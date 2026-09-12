@@ -1,0 +1,17 @@
+import { create } from 'zustand';
+
+import type { SessionUser } from '@/types/domain';
+
+interface AuthState {
+  accessToken: string | null;
+  user: SessionUser | null;
+  setSession: (session: { accessToken: string; user: SessionUser }) => void;
+  clearSession: () => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  accessToken: null,
+  user: null,
+  setSession: (session) => set(session),
+  clearSession: () => set({ accessToken: null, user: null }),
+}));
