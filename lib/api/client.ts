@@ -17,12 +17,14 @@ interface RequestOptions extends RequestInit {
 
 export async function apiClient<T>(path: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
   const { accessToken, tenant = false, headers, ...init } = options;
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(!isFormData && init.body ? { 'Content-Type': 'application/json' } : {}),
       ...(tenant ? { 'x-tenant-domain': tenantDomain } : {}),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
