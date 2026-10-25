@@ -37,3 +37,63 @@ export function reviewVerification(
     body: JSON.stringify(input),
   });
 }
+
+export interface UniversityRecord {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string;
+  isActive: boolean;
+  isDemo?: boolean;
+  createdAt: string;
+  _count?: {
+    users: number;
+    jobs: number;
+  };
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  pendingVerifications: number;
+  approvedUsers: number;
+  totalJobs: number;
+  pendingJobs: number;
+  totalUniversities: number;
+}
+
+export function getAdminStats(accessToken: string | null) {
+  return apiClient<AdminStats>('/admin/stats', {
+    method: 'GET',
+    accessToken,
+  });
+}
+
+export function getUniversities(accessToken: string | null) {
+  return apiClient<UniversityRecord[]>('/admin/universities', {
+    method: 'GET',
+    accessToken,
+  });
+}
+
+export function createUniversity(
+  accessToken: string | null,
+  data: { name: string; slug: string; domain: string },
+) {
+  return apiClient<UniversityRecord>('/admin/universities', {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(data),
+  });
+}
+
+export function toggleUniversityStatus(
+  accessToken: string | null,
+  universityId: string,
+  isActive: boolean,
+) {
+  return apiClient<UniversityRecord>(`/admin/universities/${universityId}/status`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify({ isActive }),
+  });
+}

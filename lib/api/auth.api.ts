@@ -42,3 +42,44 @@ export function refreshSession() {
 export function logout() {
   return apiClient<void>('/auth/logout', { method: 'POST' });
 }
+
+export interface DemoCapabilities {
+  enabled: boolean;
+  environment: string;
+  roles: Array<{ role: UserRole; label: string; email: string }>;
+}
+
+export function getDemoCapabilities() {
+  return apiClient<DemoCapabilities>('/auth/demo-capabilities', { method: 'GET' });
+}
+
+export function demoLogin(role: UserRole) {
+  return apiClient<AuthSession>('/auth/demo-login', {
+    method: 'POST',
+    body: JSON.stringify({ role }),
+  });
+}
+
+export function forgotPassword(email: string) {
+  return apiClient<{ message: string; debugToken?: string; resetUrl?: string }>(
+    '/auth/forgot-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    },
+  );
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return apiClient<void>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+export function verifyEmail(token: string) {
+  return apiClient<void>('/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
