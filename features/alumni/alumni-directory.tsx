@@ -1,136 +1,108 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { LogIn, Search, SlidersHorizontal, Users } from 'lucide-react';
+import { SlidersHorizontal, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { AlumniCard } from '@/components/alumni/alumni-card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { SectionHeading } from '@/components/ui/section-heading';
+import { DirectoryGridSkeleton } from '@/components/shared/skeletons';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ErrorState } from '@/components/shared/error-state';
+import { SearchInput } from '@/components/shared/search-input';
 import { getAlumni } from '@/lib/api/alumni.api';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 export function AlumniDirectory() {
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('All');
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const user = useAuthStore((state) => state.user);
+  const { user, isLoading: authLoading } = useAuth();
 
-  const query = useQuery({
-    queryKey: ['alumni', accessToken, department],
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['directory', department, search],
     queryFn: () =>
-      getAlumni(accessToken, {
+      getAlumni({
         department: department === 'All' ? undefined : department,
+        search: search || undefined,
       }),
-    enabled: Boolean(accessToken),
+    enabled: Boolean(user),
   });
 
-  const rawList = query.data?.data ?? [];
+  if (authLoading) {
+    return <DirectoryGridSkeleton count={8} />;
+  }
 
-  const alumni = useMemo(() => {
-    return rawList.filter((person) => {
-      const term = search.toLowerCase();
-      const haystack = [person.name, person.currentCompany, person.position, ...(person.skills ?? [])]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return !term || haystack.includes(term);
-    });
-  }, [rawList, search]);
-
-  if (!user || !accessToken) {
+  if (!user) {
     return (
-      <section className="page-shell directory-page">
-        <p className="eyebrow">THE VERIFIED DIRECTORY</p>
-        <h1>Connect with your university alumni.</h1>
-        <p className="lede">
-          The verified alumni network is exclusive to enrolled students, alumni, and faculty.
-        </p>
-
-        <div className="dashboard-note" style={{ maxWidth: '640px', margin: '2rem 0' }}>
-          <p className="eyebrow">MEMBERS ONLY</p>
-          <h2>Sign in to search & connect.</h2>
-          <p>
-            Please sign in or create an account to view verified alumni profiles, send mentorship
-            inquiries, and build professional connections.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <Button asChild>
-              <Link href="/login">
-                <LogIn size={16} /> Sign in
-              </Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/register">Create profile</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <div className="py-12 text-center">
+        <EmptyState
+          title="Sign in required"
+          description="The alumni directory is private to verified students, alumni, and faculty."
+          actionLabel="Sign In"
+          onAction={() => {
+            window.location.href = '/login';
+          }}
+        />
+      </div>
     );
   }
 
-  return (
-    <section className="page-shell directory-page">
-      <p className="eyebrow">THE VERIFIED DIRECTORY</p>
-      <h1>Look up. Reach out. Move forward.</h1>
-      <p className="lede">
-        A living record of verified people from your university who are open to connecting.
-      </p>
+  const alumniList = data?.data ?? [];
 
-      <div className="directory-controls">
-        <Input
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search names, companies, skills…"
-          aria-label="Search alumni"
-        />
-        <div className="filter-row">
-          <SlidersHorizontal size={17} />
-          {['All', 'CSE', 'EEE', 'BBA', 'Civil', 'Economics'].map((item) => (
+  return (
+    <div className="space-y-6">
+      {/* Search and Department Filter */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="w-full sm:max-w-md">
+          <SearchInput
+            placeholder="Search alumni by name, role, skills..."
+            onSearch={setSearch}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+          <SlidersHorizontal className="h-4 w-4 text-slate-400 shrink-0" />
+          {['All', 'Computer Science', 'Business', 'Engineering', 'Economics'].map((dept) => (
             <button
-              key={item}
-              className={department === item ? 'filter-chip filter-chip--selected' : 'filter-chip'}
-              onClick={() => setDepartment(item)}
+              key={dept}
+              type="button"
+              onClick={() => setDepartment(dept)}
+              className={`rounded-full px-3 py-1 font-medium transition ${
+                department === dept
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
-              {item}
+              {dept}
             </button>
           ))}
         </div>
       </div>
 
-      {query.isLoading ? (
-        <p className="empty-state">
-          <Users size={24} /> Loading alumni network...
-        </p>
-      ) : query.isError ? (
-        <div className="dashboard-note" style={{ borderLeft: '4px solid #ef4444' }}>
-          <h2>Failed to load directory</h2>
-          <p>Could not load the alumni directory from the server. Please try again.</p>
-          <Button variant="secondary" onClick={() => query.refetch()}>
-            Retry
-          </Button>
-        </div>
+      {isLoading ? (
+        <DirectoryGridSkeleton count={8} />
+      ) : isError ? (
+        <ErrorState
+          title="Failed to load alumni directory"
+          message="Could not connect to the network service. Please check your connection and retry."
+          onRetry={() => refetch()}
+        />
+      ) : alumniList.length === 0 ? (
+        <EmptyState
+          title="No alumni found"
+          description={
+            search
+              ? `No alumni matching "${search}". Try adjusting your search or filters.`
+              : 'The directory currently has no members listed for this criteria.'
+          }
+        />
       ) : (
-        <>
-          <SectionHeading
-            eyebrow="VERIFIED NETWORK RESULTS"
-            title={`${alumni.length} ${alumni.length === 1 ? 'member' : 'members'} found`}
-          />
-          <div className="alumni-grid">
-            {alumni.map((alumnus) => (
-              <AlumniCard key={alumnus.id} alumnus={alumnus} />
-            ))}
-          </div>
-          {alumni.length === 0 ? (
-            <p className="empty-state">
-              <Search size={24} />
-              No verified alumni match that search.
-            </p>
-          ) : null}
-        </>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {alumniList.map((alumnus) => (
+            <AlumniCard key={alumnus.id} alumnus={alumnus} />
+          ))}
+        </div>
       )}
-    </section>
+    </div>
   );
 }

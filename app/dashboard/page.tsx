@@ -1,39 +1,46 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useAuthStore } from '@/store/auth-store';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/hooks/use-auth';
 
-export default function DashboardEntryPage() {
+export default function DashboardRedirectPage() {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
+  const { user, role, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!user) return;
-    switch (user.role) {
+    if (isLoading) return;
+
+    if (!user) {
+      router.replace('/login');
+      return;
+    }
+
+    switch (role) {
       case 'STUDENT':
-        router.replace('/dashboard/student');
+        router.replace('/student/dashboard');
         break;
       case 'ALUMNI':
-        router.replace('/dashboard/alumni');
+        router.replace('/alumni/dashboard');
         break;
       case 'MODERATOR':
-        router.replace('/dashboard/moderator');
-        break;
-      case 'ADMIN':
-        router.replace('/dashboard/admin');
+        router.replace('/moderator/dashboard');
         break;
       case 'SUPER_ADMIN':
-        router.replace('/dashboard/super-admin');
+        router.replace('/admin/dashboard');
         break;
       default:
-        router.replace('/dashboard/student');
+        router.replace('/login');
     }
-  }, [user, router]);
+  }, [user, role, isLoading, router]);
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '40vh' }}>
-      <p style={{ color: 'var(--muted, #666)', fontSize: '0.95rem' }}>Resolving role desk…</p>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+        <p className="text-xs font-medium text-slate-500">Redirecting to your role workspace...</p>
+      </div>
     </div>
   );
 }
+

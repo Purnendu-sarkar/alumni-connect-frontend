@@ -1,17 +1,20 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-import { logout } from '@/lib/api/auth.api';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuth } from '@/lib/hooks/use-auth';
 
 export function SignOutButton() {
-  const router = useRouter();
-  const clearSession = useAuthStore((state) => state.clearSession);
-  const signOut = async () => {
-    try { await logout(); } finally { clearSession(); router.replace('/login'); }
-  };
-  return <Button variant="ghost" size="sm" onClick={signOut}><LogOut size={16} /> Sign out</Button>;
+  const { logout, isLoggingOut } = useAuth();
+
+  return (
+    <button
+      type="button"
+      onClick={() => logout()}
+      disabled={isLoggingOut}
+      className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition disabled:opacity-50"
+    >
+      <LogOut className="h-4 w-4" />
+      <span>{isLoggingOut ? 'Signing out...' : 'Sign out'}</span>
+    </button>
+  );
 }

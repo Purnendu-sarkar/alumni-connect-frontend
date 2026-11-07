@@ -6,290 +6,308 @@ import {
   ArrowLeft,
   Check,
   CheckCircle2,
+  Clock,
   Filter,
   RefreshCw,
+  Search,
+  ShieldAlert,
   ShieldCheck,
+  UserCheck,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { getVerifications, reviewVerification } from '@/lib/api/admin.api';
-import { useAuthStore } from '@/store/auth-store';
+import { useAuth } from '@/lib/hooks/use-auth';
 import type { UserRole, VerificationItem, VerificationStatus } from '@/types/domain';
+import { TableSkeleton } from '@/components/shared/skeletons';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ErrorState } from '@/components/shared/error-state';
+import { ConfirmModal } from '@/components/shared/confirm-modal';
+import { ReauthModal } from '@/components/shared/reauth-modal';
 
 export default function AdminVerificationPage() {
   const queryClient = useQueryClient();
-  const user = useAuthStore((state) => state.user);
-  const accessToken = useAuthStore((state) => state.accessToken);
+  const { user, role, isLoading: authLoading } = useAuth();
 
   const [statusFilter, setStatusFilter] = useState<VerificationStatus>('PENDING');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
 
-  const [rejectingUser, setRejectingUser] = useState<VerificationItem | null>(null);
+  const [selectedUser, setSelectedUser] = useState<VerificationItem | null>(null);
+  const [actionType, setActionType] = useState<'APPROVE' | 'REJECT' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
-
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR';
+  const [showReauthModal, setShowReauthModal] = useState(false);
 
   const query = useQuery({
-    queryKey: ['admin-verifications', accessToken, statusFilter, roleFilter, search],
+    queryKey: ['admin-verifications', statusFilter, roleFilter, search],
     queryFn: () =>
-      getVerifications(accessToken, {
+      getVerifications({
         status: statusFilter,
-        role: roleFilter === 'ALL' ? undefined : roleFilter,
+        role: roleFilter === 'ALL' ? undefined : (roleFilter as UserRole),
         search: search.trim() || undefined,
         limit: 50,
       }),
-    enabled: Boolean(accessToken && isStaff),
+    enabled: Boolean(user && role === 'SUPER_ADMIN'),
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ userId, status, reason }: { userId: string; status: 'APPROVED' | 'REJECTED'; reason?: string }) =>
-      reviewVerification(accessToken, userId, { status, reason }),
+    mutationFn: ({
+      userId,
+      status,
+      reason,
+    }: {
+      userId: string;
+      status: 'APPROVED' | 'REJECTED';
+      reason?: string;
+    }) => reviewVerification(userId, { status, reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
-      setRejectingUser(null);
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+      setSelectedUser(null);
+      setActionType(null);
       setRejectionReason('');
       setActionError(null);
     },
-    onError: (err: unknown) => {
-      const msg = err instanceof Error ? err.message : 'Failed to review verification.';
-      setActionError(msg);
+    onError: (err: any) => {
+      if (err.code === 'REAUTH_REQUIRED' || err.status === 401) {
+        setShowReauthModal(true);
+      } else {
+        setActionError(err.message || 'Failed to review verification.');
+      }
     },
   });
 
-  if (!user || !isStaff) {
-    return (
-      <main className="page-shell">
-        <div className="dashboard-note" style={{ borderLeft: '4px solid #ef4444', maxWidth: '600px', margin: '4rem auto' }}>
-          <h2>Access Restricted</h2>
-          <p>You must be an institutional Administrator or Moderator to view the Verification Queue.</p>
-          <Button asChild style={{ marginTop: '1rem' }}>
-            <Link href="/dashboard">Return to Dashboard</Link>
-          </Button>
-        </div>
-      </main>
-    );
+  const handleConfirmAction = () => {
+    if (!selectedUser || !actionType) return;
+    reviewMutation.mutate({
+      userId: selectedUser.id,
+      status: actionType === 'APPROVE' ? 'APPROVED' : 'REJECTED',
+      reason: actionType === 'REJECT' ? rejectionReason : undefined,
+    });
+  };
+
+  if (authLoading) {
+    return <TableSkeleton rows={8} columns={5} />;
   }
 
   const verifications = query.data?.data ?? [];
 
   return (
-    <main className="page-shell">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <Link href="/dashboard" className="back-link">
-            <ArrowLeft size={16} /> Back to dashboard
-          </Link>
-          <p className="eyebrow">INSTITUTIONAL ADMINISTRATION</p>
-          <h1>Alumni & Student Verification Queue</h1>
-          <p className="lede">
-            Review academic identity, verify official institutional enrollment, or reject unconfirmed submissions.
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Institutional Verification Queue
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Review academic enrollment records and manage verification approvals.
           </p>
         </div>
 
-        <Button variant="secondary" onClick={() => query.refetch()} disabled={query.isFetching}>
-          <RefreshCw size={16} className={query.isFetching ? 'animate-spin' : ''} /> Refresh
-        </Button>
+        <button
+          onClick={() => query.refetch()}
+          disabled={query.isFetching}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${query.isFetching ? 'animate-spin' : ''}`} />
+          <span>Refresh Queue</span>
+        </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', margin: '2rem 0 1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {(['PENDING', 'APPROVED', 'REJECTED'] as const).map((status) => (
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {actionError}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, student ID, email..."
+            className="w-full rounded-lg border border-slate-200 py-1.5 pl-9 pr-3 text-xs text-slate-900 focus:border-blue-600 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 font-medium">Status:</span>
+          {(['PENDING', 'APPROVED', 'REJECTED'] as const).map((s) => (
             <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={statusFilter === status ? 'filter-chip filter-chip--selected' : 'filter-chip'}
-              style={{ fontWeight: 600 }}
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`rounded-lg px-2.5 py-1 font-semibold transition ${
+                statusFilter === s
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
-              {status === 'PENDING' ? 'Pending Review' : status === 'APPROVED' ? 'Approved' : 'Rejected'}
+              {s}
             </button>
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <Filter size={16} style={{ color: 'var(--muted, #666)' }} />
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-slate-500 font-medium">Role:</span>
           {(['ALL', 'STUDENT', 'ALUMNI'] as const).map((r) => (
             <button
               key={r}
               onClick={() => setRoleFilter(r)}
-              className={roleFilter === r ? 'filter-chip filter-chip--selected' : 'filter-chip'}
+              className={`rounded-lg px-2.5 py-1 font-semibold transition ${
+                roleFilter === r
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
             >
-              {r === 'ALL' ? 'All Roles' : r === 'STUDENT' ? 'Students' : 'Alumni'}
+              {r}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Search Input */}
-      <div style={{ marginBottom: '1.5rem', maxWidth: '480px' }}>
-        <Input
-          placeholder="Search name, email, department, or student ID…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-
-      {actionError ? (
-        <div className="dashboard-note" style={{ borderLeft: '4px solid #ef4444', marginBottom: '1rem' }}>
-          <p style={{ color: '#b91c1c', margin: 0 }}>{actionError}</p>
-        </div>
-      ) : null}
-
-      {/* Rejection Modal / Inline Dialog */}
-      {rejectingUser ? (
-        <div
-          className="dashboard-note"
-          style={{
-            border: '2px solid #ef4444',
-            background: '#fff5f5',
-            margin: '1.5rem 0',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertTriangle size={20} /> Reject verification for {rejectingUser.name}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setRejectingUser(null)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          <p style={{ fontSize: '0.9rem', color: '#7f1d1d', margin: '0.5rem 0' }}>
-            Provide clear feedback explaining why this submission could not be verified (e.g. Student ID
-            mismatch, batch year incorrect). The user will see this feedback and can update their profile.
-          </p>
-
-          <textarea
-            className="field__input"
-            rows={3}
-            placeholder="e.g. Student ID does not match records for CSE batch 2020. Please re-enter your official university ID number."
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            style={{ width: '100%', marginTop: '0.5rem' }}
-          />
-
-          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-            <Button
-              onClick={() =>
-                reviewMutation.mutate({
-                  userId: rejectingUser.id,
-                  status: 'REJECTED',
-                  reason: rejectionReason,
-                })
-              }
-              disabled={reviewMutation.isPending || rejectionReason.trim().length < 3}
-              style={{ background: '#dc2626', color: '#fff' }}
-            >
-              {reviewMutation.isPending ? 'Rejecting…' : 'Confirm Rejection'}
-            </Button>
-            <Button variant="ghost" onClick={() => setRejectingUser(null)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Verification Items List */}
+      {/* Verification Table */}
       {query.isLoading ? (
-        <p className="empty-state">Loading verification records…</p>
+        <TableSkeleton rows={6} columns={5} />
+      ) : query.isError ? (
+        <ErrorState
+          title="Failed to load verifications"
+          message="Could not load the queue from the institutional admin service."
+          onRetry={() => query.refetch()}
+        />
       ) : verifications.length === 0 ? (
-        <p className="empty-state">
-          <ShieldCheck size={28} />
-          No {statusFilter.toLowerCase()} verification records found.
-        </p>
+        <EmptyState
+          title="Queue is empty"
+          description={`No ${statusFilter.toLowerCase()} verification records found matching your filters.`}
+        />
       ) : (
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          {verifications.map((item) => (
-            <article
-              key={item.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1.25rem',
-                background: 'var(--surface-muted, #f8f8f8)',
-                borderRadius: 'var(--radius, 8px)',
-                border: item.verificationStatus === 'REJECTED' ? '1px solid #fecaca' : '1px solid var(--border, #e5e5e5)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <Avatar name={item.name} src={item.avatarUrl} />
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <strong style={{ fontSize: '1.05rem' }}>{item.name}</strong>
-                    <Badge variant={item.role.name === 'ALUMNI' ? 'success' : 'neutral'}>
-                      {item.role.name}
-                    </Badge>
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: 'var(--muted, #666)' }}>
-                    {item.email} · {item.department || 'No dept'} · Batch {item.batch || 'N/A'}
-                  </span>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--muted, #888)', marginTop: '0.25rem' }}>
-                    {item.studentId ? <span>Student ID: <strong>{item.studentId}</strong> · </span> : null}
-                    {item.academicId ? <span>Academic ID: <strong>{item.academicId}</strong> · </span> : null}
-                    {item.position || item.currentCompany ? (
-                      <span>Work: {item.position} @ {item.currentCompany} · </span>
-                    ) : null}
-                    <span>Submitted: {new Date(item.createdAt).toLocaleDateString()}</span>
-                  </div>
-
-                  {item.rejectionReason ? (
-                    <div style={{ marginTop: '0.5rem', color: '#dc2626', fontSize: '0.85rem' }}>
-                      <strong>Rejection reason:</strong> {item.rejectionReason}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {/* Review Buttons */}
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {item.verificationStatus !== 'APPROVED' ? (
-                  <Button
-                    onClick={() =>
-                      reviewMutation.mutate({
-                        userId: item.id,
-                        status: 'APPROVED',
-                      })
-                    }
-                    disabled={reviewMutation.isPending}
-                    style={{ background: '#16a34a', color: '#fff' }}
-                  >
-                    <Check size={16} /> Approve
-                  </Button>
-                ) : (
-                  <Badge variant="success">
-                    <CheckCircle2 size={14} style={{ marginRight: '4px' }} /> Verified
-                  </Badge>
-                )}
-
-                {item.verificationStatus !== 'REJECTED' ? (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setRejectingUser(item)}
-                    style={{ color: '#dc2626' }}
-                  >
-                    <X size={16} /> Reject
-                  </Button>
-                ) : null}
-              </div>
-            </article>
-          ))}
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="border-b border-slate-200 bg-slate-50/75 text-slate-600 font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="py-3 px-4">User</th>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4">Academic Credentials</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {verifications.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition">
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-slate-900">{item.name}</div>
+                      <div className="text-slate-400">{item.email}</div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="rounded-md bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                        {item.role?.name ?? 'USER'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 space-y-0.5">
+                      <div>Dept: <span className="font-medium text-slate-900">{item.department || 'N/A'}</span></div>
+                      <div>ID: <span className="font-mono text-slate-900">{item.studentId || item.academicId || 'N/A'}</span></div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 font-semibold text-[11px] ${
+                          item.verificationStatus === 'APPROVED'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : item.verificationStatus === 'REJECTED'
+                            ? 'bg-red-50 text-red-700'
+                            : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        {item.verificationStatus}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {item.verificationStatus === 'PENDING' && (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUser(item);
+                              setActionType('APPROVE');
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 font-semibold text-white hover:bg-emerald-700 shadow-xs"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedUser(item);
+                              setActionType('REJECT');
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2.5 py-1 font-semibold text-red-600 hover:bg-red-50 shadow-xs"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-    </main>
+
+      {/* Confirmation Modal */}
+      {selectedUser && actionType && (
+        <ConfirmModal
+          isOpen={true}
+          title={actionType === 'APPROVE' ? 'Approve Verification' : 'Reject Verification'}
+          message={
+            actionType === 'APPROVE'
+              ? `Are you sure you want to verify ${selectedUser.name}? This grants full access to the institutional directory and network features.`
+              : `Are you sure you want to reject ${selectedUser.name}'s verification submission?`
+          }
+          confirmLabel={actionType === 'APPROVE' ? 'Confirm Approval' : 'Confirm Rejection'}
+          variant={actionType === 'APPROVE' ? 'default' : 'danger'}
+          isLoading={reviewMutation.isPending}
+          onConfirm={handleConfirmAction}
+          onCancel={() => {
+            setSelectedUser(null);
+            setActionType(null);
+          }}
+        >
+          {actionType === 'REJECT' && (
+            <div className="mt-3">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Reason for Rejection (Optional)
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="e.g. Student ID does not match registrar database."
+                rows={2}
+                className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-900 focus:border-red-500 focus:outline-none"
+              />
+            </div>
+          )}
+        </ConfirmModal>
+      )}
+
+      {/* Reauth Modal Checkpoint (15-minute Super Admin security window) */}
+      <ReauthModal
+        isOpen={showReauthModal}
+        onSuccess={() => {
+          setShowReauthModal(false);
+          handleConfirmAction();
+        }}
+        onCancel={() => setShowReauthModal(false)}
+      />
+    </div>
   );
 }

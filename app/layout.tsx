@@ -1,41 +1,35 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
-import '@fontsource/archivo-black/400.css';
-import '@fontsource/work-sans/400.css';
-import '@fontsource/work-sans/500.css';
-import '@fontsource/work-sans/600.css';
-import '@fontsource/work-sans/700.css';
-
 import { Providers } from '@/providers/providers';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://alumniconnect.example'),
+  metadataBase: new URL('https://alumniconnect.edu'),
   title: {
-    default: 'AlumniConnect — Your network, in print.',
+    default: 'AlumniConnect — Institutional Networking Platform',
     template: '%s | AlumniConnect',
   },
-  description: 'The verified professional network for your university community.',
+  description: 'The verified single-university professional networking platform for students and alumni.',
   applicationName: 'AlumniConnect',
-  keywords: ['alumni', 'mentorship', 'jobs', 'university network'],
+  keywords: ['alumni', 'mentorship', 'jobs', 'university network', 'career'],
   openGraph: {
     type: 'website',
     siteName: 'AlumniConnect',
     title: 'AlumniConnect',
-    description: 'Find mentors, opportunities, and your university network.',
+    description: 'Find mentors, opportunities, and build enduring institutional connections.',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0A0A0A',
+  themeColor: '#0B1F3A',
   colorScheme: 'light',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>

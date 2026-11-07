@@ -12,68 +12,54 @@ export interface CreateJobInput {
   expiresAt?: string;
 }
 
-export interface MyJobsResponse {
-  postedJobs: (Job & { status?: string })[];
-  applications: Array<{
-    id: string;
-    jobId: string;
-    status: string;
-    createdAt: string;
-    job: Job;
-  }>;
+export interface JobFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  location?: string;
+  employmentType?: string;
 }
 
-export function getJobs() {
-  return apiClient<Job[]>('/jobs?page=1&limit=24', { tenant: true });
+export function getJobs(filters: JobFilters = {}) {
+  const params = new URLSearchParams({
+    page: String(filters.page ?? 1),
+    limit: String(filters.limit ?? 20),
+  });
+  if (filters.search) params.set('search', filters.search);
+  if (filters.location) params.set('location', filters.location);
+  if (filters.employmentType) params.set('employmentType', filters.employmentType);
+
+  return apiClient<Job[]>(`/jobs?${params.toString()}`);
 }
 
-export function getPendingJobs(accessToken: string | null) {
-  return apiClient<Job[]>('/jobs/pending', { accessToken, tenant: true });
+export function getJobById(jobId: string) {
+  return apiClient<Job>(`/jobs/${jobId}`);
 }
 
-export function getMyJobs(accessToken: string | null) {
-  return apiClient<MyJobsResponse>('/jobs/mine', { accessToken, tenant: true });
-}
-
-export function createJob(accessToken: string | null, data: CreateJobInput) {
+export function createJob(data: CreateJobInput) {
   return apiClient<Job>('/jobs', {
     method: 'POST',
-    accessToken,
-    tenant: true,
     body: JSON.stringify(data),
   });
 }
 
-export function getJobById(jobId: string) {
-  return apiClient<Job>(`/jobs/${jobId}`, { tenant: true });
-}
-
-export function reviewJob(
-  accessToken: string | null,
+export function moderateJob(
   jobId: string,
-  status: 'APPROVED' | 'REJECTED',
-  rejectionReason?: string,
+  status: 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED',
+  note?: string,
 ) {
-  return apiClient<Job>(`/jobs/${jobId}/review`, {
+  return apiClient<Job>(`/jobs/${jobId}/moderate`, {
     method: 'PATCH',
-    accessToken,
-    tenant: true,
-    body: JSON.stringify({
-      status,
-      rejectionReason: rejectionReason?.trim() || (status === 'REJECTED' ? 'Posting does not meet platform guidelines' : undefined),
-    }),
+    body: JSON.stringify({ status, note }),
   });
 }
 
 export function applyToJob(
-  accessToken: string | null,
   jobId: string,
-  message?: string,
+  data: { coverLetter?: string; resumeUrl?: string } = {},
 ) {
-  return apiClient<{ id: string; jobId: string }>(`/jobs/${jobId}/applications`, {
+  return apiClient<{ application: any }>(`/jobs/${jobId}/apply`, {
     method: 'POST',
-    accessToken,
-    tenant: true,
-    body: JSON.stringify({ message: message?.trim() || undefined }),
+    body: JSON.stringify(data),
   });
 }

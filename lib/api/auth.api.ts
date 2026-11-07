@@ -1,79 +1,57 @@
 import { apiClient } from './client';
-import type { SessionUser, UserRole } from '@/types/domain';
-
-export interface AuthSession {
-  accessToken: string;
-  user: SessionUser;
-}
+import type { CurrentUser, UserRole } from '@/lib/hooks/use-auth';
 
 export interface RegisterInput {
   name: string;
   email: string;
   password: string;
-  universitySlug: string;
-  role: Extract<UserRole, 'STUDENT' | 'ALUMNI'>;
+  role: 'STUDENT' | 'ALUMNI';
   department: string;
-  batch: string;
-  studentId?: string;
-  currentSemester?: string;
-  admissionYear?: string;
-  expectedGraduationYear?: string;
-  graduationYear?: string;
-  academicId?: string;
-  employmentStatus?: string;
-  currentCompany?: string;
-  position?: string;
-  skills?: string[];
-  interests?: string[];
+  batch?: string;
+  universityId?: string;
+  graduationYear?: number;
 }
 
 export function login(input: { email: string; password: string }) {
-  return apiClient<AuthSession>('/auth/login', { method: 'POST', body: JSON.stringify(input) });
+  return apiClient<{ user: CurrentUser }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function register(input: RegisterInput) {
-  return apiClient<AuthSession>('/auth/register', { method: 'POST', body: JSON.stringify(input) });
+  return apiClient<{ user: CurrentUser }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export function refreshSession() {
-  return apiClient<AuthSession>('/auth/refresh', { method: 'POST' });
+  return apiClient<{ user: CurrentUser }>('/auth/refresh', { method: 'POST' });
 }
 
 export function logout() {
   return apiClient<void>('/auth/logout', { method: 'POST' });
 }
 
-export interface DemoCapabilities {
-  enabled: boolean;
-  environment: string;
-  roles: Array<{ role: UserRole; label: string; email: string }>;
-}
-
-export function getDemoCapabilities() {
-  return apiClient<DemoCapabilities>('/auth/demo-capabilities', { method: 'GET' });
-}
-
-export function demoLogin(role: UserRole) {
-  return apiClient<AuthSession>('/auth/demo-login', {
+export function reauth(password: string) {
+  return apiClient<{ message: string }>('/auth/reauth', {
     method: 'POST',
-    body: JSON.stringify({ role }),
+    body: JSON.stringify({ password }),
   });
 }
 
 export function forgotPassword(email: string) {
-  return apiClient<{ message: string; debugToken?: string; resetUrl?: string }>(
-    '/auth/forgot-password',
-    {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    },
-  );
+  return apiClient<{ message: string }>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
 }
 
-export function resetPassword(token: string, newPassword: string) {
+export function resetPassword(token: string, password: string) {
   return apiClient<void>('/auth/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ token, newPassword }),
+    body: JSON.stringify({ token, password }),
   });
 }
 
