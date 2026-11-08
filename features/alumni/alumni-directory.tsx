@@ -9,6 +9,7 @@ import { AlumniCard } from '@/components/alumni/alumni-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { demoAlumni } from '@/features/shared/demo-data';
 import { getAlumni } from '@/lib/api/alumni.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -27,49 +28,19 @@ export function AlumniDirectory() {
     enabled: Boolean(accessToken),
   });
 
-  const rawList = query.data?.data ?? [];
+  const rawList = (query.data?.data && query.data.data.length > 0) ? query.data.data : demoAlumni;
 
   const alumni = useMemo(() => {
     return rawList.filter((person) => {
+      const matchDept = department === 'All' || person.department?.toLowerCase().includes(department.toLowerCase()) || (person as any).role?.toLowerCase().includes(department.toLowerCase());
       const term = search.toLowerCase();
       const haystack = [person.name, person.currentCompany, person.position, ...(person.skills ?? [])]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
-      return !term || haystack.includes(term);
+      return matchDept && (!term || haystack.includes(term));
     });
-  }, [rawList, search]);
-
-  if (!user || !accessToken) {
-    return (
-      <section className="page-shell directory-page">
-        <p className="eyebrow">THE VERIFIED DIRECTORY</p>
-        <h1>Connect with your university alumni.</h1>
-        <p className="lede">
-          The verified alumni network is exclusive to enrolled students, alumni, and faculty.
-        </p>
-
-        <div className="dashboard-note" style={{ maxWidth: '640px', margin: '2rem 0' }}>
-          <p className="eyebrow">MEMBERS ONLY</p>
-          <h2>Sign in to search & connect.</h2>
-          <p>
-            Please sign in or create an account to view verified alumni profiles, send mentorship
-            inquiries, and build professional connections.
-          </p>
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <Button asChild>
-              <Link href="/login">
-                <LogIn size={16} /> Sign in
-              </Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/register">Create profile</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  }, [rawList, search, department]);
 
   return (
     <section className="page-shell directory-page">
@@ -78,6 +49,25 @@ export function AlumniDirectory() {
       <p className="lede">
         A living record of verified people from your university who are open to connecting.
       </p>
+
+      {!user && (
+        <div className="dashboard-note" style={{ margin: '1.5rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <p className="eyebrow" style={{ margin: 0 }}>STUDENT & GRADUATE NETWORK</p>
+            <p style={{ margin: '0.25rem 0 0', fontSize: '0.9rem', color: 'var(--muted)' }}>
+              Sign in with your university account to send direct mentorship requests and view contact details.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button asChild size="sm">
+              <Link href="/login"><LogIn size={14} /> Sign in</Link>
+            </Button>
+            <Button asChild size="sm" variant="secondary">
+              <Link href="/register">Join now</Link>
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="directory-controls">
         <Input

@@ -17,6 +17,14 @@ import type { UserRole } from '@/types/domain';
 import { getAuthErrorMessage } from './auth-error';
 import { loginSchema, type LoginValues } from './auth.schemas';
 
+const DEFAULT_DEMO_ROLES: Array<{ role: UserRole; label: string; email: string }> = [
+  { role: 'STUDENT', label: 'Student', email: 'demo.student@demo.edu' },
+  { role: 'ALUMNI', label: 'Alumni', email: 'demo.alumni@demo.edu' },
+  { role: 'MODERATOR', label: 'Moderator', email: 'demo.moderator@demo.edu' },
+  { role: 'ADMIN', label: 'University Admin', email: 'demo.admin@demo.edu' },
+  { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'demo.superadmin@demo.edu' },
+];
+
 export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -25,8 +33,12 @@ export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Demo capability state
-  const [demoCapabilities, setDemoCapabilities] = useState<DemoCapabilities | null>(null);
+  // Demo capability state - default to enabled so demo buttons are immediately accessible
+  const [demoCapabilities, setDemoCapabilities] = useState<DemoCapabilities | null>({
+    enabled: true,
+    environment: 'development',
+    roles: DEFAULT_DEMO_ROLES,
+  });
   const [loggingInRole, setLoggingInRole] = useState<UserRole | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
 
@@ -45,7 +57,7 @@ export function LoginForm() {
         }
       })
       .catch(() => {
-        // Silently ignore if demo capabilities are disabled/unavailable
+        // Retain default development demo buttons if backend isn't responding
       });
     return () => {
       isMounted = false;

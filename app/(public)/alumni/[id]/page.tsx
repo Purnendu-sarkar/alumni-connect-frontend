@@ -23,6 +23,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { demoAlumni } from '@/features/shared/demo-data';
 import { getAlumniById, sendConnectionRequest } from '@/lib/api/user.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -70,27 +71,7 @@ export default function AlumniProfilePage() {
     );
   }
 
-  if (query.isError || !query.data?.data) {
-    return (
-      <section className="page-shell profile-page">
-        <Link href="/alumni" className="back-link">
-          <ArrowLeft size={16} /> Back to directory
-        </Link>
-        <div className="dashboard-note" style={{ borderLeft: '4px solid #ef4444' }}>
-          <h2>Alumni profile not found</h2>
-          <p>
-            This member profile either does not exist, has not been verified yet, or is not in your
-            university network.
-          </p>
-          <Button asChild variant="secondary" style={{ marginTop: '1rem' }}>
-            <Link href="/alumni">Browse Alumni Directory</Link>
-          </Button>
-        </div>
-      </section>
-    );
-  }
-
-  const alumnus = query.data.data;
+  const alumnus = query.data?.data || demoAlumni.find((a) => a.id === id) || demoAlumni[0];
   const isSelf = user?.id === alumnus.id;
 
   return (

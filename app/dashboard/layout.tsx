@@ -11,6 +11,7 @@ import {
   GraduationCap,
   Handshake,
   LayoutDashboard,
+  Settings,
   ShieldAlert,
   ShieldCheck,
   UserRound,
@@ -39,6 +40,7 @@ function getRoleNavLinks(role?: UserRole): NavLink[] {
         { href: '/alumni', label: 'Alumni Directory', icon: Users },
         { href: '/dashboard/connections', label: 'Connections', icon: Handshake },
         { href: '/dashboard/jobs', label: 'My Applications', icon: BriefcaseBusiness },
+        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
     case 'ALUMNI':
       return [
@@ -47,6 +49,7 @@ function getRoleNavLinks(role?: UserRole): NavLink[] {
         { href: '/dashboard/connections', label: 'Network Connections', icon: Handshake },
         { href: '/dashboard/jobs', label: 'My Postings', icon: BriefcaseBusiness },
         { href: '/alumni', label: 'Alumni Directory', icon: Users },
+        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
     case 'MODERATOR':
       return [
@@ -54,22 +57,27 @@ function getRoleNavLinks(role?: UserRole): NavLink[] {
         { href: '/admin/verification', label: 'Verification Queue', icon: ShieldCheck },
         { href: '/alumni', label: 'Campus Directory', icon: Users },
         { href: '/dashboard/profile', label: 'My Account', icon: UserRound },
+        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
     case 'ADMIN':
       return [
         { href: '/dashboard/admin', label: 'University Admin', icon: Building2 },
         { href: '/admin/verification', label: 'Verification Queue', icon: ShieldCheck },
         { href: '/dashboard/moderator', label: 'Job Moderation', icon: FileCheck2 },
+        { href: '/dashboard/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert },
         { href: '/alumni', label: 'Campus Directory', icon: Users },
         { href: '/dashboard/profile', label: 'Admin Account', icon: UserRound },
+        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
     case 'SUPER_ADMIN':
       return [
         { href: '/dashboard/super-admin', label: 'Platform Console', icon: LayoutDashboard },
         { href: '/admin/verification', label: 'Global Verifications', icon: ShieldCheck },
         { href: '/dashboard/moderator', label: 'Job Moderation', icon: FileCheck2 },
+        { href: '/dashboard/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert },
         { href: '/alumni', label: 'All Members', icon: Users },
         { href: '/dashboard/profile', label: 'Root Profile', icon: UserRound },
+        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
     default:
       return [
