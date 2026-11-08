@@ -2,20 +2,11 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  AlertTriangle,
-  ArrowLeft,
   Check,
-  CheckCircle2,
-  Clock,
-  Filter,
   RefreshCw,
   Search,
-  ShieldAlert,
-  ShieldCheck,
-  UserCheck,
   X,
 } from 'lucide-react';
-import Link from 'next/link';
 import { useState } from 'react';
 
 import { getVerifications, reviewVerification } from '@/lib/api/admin.api';
@@ -71,11 +62,12 @@ export default function AdminVerificationPage() {
       setRejectionReason('');
       setActionError(null);
     },
-    onError: (err: any) => {
-      if (err.code === 'REAUTH_REQUIRED' || err.status === 401) {
+    onError: (err: unknown) => {
+      const errorObj = err as { code?: string; status?: number; message?: string };
+      if (errorObj?.code === 'REAUTH_REQUIRED' || errorObj?.status === 401) {
         setShowReauthModal(true);
       } else {
-        setActionError(err.message || 'Failed to review verification.');
+        setActionError(errorObj?.message || 'Failed to review verification.');
       }
     },
   });

@@ -4,9 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Check,
   Clock,
-  Handshake,
-  MessageSquare,
-  Search,
   UserCheck,
   UserPlus,
   Users,
@@ -40,8 +37,9 @@ export default function StudentConnectionsPage() {
       queryClient.invalidateQueries({ queryKey: ['connections'] });
       setActionError(null);
     },
-    onError: (err: any) => {
-      setActionError(err.message || 'Failed to update connection request.');
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to update connection request.';
+      setActionError(msg);
     },
   });
 

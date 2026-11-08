@@ -1,8 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Briefcase, Building, MapPin, Search } from 'lucide-react';
-import Link from 'next/link';
+import { Briefcase, Building, MapPin } from 'lucide-react';
 import { useState } from 'react';
 
 import { JobListSkeleton } from '@/components/shared/skeletons';

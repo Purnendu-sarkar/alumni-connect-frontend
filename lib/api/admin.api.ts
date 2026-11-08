@@ -33,10 +33,14 @@ export function reviewVerification(
 
 export interface AdminStats {
   totalUsers: number;
+  totalStudents: number;
+  totalAlumni: number;
+  totalModerators: number;
+  totalSuperAdmins: number;
+  activeUsers: number;
   pendingVerifications: number;
-  approvedUsers: number;
-  totalJobs: number;
-  pendingJobs: number;
+  activeJobs: number;
+  totalConnections: number;
 }
 
 export function getAdminStats() {
@@ -49,5 +53,5 @@ export function getAuditLogs(params: { page?: number; limit?: number; action?: s
   if (params.limit) query.set('limit', String(params.limit));
   if (params.action) query.set('action', params.action);
   const queryStr = query.toString() ? `?${query.toString()}` : '';
-  return apiClient<any[]>(`/admin/audit-logs${queryStr}`);
+  return apiClient<Record<string, unknown>[]>(`/admin/audit-logs${queryStr}`);
 }

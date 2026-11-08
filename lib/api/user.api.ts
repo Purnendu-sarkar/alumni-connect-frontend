@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { Alumni, UserProfile } from '@/types/domain';
+import type { UserProfile } from '@/types/domain';
 
 export function getMe() {
   return apiClient<{ user: UserProfile }>('/users/me');
@@ -13,7 +13,7 @@ export function updateMe(data: Partial<UserProfile>) {
 }
 
 export function getUserById(id: string) {
-  return apiClient<{ user: any }>(`/users/${id}`);
+  return apiClient<{ user: UserProfile }>(`/users/${id}`);
 }
 
 export function sendConnectionRequest(input: { receiverId: string; message?: string }) {

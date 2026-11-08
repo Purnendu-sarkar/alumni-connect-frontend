@@ -3,6 +3,10 @@ import type { ReactNode } from 'react';
 
 import { Providers } from '@/providers/providers';
 import '@/styles/globals.css';
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://alumniconnect.edu'),
@@ -28,7 +32,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", inter.variable)}>
       <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
         <Providers>{children}</Providers>
       </body>

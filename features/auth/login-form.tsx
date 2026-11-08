@@ -14,12 +14,15 @@ import { loginSchema, type LoginValues } from './auth.schemas';
 export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<{ message: string; code?: string } | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -29,8 +32,11 @@ export function LoginForm() {
     },
   });
 
+  const emailValue = watch('email');
+
   const onSubmit = async (values: LoginValues) => {
     setFormError(null);
+    setResendSuccess(false);
     try {
       const res = await login(values);
       if (res.data?.user) {
@@ -44,8 +50,26 @@ export function LoginForm() {
       } else {
         router.replace('/dashboard');
       }
-    } catch (err: any) {
-      setFormError(err.message || 'Invalid email or password.');
+    } catch (err: unknown) {
+      const errorObj = err as { message?: string; code?: string; statusText?: string };
+      setFormError({
+        message: errorObj?.message || 'Invalid email or password.',
+        code: errorObj?.code || errorObj?.statusText,
+      });
+    }
+  };
+
+  const handleResend = async () => {
+    if (!emailValue) return;
+    setResendingEmail(true);
+    try {
+      const { resendVerification } = await import('@/lib/api/auth.api');
+      await resendVerification(emailValue);
+      setResendSuccess(true);
+    } catch {
+      // Ignored
+    } finally {
+      setResendingEmail(false);
     }
   };
 
@@ -59,8 +83,40 @@ export function LoginForm() {
       </div>
 
       {formError && (
-        <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {formError}
+        <div
+          className={`mb-5 rounded-xl border p-4 text-xs leading-relaxed ${
+            formError.code === 'PENDING_ADMIN_VERIFICATION' ||
+            formError.code === 'PENDING_EMAIL_VERIFICATION' ||
+            formError.code === 'PENDING_SETUP'
+              ? 'border-amber-200 bg-amber-50 text-amber-900'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          <div className="font-semibold mb-1">
+            {formError.code === 'PENDING_ADMIN_VERIFICATION' && 'Verification Pending'}
+            {formError.code === 'PENDING_EMAIL_VERIFICATION' && 'Email Verification Required'}
+            {formError.code === 'PENDING_SETUP' && 'Account Setup Incomplete'}
+            {formError.code === 'VERIFICATION_REJECTED' && 'Verification Rejected'}
+            {!['PENDING_ADMIN_VERIFICATION', 'PENDING_EMAIL_VERIFICATION', 'PENDING_SETUP', 'VERIFICATION_REJECTED'].includes(formError.code || '') && 'Sign In Error'}
+          </div>
+          <p>{formError.message}</p>
+
+          {formError.code === 'PENDING_EMAIL_VERIFICATION' && (
+            <div className="mt-2.5 pt-2 border-t border-amber-200/60">
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resendingEmail || resendSuccess}
+                className="font-semibold text-amber-800 hover:text-amber-950 underline disabled:opacity-50"
+              >
+                {resendingEmail
+                  ? 'Sending...'
+                  : resendSuccess
+                    ? 'Verification link resent to your email!'
+                    : 'Resend verification email'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

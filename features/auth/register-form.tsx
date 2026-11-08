@@ -1,22 +1,25 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Eye, EyeOff, GraduationCap, Loader2, School } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap, Loader2, Mail, School } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { register as registerAccount } from '@/lib/api/auth.api';
+import { register as registerAccount, resendVerification } from '@/lib/api/auth.api';
 import { registerSchema, type RegisterValues } from './auth.schemas';
 
 export function RegisterForm() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [registeredSuccess, setRegisteredSuccess] = useState<{
+    email: string;
+    role: 'STUDENT' | 'ALUMNI';
+    name: string;
+  } | null>(null);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
   const {
     register,
@@ -43,7 +46,7 @@ export function RegisterForm() {
   const onSubmit = async (values: RegisterValues) => {
     setFormError(null);
     try {
-      const res = await registerAccount({
+      await registerAccount({
         name: values.name,
         email: values.email,
         password: values.password,
@@ -54,20 +57,84 @@ export function RegisterForm() {
         graduationYear: values.graduationYear ? Number(values.graduationYear) : undefined,
       });
 
-      if (res.data?.user) {
-        queryClient.setQueryData(['auth', 'me'], res.data.user);
-        if (values.role === 'STUDENT') {
-          router.replace('/student/dashboard');
-        } else {
-          router.replace('/alumni/dashboard');
-        }
-      } else {
-        router.replace('/login');
-      }
-    } catch (err: any) {
-      setFormError(err.message || 'Registration failed. Please try again.');
+      setRegisteredSuccess({
+        email: values.email,
+        role: values.role,
+        name: values.name,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setFormError(msg);
     }
   };
+
+  const handleResendEmail = async () => {
+    if (!registeredSuccess?.email) return;
+    setResendStatus('sending');
+    try {
+      await resendVerification(registeredSuccess.email);
+      setResendStatus('sent');
+      setTimeout(() => setResendStatus('idle'), 5000);
+    } catch {
+      setResendStatus('idle');
+    }
+  };
+
+  if (registeredSuccess) {
+    const isAlumni = registeredSuccess.role === 'ALUMNI';
+
+    return (
+      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-100 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 mb-4">
+          <Mail className="h-7 w-7" />
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">Check Your Email</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          We sent a verification link to{' '}
+          <strong className="text-slate-900">{registeredSuccess.email}</strong>.
+        </p>
+
+        <div className="my-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-left text-xs leading-relaxed text-slate-700">
+          {isAlumni ? (
+            <>
+              <p className="font-semibold text-slate-900 mb-1">Alumni Verification Process</p>
+              Once you click the link in your email, your degree credentials will be placed in the
+              Super Admin verification queue. You will receive an approval email as soon as an
+              administrator verifies your records.
+            </>
+          ) : (
+            <>
+              <p className="font-semibold text-slate-900 mb-1">Student Activation</p>
+              Once you click the link in your email, your account will be activated immediately and
+              you can sign in to explore the directory, jobs, and mentorship programs.
+            </>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <Link
+            href="/login"
+            className="inline-flex w-full justify-center rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-700 transition"
+          >
+            Proceed to Sign In
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleResendEmail}
+            disabled={resendStatus !== 'idle'}
+            className="text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+          >
+            {resendStatus === 'sending'
+              ? 'Resending email...'
+              : resendStatus === 'sent'
+                ? 'Verification email resent!'
+                : "Didn't receive the email? Resend"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-100">

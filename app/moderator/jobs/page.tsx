@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Briefcase, Check, RefreshCw, X } from 'lucide-react';
+import { Check, RefreshCw, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { getJobs, moderateJob } from '@/lib/api/jobs.api';
@@ -41,8 +41,9 @@ export default function ModeratorJobsPage() {
       setNote('');
       setServerError(null);
     },
-    onError: (err: any) => {
-      setServerError(err.message || 'Failed to moderate job posting.');
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to moderate job posting.';
+      setServerError(msg);
     },
   });
 

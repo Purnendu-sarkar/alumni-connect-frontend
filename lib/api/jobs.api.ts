@@ -58,7 +58,7 @@ export function applyToJob(
   jobId: string,
   data: { coverLetter?: string; resumeUrl?: string } = {},
 ) {
-  return apiClient<{ application: any }>(`/jobs/${jobId}/apply`, {
+  return apiClient<{ application: Record<string, unknown> }>(`/jobs/${jobId}/apply`, {
     method: 'POST',
     body: JSON.stringify(data),
   });

@@ -26,8 +26,9 @@ export default function ForgotPasswordPage() {
     try {
       await forgotPassword(values.email);
       setSubmitted(true);
-    } catch (err: any) {
-      setServerError(err.message || 'Unable to process password reset request.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unable to process password reset request.';
+      setServerError(msg);
     }
   };
 

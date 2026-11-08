@@ -6,7 +6,6 @@ import {
   Lock,
   School,
   ShieldCheck,
-  Sparkles,
   Users,
 } from 'lucide-react';
 

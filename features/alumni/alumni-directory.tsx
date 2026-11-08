@@ -1,8 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, Users } from 'lucide-react';
-import Link from 'next/link';
+import { SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
 import { AlumniCard } from '@/components/alumni/alumni-card';

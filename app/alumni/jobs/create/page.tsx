@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Briefcase, CheckCircle2, Loader2, PlusCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -36,8 +36,9 @@ export default function CreateJobPage() {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       router.push('/alumni/dashboard');
     },
-    onError: (err: any) => {
-      setServerError(err.message || 'Failed to submit job posting.');
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : 'Failed to submit job posting.';
+      setServerError(msg);
     },
   });
 

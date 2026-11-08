@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -11,7 +11,6 @@ import { resetPassword } from '@/lib/api/auth.api';
 import { resetPasswordSchema, type ResetPasswordValues } from '@/features/auth/auth.schemas';
 
 function ResetPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
 
@@ -38,8 +37,9 @@ function ResetPasswordForm() {
     try {
       await resetPassword(values.token, values.password);
       setSuccess(true);
-    } catch (err: any) {
-      setServerError(err.message || 'Password reset failed. The link may have expired.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Password reset failed. The link may have expired.';
+      setServerError(msg);
     }
   };
 

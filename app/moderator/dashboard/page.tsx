@@ -1,15 +1,21 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { FileCheck2, AlertTriangle, History, ArrowRight, ShieldAlert } from 'lucide-react';
+import {
+  FileCheck2,
+  AlertTriangle,
+  History,
+  ShieldAlert,
+} from 'lucide-react';
 import { useAuth } from '@/lib/hooks/use-auth';
+import { StatsCard, QuickActionCard } from '@/components/dashboard/cards';
 
 export default function ModeratorDashboardPage() {
   const { user } = useAuth();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Welcome Banner */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 md:p-8 shadow-xs">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -21,40 +27,62 @@ export default function ModeratorDashboardPage() {
               Review Desk: {user?.name ?? 'Moderator'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Ensure platform postings, reports, and member interactions meet community standards.
+              Uphold institutional integrity, review submitted opportunities, and investigate member reports.
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <Link
+      {/* Moderation Queue Stats */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard
+          label="Job Review Queue"
+          value="Queue"
+          icon={FileCheck2}
+          subtext="Pending career postings"
           href="/moderator/jobs"
-          className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-amber-300 hover:shadow-md transition"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition">
-            <FileCheck2 className="h-6 w-6" />
-          </div>
-          <h3 className="mt-4 text-base font-semibold text-slate-900">Job Review Queue</h3>
-          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-            Review pending job and internship postings submitted by alumni before publication.
-          </p>
-        </Link>
-
-        <Link
+          hrefLabel="Review jobs →"
+          colorScheme="amber"
+        />
+        <StatsCard
+          label="Flagged Content"
+          value="Zero"
+          icon={AlertTriangle}
+          subtext="No active safety flags"
           href="/moderator/reports"
-          className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-amber-300 hover:shadow-md transition"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 group-hover:bg-red-600 group-hover:text-white transition">
-            <AlertTriangle className="h-6 w-6" />
-          </div>
-          <h3 className="mt-4 text-base font-semibold text-slate-900">Member Reports</h3>
-          <p className="mt-1 text-xs text-slate-500 leading-relaxed">
-            Investigate flagged profiles, messages, or suspicious listings submitted by students.
-          </p>
-        </Link>
+          hrefLabel="Check reports →"
+          colorScheme="blue"
+        />
+        <StatsCard
+          label="Moderation Actions"
+          value="Logged"
+          icon={History}
+          subtext="Append-only record"
+          href="/moderator/activity"
+          hrefLabel="View history →"
+          colorScheme="indigo"
+        />
+      </div>
+
+      {/* Quick Action Grid */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <QuickActionCard
+          title="Job Review Queue"
+          description="Review, verify, or reject job and internship openings submitted by alumni before public distribution."
+          icon={FileCheck2}
+          href="/moderator/jobs"
+          colorScheme="amber"
+          badge="Priority"
+        />
+        <QuickActionCard
+          title="Member Safety Reports"
+          description="Investigate suspicious interactions, misattributed profiles, or community guideline infractions."
+          icon={AlertTriangle}
+          href="/moderator/reports"
+          colorScheme="purple"
+          badge="Safety"
+        />
       </div>
     </div>
   );
 }
-

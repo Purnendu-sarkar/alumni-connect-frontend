@@ -23,8 +23,24 @@ export const registerSchema = z
     role: z.enum(['STUDENT', 'ALUMNI']),
     department: z.string().trim().min(1, 'Department is required.').max(100),
     batch: z.string().trim().max(100).optional(),
-    universityId: z.string().trim().max(100).optional(),
+    universityId: z.string().trim().min(2, 'Institutional University ID is required.').max(40),
     graduationYear: z.string().trim().max(10).optional(),
+  })
+  .superRefine((data, context) => {
+    if (data.password !== data.confirmPassword) {
+      context.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: 'Passwords do not match.',
+      });
+    }
+  });
+
+export const setupAccountSchema = z
+  .object({
+    token: z.string().min(1, 'Setup token is required.'),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your password.'),
   })
   .superRefine((data, context) => {
     if (data.password !== data.confirmPassword) {
@@ -58,5 +74,6 @@ export const resetPasswordSchema = z
 
 export type LoginValues = z.infer<typeof loginSchema>;
 export type RegisterValues = z.infer<typeof registerSchema>;
+export type SetupAccountValues = z.infer<typeof setupAccountSchema>;
 export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;

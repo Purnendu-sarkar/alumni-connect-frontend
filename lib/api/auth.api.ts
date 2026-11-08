@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { CurrentUser, UserRole } from '@/lib/hooks/use-auth';
+import type { CurrentUser } from '@/lib/hooks/use-auth';
 
 export interface RegisterInput {
   name: string;
@@ -56,8 +56,28 @@ export function resetPassword(token: string, password: string) {
 }
 
 export function verifyEmail(token: string) {
-  return apiClient<void>('/auth/verify-email', {
+  return apiClient<{ message: string; role?: string; status?: string }>('/auth/verify-email', {
     method: 'POST',
     body: JSON.stringify({ token }),
+  });
+}
+
+export function validateSetupToken(token: string) {
+  return apiClient<{ valid: boolean; email: string; name?: string; role: string }>(
+    `/auth/setup-account/validate?token=${encodeURIComponent(token)}`,
+  );
+}
+
+export function setupAccount(input: { token: string; password: string }) {
+  return apiClient<{ message: string }>('/auth/setup-account', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function resendVerification(email: string) {
+  return apiClient<{ message: string }>('/auth/resend-verification', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
   });
 }
