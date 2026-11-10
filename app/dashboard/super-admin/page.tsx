@@ -4,12 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowUpRight,
   BriefcaseBusiness,
-  Building2,
+  CheckCircle2,
   Clock,
   Layers,
   Plus,
-  Power,
   RefreshCw,
+  Send,
+  Shield,
+  Trash2,
   Users,
   X,
 } from 'lucide-react';
@@ -21,10 +23,12 @@ import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
 import {
-  createUniversity,
   getAdminStats,
-  getUniversities,
-  toggleUniversityStatus,
+  getModeratorInvitations,
+  inviteModerator,
+  resendModeratorInvitation,
+  revokeModeratorInvitation,
+  type ModeratorInvitation,
 } from '@/lib/api/admin.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -32,14 +36,14 @@ export default function SuperAdminDashboardPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Owner';
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Administrator';
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [domain, setDomain] = useState('');
+  // Moderator invitation modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
 
   const statsQuery = useQuery({
     queryKey: ['admin-stats', accessToken],
@@ -47,69 +51,78 @@ export default function SuperAdminDashboardPage() {
     enabled: Boolean(accessToken),
   });
 
-  const universitiesQuery = useQuery({
-    queryKey: ['super-admin-universities', accessToken],
-    queryFn: () => getUniversities(accessToken),
+  const invitationsQuery = useQuery({
+    queryKey: ['moderator-invitations', accessToken],
+    queryFn: () => getModeratorInvitations(accessToken),
     enabled: Boolean(accessToken),
   });
 
-  const createMutation = useMutation({
-    mutationFn: (data: { name: string; slug: string; domain: string }) =>
-      createUniversity(accessToken, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['super-admin-universities'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-      setShowCreateModal(false);
-      setName('');
-      setSlug('');
-      setDomain('');
-      setActionSuccess('New university tenant provisioned successfully.');
+  const inviteMutation = useMutation({
+    mutationFn: (email: string) => inviteModerator(accessToken, email),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-invitations'] });
+      setShowInviteModal(false);
+      setInviteEmail('');
+      setActionSuccess(`Invitation sent to ${res.data?.email || 'moderator'}.`);
+      if (res.data?.invitationUrl) {
+        setLastInviteUrl(res.data.invitationUrl);
+      }
       setActionError(null);
     },
     onError: (err: unknown) => {
-      setActionError(err instanceof Error ? err.message : 'Failed to provision university.');
+      setActionError(err instanceof Error ? err.message : 'Failed to dispatch moderator invitation.');
     },
   });
 
-  const toggleMutation = useMutation({
-    mutationFn: ({ universityId, isActive }: { universityId: string; isActive: boolean }) =>
-      toggleUniversityStatus(accessToken, universityId, isActive),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['super-admin-universities'] });
-      setActionSuccess('University status updated successfully.');
+  const resendMutation = useMutation({
+    mutationFn: (id: string) => resendModeratorInvitation(accessToken, id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-invitations'] });
+      setActionSuccess('Invitation resent successfully.');
+      if (res.data?.invitationUrl) {
+        setLastInviteUrl(res.data.invitationUrl);
+      }
       setActionError(null);
     },
     onError: (err: unknown) => {
-      setActionError(err instanceof Error ? err.message : 'Failed to change university status.');
+      setActionError(err instanceof Error ? err.message : 'Failed to resend invitation.');
     },
   });
 
-  const handleCreate = (e: React.FormEvent) => {
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) => revokeModeratorInvitation(accessToken, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-invitations'] });
+      setActionSuccess('Invitation revoked successfully.');
+      setActionError(null);
+    },
+    onError: (err: unknown) => {
+      setActionError(err instanceof Error ? err.message : 'Failed to revoke invitation.');
+    },
+  });
+
+  const handleInviteSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setActionError(null);
-    if (!name.trim() || !slug.trim() || !domain.trim()) {
-      setActionError('Name, slug, and domain are required.');
+    if (!inviteEmail.trim()) {
+      setActionError('Please provide an email address.');
       return;
     }
-    createMutation.mutate({
-      name: name.trim(),
-      slug: slug.trim().toLowerCase(),
-      domain: domain.trim().toLowerCase(),
-    });
+    inviteMutation.mutate(inviteEmail.trim().toLowerCase());
   };
 
   const stats = statsQuery.data?.data;
-  const universities = universitiesQuery.data?.data ?? [];
+  const invitations: ModeratorInvitation[] = invitationsQuery.data?.data ?? [];
 
   return (
     <section className="dashboard-page">
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
-          <p className="eyebrow">PLATFORM GOVERNANCE & MULTI-TENANCY</p>
+          <p className="eyebrow">ROOT PLATFORM ADMINISTRATION</p>
           <h1>Super Admin Console — {firstName}.</h1>
           <p className="lede">
-            Root System Desk · Manage institutional tenants, platform metrics, and system audit logs.
+            Campus Platform Oversight · Moderator management, alumni verification, and security governance.
           </p>
         </div>
 
@@ -121,18 +134,27 @@ export default function SuperAdminDashboardPage() {
             variant="secondary"
             onClick={() => {
               statsQuery.refetch();
-              universitiesQuery.refetch();
+              invitationsQuery.refetch();
             }}
-            disabled={universitiesQuery.isFetching}
+            disabled={statsQuery.isFetching || invitationsQuery.isFetching}
           >
-            <RefreshCw size={14} className={universitiesQuery.isFetching ? 'animate-spin' : ''} /> Refresh Console
+            <RefreshCw size={14} className={statsQuery.isFetching ? 'animate-spin' : ''} /> Refresh Console
           </Button>
         </div>
       </div>
 
       {actionSuccess ? (
-        <div style={{ marginTop: '1.25rem' }}>
-          <Badge variant="success">{actionSuccess}</Badge>
+        <div style={{ marginTop: '1.25rem', padding: '0.75rem 1rem', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '6px', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <CheckCircle2 size={16} /> {actionSuccess}
+        </div>
+      ) : null}
+
+      {lastInviteUrl ? (
+        <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '6px', fontSize: '0.85rem' }}>
+          <strong>Development Setup Link: </strong>
+          <a href={lastInviteUrl} style={{ color: '#b45309', textDecoration: 'underline' }}>
+            {lastInviteUrl}
+          </a>
         </div>
       ) : null}
 
@@ -142,27 +164,27 @@ export default function SuperAdminDashboardPage() {
         </div>
       ) : null}
 
-      {/* Platform Wide Stats */}
+      {/* Platform Stats */}
       <div className="dashboard-stats" style={{ marginTop: '1.5rem' }}>
-        <article>
-          <Building2 size={24} style={{ color: '#7c3aed' }} />
-          <strong>{stats?.totalUniversities ?? universities.length}</strong>
-          <span>INSTITUTIONAL TENANTS</span>
-        </article>
         <article>
           <Users size={24} style={{ color: '#2563eb' }} />
           <strong>{stats?.totalUsers ?? '…'}</strong>
-          <span>PLATFORM USERS</span>
+          <span>TOTAL COMMUNITY MEMBERS</span>
         </article>
         <article>
           <Clock size={24} style={{ color: '#d97706' }} />
           <strong>{stats?.pendingVerifications ?? '…'}</strong>
-          <span>GLOBAL VERIFICATIONS PENDING</span>
+          <span>ALUMNI ACCREDITATIONS PENDING</span>
         </article>
         <article>
           <BriefcaseBusiness size={24} style={{ color: '#16a34a' }} />
           <strong>{stats?.totalJobs ?? '…'}</strong>
-          <span>TOTAL LISTED JOBS</span>
+          <span>CAREER OPPORTUNITIES</span>
+        </article>
+        <article>
+          <Shield size={24} style={{ color: '#7c3aed' }} />
+          <strong>{invitations.filter((i) => !i.acceptedAt && !i.revokedAt).length}</strong>
+          <span>PENDING MODERATOR INVITES</span>
         </article>
       </div>
 
@@ -171,41 +193,44 @@ export default function SuperAdminDashboardPage() {
         <section>
           <div className="section-heading">
             <div>
-              <p className="eyebrow">GLOBAL QUEUES</p>
-              <h2>Cross-Tenant Oversight</h2>
+              <p className="eyebrow">ADMINISTRATIVE QUEUES</p>
+              <h2>Platform Operations & Review</h2>
             </div>
           </div>
           <p style={{ color: 'var(--muted, #666)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-            Access moderation and verification workflows across all connected universities. Super Admins
-            can review institutional staff queues and resolve edge escalations.
+            Direct access to core administrative queues. Review alumni accreditation requests, monitor job postings, and inspect immutable system audit logs.
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
             <Button asChild>
-              <Link href="/admin/verification">Global Verification Desk <ArrowUpRight size={14} /></Link>
+              <Link href="/admin/verification">Alumni Verifications <ArrowUpRight size={14} /></Link>
             </Button>
             <Button asChild variant="secondary">
               <Link href="/dashboard/moderator">Job Moderation Desk <ArrowUpRight size={14} /></Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link href="/dashboard/admin/audit-logs">Security Audit Logs <ArrowUpRight size={14} /></Link>
+            </Button>
             <Button asChild variant="ghost">
-              <Link href="/alumni">All Platform Members</Link>
+              <Link href="/alumni">Campus Directory</Link>
             </Button>
           </div>
         </section>
 
         <aside className="dashboard-note">
-          <p className="eyebrow">SECURITY CONFINEMENT</p>
-          <h2>Tenant Isolation & Sandboxing</h2>
+          <p className="eyebrow">GOVERNANCE POLICY</p>
+          <h2>Role Separation & Security</h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--muted, #444)', lineHeight: 1.5 }}>
-            • <strong>Permanent Owner:</strong> Safe from demotion and lockout.<br />
-            • <strong>Demo Accounts:</strong> Tagged with <code>isDemo: true</code> and restricted to sandbox data only.<br />
-            • <strong>Production Safeguard:</strong> Demo credentials, tokens, and endpoints are rejected in production.
+            • <strong>Super Admin:</strong> Full root privileges, user verification, moderator invitations, and security logs.<br />
+            • <strong>Moderators:</strong> Review and approve job postings and content flags.<br />
+            • <strong>Accredited Alumni:</strong> Verified by administration before gaining network access.<br />
+            • <strong>Single University:</strong> Scoped strictly to the university campus community.
           </p>
         </aside>
       </div>
 
-      {/* Provision University Modal */}
-      {showCreateModal ? (
+      {/* Invite Moderator Modal / Drawer */}
+      {showInviteModal ? (
         <div
           className="dashboard-note"
           style={{
@@ -218,128 +243,153 @@ export default function SuperAdminDashboardPage() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
-              <p className="eyebrow" style={{ margin: 0, color: '#7c3aed' }}>NEW TENANT ONBOARDING</p>
-              <h2 style={{ margin: '0.25rem 0 0' }}>Provision Institutional Tenant</h2>
+              <p className="eyebrow" style={{ margin: 0, color: '#7c3aed' }}>MODERATOR APPOINTMENT</p>
+              <h2 style={{ margin: '0.25rem 0 0' }}>Invite New Platform Moderator</h2>
             </div>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={() => setShowInviteModal(false)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
             >
               <X size={20} />
             </button>
           </div>
 
-          <form onSubmit={handleCreate} style={{ display: 'grid', gap: '1rem' }}>
+          <form onSubmit={handleInviteSubmit} style={{ display: 'grid', gap: '1rem' }}>
             <Input
-              label="Institution Full Name *"
-              placeholder="e.g. Bangladesh University of Engineering and Technology"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              label="Staff / Faculty Email Address *"
+              type="email"
+              placeholder="e.g. faculty.staff@university.edu"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              hint="An invitation with a secure 72-hour single-use setup link will be dispatched to this address."
               required
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-              <Input
-                label="Tenant Slug *"
-                placeholder="e.g. buet"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                required
-              />
-              <Input
-                label="Official Email Domain *"
-                placeholder="e.g. buet.ac.bd"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                required
-              />
-            </div>
-
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-              <Button type="button" variant="ghost" onClick={() => setShowCreateModal(false)}>
+              <Button type="button" variant="ghost" onClick={() => setShowInviteModal(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
-                <Plus size={16} /> {createMutation.isPending ? 'Provisioning…' : 'Create Institution'}
+              <Button type="submit" disabled={inviteMutation.isPending}>
+                <Send size={16} /> {inviteMutation.isPending ? 'Sending Invitation…' : 'Dispatch Invitation'}
               </Button>
             </div>
           </form>
         </div>
       ) : null}
 
-      {/* Universities / Tenants Table */}
-      <div id="universities" style={{ marginTop: '2.5rem' }}>
+      {/* Moderator Invitations Table */}
+      <div style={{ marginTop: '2.5rem' }}>
         <div className="section-heading">
           <div>
-            <p className="eyebrow">MULTI-TENANT REGISTRY</p>
-            <h2>Connected University Tenants ({universities.length})</h2>
+            <p className="eyebrow">STAFF DELEGATION</p>
+            <h2>Moderator Invitations ({invitations.length})</h2>
           </div>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} /> Provision Tenant
+          <Button onClick={() => setShowInviteModal(true)}>
+            <Plus size={16} /> Invite Moderator
           </Button>
         </div>
 
-        {universitiesQuery.isLoading ? (
-          <p className="empty-state">Loading registered universities…</p>
-        ) : universities.length === 0 ? (
-          <p className="empty-state">No universities provisioned yet.</p>
+        {invitationsQuery.isLoading ? (
+          <p className="empty-state">Loading moderator invitations…</p>
+        ) : invitations.length === 0 ? (
+          <div className="empty-state" style={{ padding: '2rem', textAlign: 'center', border: '2px dashed var(--line, #ccc)' }}>
+            <Shield size={32} style={{ margin: '0 auto 0.75rem', color: 'var(--muted)' }} />
+            <p style={{ margin: 0, fontWeight: 600 }}>No moderator invitations yet.</p>
+            <p style={{ margin: '0.25rem 0 1rem', fontSize: '0.85rem', color: 'var(--muted)' }}>
+              Invite faculty members or trusted staff to assist with campus job and content moderation.
+            </p>
+            <Button size="sm" onClick={() => setShowInviteModal(true)}>
+              <Plus size={14} /> Invite First Moderator
+            </Button>
+          </div>
         ) : (
           <div style={{ display: 'grid', gap: '0.75rem', marginTop: '1rem' }}>
-            {universities.map((uni) => (
-              <div
-                key={uni.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '1rem',
-                  padding: '1.25rem',
-                  borderRadius: '8px',
-                  background: 'var(--surface-muted, #f8f8f8)',
-                  border: '1px solid var(--border, #e5e5e5)',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <strong style={{ fontSize: '1.1rem' }}>{uni.name}</strong>
-                    {uni.isDemo ? (
-                      <Badge variant="neutral" style={{ color: '#d97706', borderColor: '#fcd34d' }}>
-                        Sandbox Demo
-                      </Badge>
-                    ) : null}
-                    <Badge variant={uni.isActive ? 'success' : 'neutral'}>
-                      {uni.isActive ? 'Active' : 'Suspended'}
-                    </Badge>
-                  </div>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--muted, #666)' }}>
-                    Slug: <code>{uni.slug}</code> · Domain: <code>{uni.domain}</code> · Registered:{' '}
-                    {new Date(uni.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
+            {invitations.map((inv) => {
+              const isAccepted = Boolean(inv.acceptedAt);
+              const isRevoked = Boolean(inv.revokedAt);
+              const isExpired = !isAccepted && !isRevoked && new Date(inv.expiresAt) < new Date();
+              const isPending = !isAccepted && !isRevoked && !isExpired;
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      toggleMutation.mutate({
-                        universityId: uni.id,
-                        isActive: !uni.isActive,
-                      })
-                    }
-                    disabled={toggleMutation.isPending}
-                    style={{
-                      color: uni.isActive ? '#dc2626' : '#16a34a',
-                      fontSize: '0.85rem',
-                    }}
-                  >
-                    <Power size={14} style={{ marginRight: '4px' }} />
-                    {uni.isActive ? 'Suspend' : 'Activate'}
-                  </Button>
+              return (
+                <div
+                  key={inv.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                    padding: '1.25rem',
+                    borderRadius: '8px',
+                    background: 'var(--surface-muted, #f8f8f8)',
+                    border: '1px solid var(--border, #e5e5e5)',
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <strong style={{ fontSize: '1.05rem' }}>{inv.email}</strong>
+                      <Badge
+                        variant={
+                          isAccepted
+                            ? 'success'
+                            : isRevoked
+                            ? 'error'
+                            : isExpired
+                            ? 'neutral'
+                            : 'neutral'
+                        }
+                      >
+                        {isAccepted
+                          ? 'Activated'
+                          : isRevoked
+                          ? 'Revoked'
+                          : isExpired
+                          ? 'Expired'
+                          : 'Pending (72h)'}
+                      </Badge>
+                    </div>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--muted, #666)' }}>
+                      Role: <code>{inv.role}</code> · Sent: {new Date(inv.createdAt).toLocaleString()} · Expires:{' '}
+                      {new Date(inv.expiresAt).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    {isPending ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => resendMutation.mutate(inv.id)}
+                          disabled={resendMutation.isPending}
+                        >
+                          <Send size={13} style={{ marginRight: '4px' }} /> Resend
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => revokeMutation.mutate(inv.id)}
+                          disabled={revokeMutation.isPending}
+                          style={{ color: '#dc2626' }}
+                        >
+                          <Trash2 size={13} style={{ marginRight: '4px' }} /> Revoke
+                        </Button>
+                      </>
+                    ) : isExpired ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => resendMutation.mutate(inv.id)}
+                        disabled={resendMutation.isPending}
+                      >
+                        <RefreshCw size={13} style={{ marginRight: '4px' }} /> Re-invite
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

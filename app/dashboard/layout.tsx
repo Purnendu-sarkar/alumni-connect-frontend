@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BriefcaseBusiness,
-  Building2,
   CheckCircle2,
   Clock,
   FileCheck2,
@@ -54,25 +53,14 @@ function getRoleNavLinks(role?: UserRole): NavLink[] {
     case 'MODERATOR':
       return [
         { href: '/dashboard/moderator', label: 'Moderator Desk', icon: ShieldAlert },
-        { href: '/admin/verification', label: 'Verification Queue', icon: ShieldCheck },
         { href: '/alumni', label: 'Campus Directory', icon: Users },
         { href: '/dashboard/profile', label: 'My Account', icon: UserRound },
         { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
       ];
-    case 'ADMIN':
-      return [
-        { href: '/dashboard/admin', label: 'University Admin', icon: Building2 },
-        { href: '/admin/verification', label: 'Verification Queue', icon: ShieldCheck },
-        { href: '/dashboard/moderator', label: 'Job Moderation', icon: FileCheck2 },
-        { href: '/dashboard/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert },
-        { href: '/alumni', label: 'Campus Directory', icon: Users },
-        { href: '/dashboard/profile', label: 'Admin Account', icon: UserRound },
-        { href: '/dashboard/settings', label: 'Privacy & Settings', icon: Settings },
-      ];
     case 'SUPER_ADMIN':
       return [
-        { href: '/dashboard/super-admin', label: 'Platform Console', icon: LayoutDashboard },
-        { href: '/admin/verification', label: 'Global Verifications', icon: ShieldCheck },
+        { href: '/dashboard/super-admin', label: 'Super Admin Console', icon: LayoutDashboard },
+        { href: '/admin/verification', label: 'Alumni Verifications', icon: ShieldCheck },
         { href: '/dashboard/moderator', label: 'Job Moderation', icon: FileCheck2 },
         { href: '/dashboard/admin/audit-logs', label: 'Security Audit Logs', icon: ShieldAlert },
         { href: '/alumni', label: 'All Members', icon: Users },
@@ -97,8 +85,6 @@ export default function DashboardLayout({ children }: Readonly<{ children: React
   const roleBadgeColor =
     user?.role === 'SUPER_ADMIN'
       ? { bg: '#ede9fe', text: '#6d28d9', border: '#ddd6fe' }
-      : user?.role === 'ADMIN'
-      ? { bg: '#dbeafe', text: '#1d4ed8', border: '#bfdbfe' }
       : user?.role === 'MODERATOR'
       ? { bg: '#fef3c7', text: '#b45309', border: '#fde68a' }
       : user?.role === 'ALUMNI'

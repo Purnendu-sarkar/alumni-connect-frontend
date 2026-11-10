@@ -21,7 +21,6 @@ const DEFAULT_DEMO_ROLES: Array<{ role: UserRole; label: string; email: string }
   { role: 'STUDENT', label: 'Student', email: 'demo.student@demo.edu' },
   { role: 'ALUMNI', label: 'Alumni', email: 'demo.alumni@demo.edu' },
   { role: 'MODERATOR', label: 'Moderator', email: 'demo.moderator@demo.edu' },
-  { role: 'ADMIN', label: 'University Admin', email: 'demo.admin@demo.edu' },
   { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'demo.superadmin@demo.edu' },
 ];
 
@@ -227,8 +226,6 @@ export function LoginForm() {
                         backgroundColor:
                           item.role === 'SUPER_ADMIN'
                             ? '#7c3aed'
-                            : item.role === 'ADMIN'
-                            ? '#2563eb'
                             : item.role === 'MODERATOR'
                             ? '#d97706'
                             : item.role === 'ALUMNI'
