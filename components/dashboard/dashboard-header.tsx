@@ -19,6 +19,14 @@ import {
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { logout } from '@/lib/api/auth.api';
 import { cn } from '@/lib/utils/cn';
 import { useAuthStore } from '@/store/auth-store';
@@ -39,11 +47,9 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [notifications, setNotifications] = useState(demoNotifications);
 
   const notifRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -57,14 +63,11 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
     return { href, label, isLast: index === pathParts.length - 1 };
   });
 
-  // Handle outside click to close popovers
+  // Handle outside click to close notification popover
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setShowNotifications(false);
-      }
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowUserMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -104,8 +107,8 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 flex items-center justify-between gap-4 h-16 px-4 sm:px-6 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs',
-        className,
+        'h-16 px-4 sm:px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 shrink-0 z-30 sticky top-0',
+        className
       )}
     >
       {/* Left: Mobile hamburger & Breadcrumbs */}
@@ -167,7 +170,7 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
           </button>
 
           {showNotifications ? (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 p-0 overflow-hidden animate-in fade-in duration-150 z-50">
+            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 p-0 overflow-hidden animate-in fade-in duration-150 z-50">
               <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 m-0">Notifications</h4>
@@ -181,7 +184,7 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1"
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 cursor-pointer"
                   >
                     <Check size={12} /> Mark read
                   </button>
@@ -190,30 +193,26 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
 
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                 {notifications.length === 0 ? (
-                  <p className="p-6 text-center text-xs text-slate-400">No notifications at this time.</p>
+                  <div className="p-6 text-center text-xs text-slate-500">
+                    No new notifications right now.
+                  </div>
                 ) : (
                   notifications.map((notif) => (
                     <div
                       key={notif.id}
                       className={cn(
-                        'p-3 text-xs transition-colors hover:bg-slate-50 flex flex-col gap-1',
-                        !notif.isRead && 'bg-blue-50/40',
+                        'p-3.5 text-xs transition-colors hover:bg-slate-50',
+                        !notif.isRead && 'bg-blue-50/40'
                       )}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <strong className="text-slate-900 font-semibold">{notif.title}</strong>
-                        <span className="text-[10px] text-slate-400 whitespace-nowrap">{notif.createdAt}</span>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-bold text-slate-900 m-0 leading-snug">{notif.title}</p>
+                        {!notif.isRead ? (
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600 shrink-0 mt-1" />
+                        ) : null}
                       </div>
-                      <p className="text-slate-600 text-[11px] m-0 line-clamp-2">{notif.message}</p>
-                      {notif.link ? (
-                        <Link
-                          href={notif.link}
-                          onClick={() => setShowNotifications(false)}
-                          className="text-[11px] font-semibold text-blue-600 hover:underline mt-1"
-                        >
-                          View details →
-                        </Link>
-                      ) : null}
+                      <p className="text-slate-600 mt-1 m-0 leading-relaxed text-[11px]">{notif.message}</p>
+                      <span className="text-[10px] text-slate-400 mt-1.5 block font-mono">{notif.createdAt}</span>
                     </div>
                   ))
                 )}
@@ -232,66 +231,54 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
           ) : null}
         </div>
 
-        {/* User Profile Dropdown */}
-        <div ref={menuRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-left"
-            aria-label="User account menu"
-          >
-            <Avatar name={user?.name || 'User'} src={user?.avatarUrl} />
-            <div className="hidden lg:block text-left">
-              <p className="text-xs font-bold text-slate-900 truncate max-w-[120px] m-0 leading-tight">
-                {user?.name?.split(' ')[0] || 'Account'}
-              </p>
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider m-0">
-                {user?.role?.replace('_', ' ')}
-              </p>
-            </div>
-            <ChevronDown size={14} className="text-slate-400 hidden lg:block" />
-          </button>
-
-          {showUserMenu ? (
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 overflow-hidden animate-in fade-in duration-150 z-50">
-              <div className="px-3.5 py-2.5 border-b border-slate-100">
-                <p className="text-xs font-bold text-slate-900 truncate m-0">{user?.name}</p>
-                <p className="text-[11px] text-slate-500 truncate m-0">{user?.email}</p>
+        {/* User Profile Dropdown using shadcn DropdownMenu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-left cursor-pointer outline-none"
+              aria-label="User account menu"
+            >
+              <Avatar name={user?.name || 'User'} src={user?.avatarUrl} size="sm" />
+              <div className="hidden lg:block text-left">
+                <p className="text-xs font-bold text-slate-900 truncate max-w-[120px] m-0 leading-tight">
+                  {user?.name?.split(' ')[0] || 'Account'}
+                </p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider m-0">
+                  {user?.role?.replace('_', ' ')}
+                </p>
               </div>
-
-              <div className="py-1">
-                <Link
-                  href={`${rolePrefix}/profile`}
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                >
-                  <User size={15} className="text-slate-400" />
-                  <span>My Profile</span>
-                </Link>
-
-                <Link
-                  href={`${rolePrefix}/settings`}
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                >
-                  <Settings size={15} className="text-slate-400" />
-                  <span>Account Settings</span>
-                </Link>
-              </div>
-
-              <div className="pt-1 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                >
-                  <LogOut size={15} />
-                  <span>Sign out</span>
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </div>
+              <ChevronDown size={14} className="text-slate-400 hidden lg:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 p-1.5">
+            <DropdownMenuLabel>
+              <p className="text-xs font-bold text-slate-900 truncate m-0">{user?.name}</p>
+              <p className="text-[11px] text-slate-500 font-normal truncate m-0">{user?.email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href={`${rolePrefix}/profile`} className="flex items-center gap-2 cursor-pointer">
+                <User size={14} className="text-slate-400" />
+                <span>My Profile</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`${rolePrefix}/settings`} className="flex items-center gap-2 cursor-pointer">
+                <Settings size={14} className="text-slate-400" />
+                <span>Account Settings</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-rose-600 focus:text-rose-700 focus:bg-rose-50 flex items-center gap-2 cursor-pointer font-semibold"
+            >
+              <LogOut size={14} />
+              <span>Sign out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

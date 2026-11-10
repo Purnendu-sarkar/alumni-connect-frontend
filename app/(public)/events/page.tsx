@@ -4,6 +4,7 @@ import { ArrowUpRight, CalendarDays, Clock, MapPin, Sparkles, Users } from 'luci
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
 
 export const metadata: Metadata = {
@@ -67,18 +68,18 @@ export default function EventsPage() {
         </p>
       </div>
 
-      {/* Featured Event Card */}
+      {/* Featured Event Card using shadcn Card */}
       {featured && (
-        <div className="bg-linear-to-br from-slate-900 to-blue-950 text-white rounded-3xl p-8 sm:p-12 shadow-xl border border-slate-800 relative overflow-hidden">
+        <Card className="bg-linear-to-br from-slate-900 to-blue-950 text-white border-slate-800 p-8 sm:p-12 relative overflow-hidden shadow-xl">
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
             <div className="space-y-4 max-w-2xl">
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-400/30 flex items-center gap-1">
                   <Sparkles size={12} /> Key Event of the Year
                 </span>
-                <span className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-xs font-semibold">
+                <Badge variant="secondary" className="bg-slate-800 text-slate-300">
                   {featured.type}
-                </span>
+                </Badge>
               </div>
 
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight m-0">
@@ -118,10 +119,10 @@ export default function EventsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
-      {/* Upcoming Events Grid */}
+      {/* Upcoming Events Grid using shadcn Card */}
       <div>
         <SectionHeading
           eyebrow="SCHEDULED CONVERSATIONS"
@@ -131,9 +132,9 @@ export default function EventsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {upcoming.map((event) => (
-            <article
+            <Card
               key={event.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between"
+              className="flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all duration-200"
             >
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-xl bg-blue-50 border border-blue-100 flex flex-col items-center justify-center text-center shrink-0">
@@ -168,20 +169,20 @@ export default function EventsPage() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-end">
+              <CardFooter className="p-0 pt-4 mt-6 border-t border-slate-100 flex items-center justify-end">
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/events/${event.id}`} className="inline-flex items-center gap-1">
                     Event Details <ArrowUpRight size={13} />
                   </Link>
                 </Button>
-              </div>
-            </article>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       </div>
 
-      {/* Propose an Event CTA */}
-      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      {/* Propose an Event CTA Card */}
+      <Card className="bg-slate-50 border-slate-200 p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-none">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-white rounded-xl border border-slate-200 text-blue-600 shrink-0">
             <Users size={24} />
@@ -199,10 +200,10 @@ export default function EventsPage() {
           </div>
         </div>
 
-        <Button asChild size="sm" className="shrink-0">
+        <Button asChild size="sm" className="shrink-0 font-bold">
           <Link href="/register">Propose an Event</Link>
         </Button>
-      </div>
+      </Card>
     </div>
   );
 }

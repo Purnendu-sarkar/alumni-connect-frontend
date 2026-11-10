@@ -15,7 +15,9 @@ import {
 
 import { AlumniCard } from '@/components/alumni/alumni-card';
 import { JobCard } from '@/components/jobs/job-card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { demoAlumni, demoJobs } from '@/features/shared/demo-data';
 import { formatCompactNumber } from '@/lib/utils/format';
@@ -44,9 +46,9 @@ const proofPoints = [
 export default function HomePage() {
   return (
     <div className="space-y-16 lg:space-y-24 py-8 md:py-12">
-      {/* Hero Section */}
+      {/* Hero Section using shadcn Card */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-8 sm:p-12 lg:p-16 shadow-xl border border-slate-800">
+        <Card className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-8 sm:p-12 lg:p-16 shadow-xl border-slate-800">
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
           <div className="relative z-10 max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
@@ -92,18 +94,18 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       </section>
 
-      {/* Proof Points Strip */}
+      {/* Proof Points Strip using shadcn Card */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {proofPoints.map((point) => {
             const Icon = point.icon;
             return (
-              <div
+              <Card
                 key={point.number}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                className="hover:border-blue-300 hover:shadow-md transition-all duration-200"
               >
                 <div className="flex items-center justify-between gap-4 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold">
@@ -119,13 +121,13 @@ export default function HomePage() {
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
                   {point.description}
                 </p>
-              </div>
+              </Card>
             );
           })}
         </div>
       </section>
 
-      {/* Directory Preview Section */}
+      {/* Directory Preview Section using shadcn AlumniCard */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="CAMPUS DIRECTORY"
@@ -147,9 +149,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Mentorship Callout Banner */}
+      {/* Mentorship Callout Banner using shadcn Card */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-blue-600 text-white rounded-3xl p-8 sm:p-12 shadow-lg flex flex-col md:flex-row items-center justify-between gap-8">
+        <Card className="bg-blue-600 text-white rounded-3xl p-8 sm:p-12 shadow-lg border-blue-600 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="space-y-3 max-w-xl">
             <span className="text-xs font-bold uppercase tracking-widest text-blue-200 font-mono">
               THE MENTORSHIP DESK
@@ -162,17 +164,17 @@ export default function HomePage() {
             </p>
           </div>
           <div className="shrink-0 flex flex-col sm:flex-row gap-3">
-            <Button asChild size="lg" className="bg-white hover:bg-slate-100 text-blue-900 font-bold shadow-xs">
+            <Button asChild size="lg" className="bg-white hover:bg-slate-100 text-blue-900 font-bold shadow-xs border-white">
               <Link href="/mentorship">Explore Mentors</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="border-blue-400 text-white hover:bg-blue-700 font-semibold">
               <Link href="/register">Become a Mentor</Link>
             </Button>
           </div>
-        </div>
+        </Card>
       </section>
 
-      {/* Job Opportunities Section */}
+      {/* Job Opportunities Section using shadcn JobCard */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="ON THE BOARD"
@@ -194,9 +196,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Network Metrics Stats */}
+      {/* Network Metrics Stats using shadcn Card */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
+        <Card className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
           <div className="space-y-1">
             <span className="text-3xl sm:text-4xl font-extrabold text-blue-400 font-mono">
               {formatCompactNumber(2400)}+
@@ -226,12 +228,12 @@ export default function HomePage() {
             </p>
             <p className="text-[11px] text-slate-500 m-0">Direct referrals with hiring alumni</p>
           </div>
-        </div>
+        </Card>
       </section>
 
-      {/* Upcoming Event & Join Banner */}
+      {/* Upcoming Event & Join Banner using shadcn Card */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-xs flex flex-col md:flex-row items-center justify-between gap-8">
+        <Card className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 shrink-0">
               <CalendarDays size={28} />
@@ -257,7 +259,7 @@ export default function HomePage() {
               <Link href="/register">Create Profile</Link>
             </Button>
           </div>
-        </div>
+        </Card>
       </section>
     </div>
   );

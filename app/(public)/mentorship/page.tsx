@@ -15,13 +15,24 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
-  X,
 } from 'lucide-react';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthStore } from '@/store/auth-store';
 
 interface Mentor {
@@ -122,43 +133,44 @@ export default function MentorshipHubPage() {
       </div>
 
       {submittedMessage && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 flex items-center gap-3 text-sm font-semibold animate-in fade-in duration-200">
-          <CheckCircle2 size={20} className="text-emerald-600 shrink-0" />
-          <span>{submittedMessage}</span>
-        </div>
+        <Alert variant="success" className="animate-in fade-in duration-200">
+          <CheckCircle2 size={16} />
+          <AlertTitle>Request Dispatched Successfully</AlertTitle>
+          <AlertDescription>{submittedMessage}</AlertDescription>
+        </Alert>
       )}
 
-      {/* 3 Steps Overview */}
+      {/* 3 Steps Overview using shadcn Card */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-3">
+        <Card className="hover:border-blue-300 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-1">
             01
           </div>
           <h3 className="text-base font-bold text-slate-900 m-0">Find by Specialization</h3>
-          <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
+          <p className="text-xs text-slate-600 leading-relaxed m-0">
             Browse verified mentors based on their real industry stack, company experience, and technical specialization.
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-3">
+        <Card className="hover:border-blue-300 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-1">
             02
           </div>
           <h3 className="text-base font-bold text-slate-900 m-0">Send a Focused Ask</h3>
-          <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
+          <p className="text-xs text-slate-600 leading-relaxed m-0">
             Share your specific challenge—whether it is architecture guidance, mock interviews, or graduate school direction.
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 transition-all">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-3">
+        <Card className="hover:border-blue-300 transition-all">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs font-mono mb-1">
             03
           </div>
           <h3 className="text-base font-bold text-slate-900 m-0">Grow & Pay It Forward</h3>
-          <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
+          <p className="text-xs text-slate-600 leading-relaxed m-0">
             Connect 1-on-1, build a lifelong peer relationship, and eventually mentor the next graduating cohort.
           </p>
-        </div>
+        </Card>
       </div>
 
       {/* Track Filters */}
@@ -168,22 +180,19 @@ export default function MentorshipHubPage() {
         </p>
         <div className="flex gap-2 flex-wrap">
           {tracks.map((track) => (
-            <button
+            <Button
               key={track}
+              variant={selectedTrack === track ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setSelectedTrack(track)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                selectedTrack === track
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-              }`}
             >
               {track}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      {/* Mentors Grid */}
+      {/* Mentors Grid using shadcn Card */}
       <div>
         <SectionHeading
           eyebrow="ACCREDITED MENTORS"
@@ -191,52 +200,56 @@ export default function MentorshipHubPage() {
           description="Alumni committed to answering questions and guiding campus students."
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {filteredMentors.map((mentor) => (
-            <article
+            <Card
               key={mentor.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between"
+              className="flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all duration-200"
             >
               <div>
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar name={mentor.name} size="md" />
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900 m-0">{mentor.name}</h3>
-                      <p className="text-xs text-slate-500 m-0">{mentor.batch} · {mentor.department}</p>
+                <CardHeader className="p-0 mb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={mentor.name} size="md" />
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900 m-0">{mentor.name}</h3>
+                        <p className="text-xs text-slate-500 m-0">{mentor.batch} · {mentor.department}</p>
+                      </div>
+                    </div>
+                    <Badge variant={mentor.available ? 'success' : 'neutral'}>
+                      {mentor.available ? 'Available' : 'Cohort Full'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-0 space-y-3">
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                    <p className="text-xs font-bold text-slate-800 m-0">{mentor.role}</p>
+                    <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 m-0">
+                      <Building2 size={13} className="text-slate-400" />
+                      {mentor.company}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                      Focus Areas
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {mentor.focusAreas.map((area) => (
+                        <span
+                          key={area}
+                          className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[11px] font-semibold"
+                        >
+                          {area}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <Badge variant={mentor.available ? 'success' : 'neutral'}>
-                    {mentor.available ? 'Available' : 'Cohort Full'}
-                  </Badge>
-                </div>
-
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 mb-4">
-                  <p className="text-xs font-bold text-slate-800 m-0">{mentor.role}</p>
-                  <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5 m-0">
-                    <Building2 size={13} className="text-slate-400" />
-                    {mentor.company}
-                  </p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono m-0">
-                    Focus Areas
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {mentor.focusAreas.map((area) => (
-                      <span
-                        key={area}
-                        className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-[11px] font-semibold"
-                      >
-                        {area}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                </CardContent>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+              <CardFooter className="p-0 pt-4 mt-6 border-t border-slate-100 flex items-center justify-between gap-4">
                 <span className="text-xs text-slate-500">
                   <strong>{mentor.menteesCount}</strong> students guided
                 </span>
@@ -254,69 +267,53 @@ export default function MentorshipHubPage() {
                     <Link href="/login">Sign in to Ask</Link>
                   </Button>
                 )}
-              </div>
-            </article>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       </div>
 
-      {/* Modal: Request Mentorship */}
-      {requestMentor && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 font-mono">
-                  STRUCTURED MENTORSHIP
-                </span>
-                <h3 className="text-lg font-bold text-slate-900 m-0">
-                  Request Guidance from {requestMentor.name}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRequestMentor(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-                aria-label="Close dialog"
-              >
-                <X size={20} />
-              </button>
+      {/* Reusable shadcn Dialog: Request Mentorship */}
+      <Dialog open={Boolean(requestMentor)} onOpenChange={(open) => !open && setRequestMentor(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 font-mono">
+              STRUCTURED MENTORSHIP
+            </span>
+            <DialogTitle>
+              Request Guidance from {requestMentor?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {requestMentor?.role} at {requestMentor?.company} ({requestMentor?.batch})
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSendRequest} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="mentorship-note">
+                What specific area would you like guidance on?
+              </Label>
+              <Textarea
+                id="mentorship-note"
+                rows={4}
+                required
+                placeholder="Introduce yourself, your academic semester, and what concrete question or challenge you are seeking feedback on."
+                value={requestNote}
+                onChange={(e) => setRequestNote(e.target.value)}
+              />
             </div>
 
-            <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-900 space-y-1">
-              <p className="font-semibold m-0">Mentor Credentials:</p>
-              <p className="m-0 text-slate-700">
-                {requestMentor.role} at <strong>{requestMentor.company}</strong> ({requestMentor.batch})
-              </p>
-            </div>
-
-            <form onSubmit={handleSendRequest} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">
-                  What specific area would you like guidance on?
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                  placeholder="Introduce yourself, your current academic semester, and what concrete question or challenge you are seeking feedback on."
-                  value={requestNote}
-                  onChange={(e) => setRequestNote(e.target.value)}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => setRequestMentor(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm">
-                  Deliver Mentorship Request
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRequestMentor(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm">
+                Deliver Mentorship Request
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

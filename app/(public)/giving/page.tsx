@@ -18,11 +18,22 @@ import {
   Sparkles,
   TrendingUp,
   Users,
-  X,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -256,9 +267,9 @@ export default function GivingPage() {
         </p>
       </div>
 
-      {/* Aggregate Financial Metrics Banner */}
+      {/* Aggregate Financial Metrics using shadcn Card */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <Card className="p-6">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono m-0">
             Funds Mobilized
           </p>
@@ -268,9 +279,9 @@ export default function GivingPage() {
           <p className="text-xs font-semibold text-emerald-600 mt-1 m-0">
             ↑ 82% of campus funding goal
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <Card className="p-6">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono m-0">
             Distinguished Donors
           </p>
@@ -280,9 +291,9 @@ export default function GivingPage() {
           <p className="text-xs text-slate-500 mt-1 m-0">
             Alumni across 14 countries
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <Card className="p-6">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono m-0">
             Scholarships Awarded
           </p>
@@ -292,9 +303,9 @@ export default function GivingPage() {
           <p className="text-xs text-slate-500 mt-1 m-0">
             Full-tuition waivers granted
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
+        <Card className="p-6">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono m-0">
             Laboratories Upgraded
           </p>
@@ -304,7 +315,7 @@ export default function GivingPage() {
           <p className="text-xs text-slate-500 mt-1 m-0">
             AI, IoT, and Robotics Hubs
           </p>
-        </div>
+        </Card>
       </div>
 
       {/* Category Navigation Tabs */}
@@ -315,22 +326,18 @@ export default function GivingPage() {
           { key: 'RESEARCH', label: 'Research & Labs' },
           { key: 'INFRASTRUCTURE', label: 'Campus Infrastructure' },
         ].map((tab) => (
-          <button
+          <Button
             key={tab.key}
-            type="button"
+            variant={selectedCategory === tab.key ? 'default' : 'outline'}
+            size="sm"
             onClick={() => setSelectedCategory(tab.key)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 ${
-              selectedCategory === tab.key
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
           >
             {tab.label}
-          </button>
+          </Button>
         ))}
       </div>
 
-      {/* Campaigns Listing Grid */}
+      {/* Campaigns Listing Grid using shadcn Card & Progress */}
       <div>
         <SectionHeading
           eyebrow="CURRENT INITIATIVES"
@@ -343,75 +350,72 @@ export default function GivingPage() {
             const percent = Math.min(100, Math.round((camp.raisedAmount / camp.targetAmount) * 100));
 
             return (
-              <article
+              <Card
                 key={camp.id}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between"
+                className="flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all duration-200"
               >
                 <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <Badge variant={camp.category === 'Research' ? 'warning' : 'neutral'}>
-                      {camp.category}
-                    </Badge>
-                    {camp.urgent && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
-                        Priority Need
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="text-base font-bold text-slate-900 leading-snug m-0">
-                    {camp.title}
-                  </h3>
-
-                  <p className="text-xs font-semibold text-slate-500 mt-1 m-0">
-                    Dept of {camp.department}
-                  </p>
-
-                  <p className="text-xs text-slate-600 mt-2.5 line-clamp-3 leading-relaxed m-0">
-                    {camp.summary}
-                  </p>
-
-                  {/* Progress Bar */}
-                  <div className="mt-5 space-y-2">
-                    <div className="flex items-baseline justify-between text-xs font-bold">
-                      <span className="text-slate-900 font-mono text-sm">
-                        {formatBDT(camp.raisedAmount)}
-                      </span>
-                      <span className="text-slate-500 font-normal">
-                        of {formatBDT(camp.targetAmount)} ({percent}%)
-                      </span>
+                  <CardHeader className="p-0 mb-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <Badge variant={camp.category === 'Research' ? 'warning' : 'neutral'}>
+                        {camp.category}
+                      </Badge>
+                      {camp.urgent && (
+                        <Badge variant="destructive">Priority Need</Badge>
+                      )}
                     </div>
+                  </CardHeader>
 
-                    <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-600 rounded-full transition-all duration-500"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
+                  <CardContent className="p-0 space-y-2">
+                    <h3 className="text-base font-bold text-slate-900 leading-snug m-0">
+                      {camp.title}
+                    </h3>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                      <span><strong>{camp.donorsCount}</strong> Donors</span>
-                      <span><strong>{camp.daysRemaining}</strong> days left</span>
+                    <p className="text-xs font-semibold text-slate-500 m-0">
+                      Dept of {camp.department}
+                    </p>
+
+                    <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed m-0">
+                      {camp.summary}
+                    </p>
+
+                    {/* Progress with shadcn Progress */}
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-baseline justify-between text-xs font-bold">
+                        <span className="text-slate-900 font-mono text-sm">
+                          {formatBDT(camp.raisedAmount)}
+                        </span>
+                        <span className="text-slate-500 font-normal">
+                          of {formatBDT(camp.targetAmount)} ({percent}%)
+                        </span>
+                      </div>
+
+                      <Progress value={percent} className="h-2.5" />
+
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                        <span><strong>{camp.donorsCount}</strong> Donors</span>
+                        <span><strong>{camp.daysRemaining}</strong> days left</span>
+                      </div>
                     </div>
-                  </div>
+                  </CardContent>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <CardFooter className="p-0 pt-4 mt-6 border-t border-slate-100">
                   <Button
                     size="sm"
-                    className="w-full justify-center"
+                    className="w-full justify-center font-bold"
                     onClick={() => handleOpenContribute(camp)}
                   >
                     Pledge Support
                   </Button>
-                </div>
-              </article>
+                </CardFooter>
+              </Card>
             );
           })}
         </div>
       </div>
 
-      {/* Wall of Honor / Recent Donors */}
+      {/* Wall of Honor using shadcn Card */}
       <div>
         <SectionHeading
           eyebrow="WALL OF HONOR"
@@ -419,15 +423,13 @@ export default function GivingPage() {
           description="Recognizing graduates and organizations supporting student advancement."
         />
 
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100 mt-6">
+        <Card className="p-0 divide-y divide-slate-100 overflow-hidden mt-6">
           {DONORS_HONOR_ROLL.map((donor) => (
             <div key={donor.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-slate-900">{donor.name}</span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                    {donor.tier}
-                  </span>
+                  <Badge variant="warning">{donor.tier}</Badge>
                 </div>
                 <p className="text-xs text-slate-500 m-0">
                   {donor.batch} · Dept of {donor.department} · Pledged to <em>{donor.campaign}</em>
@@ -444,162 +446,123 @@ export default function GivingPage() {
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       </div>
 
-      {/* Interactive Modal: Pledge Contribution */}
-      {activeModalCampaign && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
-        >
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in zoom-in-95 duration-150 max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between gap-4 pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 font-mono">
-                  MAKE A CONTRIBUTION
-                </span>
-                <h3 className="text-base font-bold text-slate-900 m-0 leading-tight">
-                  {activeModalCampaign.title}
-                </h3>
-                <p className="text-xs text-slate-500 m-0 mt-0.5">
-                  Dept of {activeModalCampaign.department}
-                </p>
+      {/* Reusable shadcn Dialog: Pledge Contribution */}
+      <Dialog open={Boolean(activeModalCampaign)} onOpenChange={(open) => !open && setActiveModalCampaign(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 font-mono">
+              MAKE A CONTRIBUTION
+            </span>
+            <DialogTitle>
+              {activeModalCampaign?.title}
+            </DialogTitle>
+            <DialogDescription>
+              Dept of {activeModalCampaign?.department}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!successReceipt ? (
+            <form onSubmit={handleContributeSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>SELECT CONTRIBUTION AMOUNT (অনুদান নির্বাচন করুন)</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1000, 2500, 5000, 10000].map((tier) => (
+                    <Button
+                      key={tier}
+                      type="button"
+                      variant={selectedTier === tier && !customAmount ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTier(tier);
+                        setCustomAmount('');
+                      }}
+                      className="font-mono font-bold"
+                    >
+                      {formatBDT(tier)}
+                    </Button>
+                  ))}
+                </div>
+
+                <Input
+                  type="number"
+                  placeholder="Or enter custom amount in ৳ (e.g. 25000)"
+                  value={customAmount}
+                  onChange={(e) => {
+                    setCustomAmount(e.target.value);
+                    setSelectedTier(0);
+                  }}
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveModalCampaign(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
-                aria-label="Close modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
 
-            {!successReceipt ? (
-              <form onSubmit={handleContributeSubmit} className="space-y-4">
-                {/* Preset Gift Amount Tiers */}
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-700">
-                    SELECT CONTRIBUTION AMOUNT (অনুদান নির্বাচন করুন)
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[1000, 2500, 5000, 10000].map((tier) => (
-                      <button
-                        key={tier}
-                        type="button"
-                        onClick={() => {
-                          setSelectedTier(tier);
-                          setCustomAmount('');
-                        }}
-                        className={`py-2 px-1 rounded-xl text-xs font-bold font-mono transition-all duration-150 ${
-                          selectedTier === tier && !customAmount
-                            ? 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {formatBDT(tier)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <input
-                    type="number"
-                    placeholder="Or enter custom amount in ৳ (e.g. 25000)"
-                    value={customAmount}
-                    onChange={(e) => {
-                      setCustomAmount(e.target.value);
-                      setSelectedTier(0);
-                    }}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  />
-                </div>
-
-                {/* Donor Details */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Sadia Rahman"
-                      value={donorName}
-                      onChange={(e) => setDonorName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Batch / Cohort
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Class of 2020"
-                      value={donorBatch}
-                      onChange={(e) => setDonorBatch(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Dedication Note */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Dedication Note (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. In honor of Batch 2018 faculty mentors"
-                    value={dedicationNote}
-                    onChange={(e) => setDedicationNote(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <Label htmlFor="donor-name">Full Name *</Label>
+                  <Input
+                    id="donor-name"
+                    required
+                    placeholder="e.g. Sadia Rahman"
+                    value={donorName}
+                    onChange={(e) => setDonorName(e.target.value)}
                   />
                 </div>
 
-                {/* Anonymous Toggle */}
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isAnonymous}
-                    onChange={(e) => setIsAnonymous(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                <div className="space-y-1">
+                  <Label htmlFor="donor-batch">Batch / Cohort</Label>
+                  <Input
+                    id="donor-batch"
+                    placeholder="e.g. Class of 2020"
+                    value={donorBatch}
+                    onChange={(e) => setDonorBatch(e.target.value)}
                   />
-                  List my contribution anonymously on the public Wall of Honor
-                </label>
-
-                {/* Payment Channel Selector */}
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Payment Gateway
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { key: 'BKASH', label: 'bKash' },
-                      { key: 'NAGAD', label: 'Nagad' },
-                      { key: 'CARD', label: 'Debit/Credit' },
-                      { key: 'BANK', label: 'Bank Wire' },
-                    ].map((method) => (
-                      <button
-                        key={method.key}
-                        type="button"
-                        onClick={() => setPaymentMethod(method.key as any)}
-                        className={`py-2 px-1 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                          paymentMethod === method.key
-                            ? 'bg-blue-50 border-2 border-blue-600 text-blue-700 font-bold'
-                            : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
-                      >
-                        {method.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
+              </div>
 
-                {/* Submit Action */}
+              <div className="space-y-1">
+                <Label htmlFor="dedication">Dedication Note (Optional)</Label>
+                <Input
+                  id="dedication"
+                  placeholder="e.g. In honor of Batch 2018 faculty mentors"
+                  value={dedicationNote}
+                  onChange={(e) => setDedicationNote(e.target.value)}
+                />
+              </div>
+
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isAnonymous}
+                  onChange={(e) => setIsAnonymous(e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                />
+                List my contribution anonymously on the public Wall of Honor
+              </label>
+
+              <div className="space-y-1.5">
+                <Label>Payment Gateway</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { key: 'BKASH', label: 'bKash' },
+                    { key: 'NAGAD', label: 'Nagad' },
+                    { key: 'CARD', label: 'Card' },
+                    { key: 'BANK', label: 'Bank' },
+                  ].map((method) => (
+                    <Button
+                      key={method.key}
+                      type="button"
+                      variant={paymentMethod === method.key ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setPaymentMethod(method.key as any)}
+                    >
+                      {method.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <DialogFooter>
                 <Button
                   type="submit"
                   size="default"
@@ -614,61 +577,60 @@ export default function GivingPage() {
                     </>
                   )}
                 </Button>
-              </form>
-            ) : (
-              /* Success Receipt View */
-              <div className="space-y-5 text-center">
-                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                  <CheckCircle2 size={32} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900 m-0">Thank You for Your Generosity!</h3>
-                  <p className="text-xs text-slate-500 mt-1 m-0">
-                    Your pledge directly advances university scholarship and student research.
-                  </p>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left space-y-2 text-xs">
-                  <div className="flex justify-between border-b border-slate-200 pb-2">
-                    <span className="text-slate-500">Voucher Reference:</span>
-                    <span className="font-mono font-bold text-slate-900">{successReceipt.receiptId}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-200 pb-2">
-                    <span className="text-slate-500">Contribution Amount:</span>
-                    <span className="font-mono font-bold text-blue-600 text-sm">{formatBDT(successReceipt.amount)}</span>
-                  </div>
-                  <div className="flex justify-between border-b border-slate-200 pb-2">
-                    <span className="text-slate-500">Designated Fund:</span>
-                    <span className="font-semibold text-slate-800 text-right max-w-[200px] truncate">{successReceipt.campaign}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Payment Gateway:</span>
-                    <span className="font-semibold text-slate-800">{paymentMethod}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 justify-center"
-                    onClick={() => alert(`Official tax receipt ${successReceipt.receiptId} downloaded.`)}
-                  >
-                    <Download size={14} /> PDF Receipt
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1 justify-center"
-                    onClick={() => setActiveModalCampaign(null)}
-                  >
-                    Done & Return
-                  </Button>
-                </div>
+              </DialogFooter>
+            </form>
+          ) : (
+            <div className="space-y-5 text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={32} />
               </div>
-            )}
-          </div>
-        </div>
-      )}
+              <div>
+                <h3 className="text-xl font-bold text-slate-900 m-0">Thank You for Your Generosity!</h3>
+                <p className="text-xs text-slate-500 mt-1 m-0">
+                  Your pledge directly advances university scholarship and student research.
+                </p>
+              </div>
+
+              <Card className="p-4 text-left space-y-2 text-xs bg-slate-50">
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Voucher Reference:</span>
+                  <span className="font-mono font-bold text-slate-900">{successReceipt.receiptId}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Contribution Amount:</span>
+                  <span className="font-mono font-bold text-blue-600 text-sm">{formatBDT(successReceipt.amount)}</span>
+                </div>
+                <div className="flex justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Designated Fund:</span>
+                  <span className="font-semibold text-slate-800 text-right max-w-[200px] truncate">{successReceipt.campaign}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Payment Gateway:</span>
+                  <span className="font-semibold text-slate-800">{paymentMethod}</span>
+                </div>
+              </Card>
+
+              <DialogFooter className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 justify-center"
+                  onClick={() => alert(`Official tax receipt ${successReceipt.receiptId} downloaded.`)}
+                >
+                  <Download size={14} /> PDF Receipt
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 justify-center"
+                  onClick={() => setActiveModalCampaign(null)}
+                >
+                  Done & Return
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

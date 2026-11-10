@@ -19,6 +19,8 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { TableSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -88,7 +90,6 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
   });
 
   const apiApplications = jobsQuery.data?.data?.applications ?? [];
-  // Use API applications if available, otherwise display curated sandbox applications
   const rawApplications = apiApplications.length > 0 ? apiApplications : DEFAULT_APPLICATIONS;
 
   const applications = rawApplications.filter((app: any) => {
@@ -123,9 +124,9 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
         }
       />
 
-      {/* Summary KPI Cards */}
+      {/* Summary KPI Cards using shadcn Card */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <Card className="p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
             Total Applications
           </span>
@@ -133,9 +134,9 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
             {countTotal}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5 m-0">Active student candidacies</p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <Card className="p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-amber-600 font-mono">
             Under Review
           </span>
@@ -143,9 +144,9 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
             {countReview}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5 m-0">Screening & resume evaluation</p>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
+        <Card className="p-5">
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
             Interviews
           </span>
@@ -153,31 +154,18 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
             {countInterview}
           </p>
           <p className="text-[11px] text-slate-500 mt-0.5 m-0">Technical & cultural rounds</p>
-        </div>
+        </Card>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 flex-wrap border-b border-slate-200 pb-3">
-        {[
-          { key: 'ALL', label: `All (${countTotal})` },
-          { key: 'APPLIED', label: 'Applied' },
-          { key: 'IN_REVIEW', label: 'Under Review' },
-          { key: 'INTERVIEW_SCHEDULED', label: 'Interview Scheduled' },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setFilterStatus(tab.key)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-              filterStatus === tab.key
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Filter Tabs using shadcn Tabs */}
+      <Tabs value={filterStatus} onValueChange={setFilterStatus} className="w-full">
+        <TabsList className="bg-slate-100 p-1">
+          <TabsTrigger value="ALL">All ({countTotal})</TabsTrigger>
+          <TabsTrigger value="APPLIED">Applied</TabsTrigger>
+          <TabsTrigger value="IN_REVIEW">Under Review</TabsTrigger>
+          <TabsTrigger value="INTERVIEW_SCHEDULED">Interview Scheduled</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {jobsQuery.isLoading ? (
         <TableSkeleton rows={4} cols={4} />
@@ -195,9 +183,9 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
       ) : (
         <div className="space-y-4">
           {applications.map((app: any) => (
-            <div
+            <Card
               key={app.id}
-              className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-blue-300 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="p-5 hover:border-blue-300 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="space-y-1.5 min-w-0 flex-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -205,9 +193,9 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
                     {app.job.title}
                   </h3>
                   <StatusBadge status={app.status} />
-                  <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  <Badge variant="secondary">
                     {app.job.employmentType || 'Full-time'}
-                  </span>
+                  </Badge>
                 </div>
 
                 <p className="text-xs text-slate-600 m-0 flex items-center gap-2 flex-wrap">
@@ -224,7 +212,7 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
                 </p>
 
                 {app.stage && (
-                  <div className="pt-2 text-xs text-blue-900 bg-blue-50/60 border border-blue-100/80 rounded-lg p-2.5 space-y-0.5">
+                  <div className="pt-2 text-xs text-blue-900 bg-blue-50/60 border border-blue-100/80 rounded-xl p-2.5 space-y-0.5">
                     <p className="font-bold text-[11px] text-blue-700 m-0">Hiring Stage: {app.stage}</p>
                     {app.notes && <p className="text-[11px] text-slate-600 m-0">{app.notes}</p>}
                   </div>
@@ -238,7 +226,7 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
                   </Link>
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

@@ -8,8 +8,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FormAlert } from '@/components/ui/form-alert';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { demoLogin, getDemoCapabilities, login, type DemoCapabilities } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/store/auth-store';
@@ -114,8 +115,8 @@ export function LoginForm() {
   };
 
   return (
-    <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-      <div className="space-y-1.5">
+    <Card className="p-6 sm:p-8 space-y-6">
+      <CardHeader className="p-0 space-y-1.5">
         <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
           WELCOME BACK
         </span>
@@ -125,57 +126,63 @@ export function LoginForm() {
         <p className="text-xs sm:text-sm text-slate-500 m-0">
           Sign in to reconnect with your alumni network, mentors, and campus opportunities.
         </p>
-      </div>
+      </CardHeader>
 
-      <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
-        <Input
-          label="Email address"
-          type="email"
-          autoComplete="email"
-          placeholder="your.email@demo.edu"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-
-        <div className="relative">
+      <CardContent className="p-0 space-y-4">
+        <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
           <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            autoComplete="current-password"
-            placeholder="••••••••"
-            error={errors.password?.message}
-            {...register('password')}
+            label="Email address"
+            type="email"
+            autoComplete="email"
+            placeholder="your.email@demo.edu"
+            error={errors.email?.message}
+            {...register('email')}
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-8.5 p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
+
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-8.5 p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
+          {formError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{formError}</AlertDescription>
+            </Alert>
+          ) : null}
+
+          <Button
+            type="submit"
+            className="w-full justify-center font-bold"
+            size="default"
+            disabled={isSubmitting || Boolean(loggingInRole)}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-
-        <div className="flex justify-end">
-          <Link
-            href="/forgot-password"
-            className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            Forgot password?
-          </Link>
-        </div>
-
-        {formError ? <FormAlert>{formError}</FormAlert> : null}
-
-        <Button
-          type="submit"
-          className="w-full justify-center font-bold"
-          size="default"
-          disabled={isSubmitting || Boolean(loggingInRole)}
-        >
-          {isSubmitting ? 'Signing in…' : 'Sign In to Campus Desk'}
-        </Button>
-      </form>
+            {isSubmitting ? 'Signing in…' : 'Sign In to Campus Desk'}
+          </Button>
+        </form>
+      </CardContent>
 
       <div className="text-center pt-2 border-t border-slate-100">
         <p className="text-xs text-slate-500 m-0">
@@ -186,7 +193,7 @@ export function LoginForm() {
         </p>
       </div>
 
-      {/* Development Demo Access */}
+      {/* Development Demo Access using shadcn Card */}
       {demoCapabilities?.enabled && demoCapabilities.roles?.length ? (
         <div className="pt-6 border-t border-slate-200 space-y-3">
           <div className="flex items-center gap-1.5">
@@ -199,7 +206,11 @@ export function LoginForm() {
             Instantly test role-specific workflows with pre-seeded sandbox accounts. No credentials required.
           </p>
 
-          {demoError ? <FormAlert>{demoError}</FormAlert> : null}
+          {demoError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{demoError}</AlertDescription>
+            </Alert>
+          ) : null}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {demoCapabilities.roles.map((item) => {
@@ -211,7 +222,7 @@ export function LoginForm() {
                   type="button"
                   onClick={() => handleDemoLogin(item.role)}
                   disabled={Boolean(loggingInRole) || isSubmitting}
-                  className={`p-2.5 rounded-xl border text-left transition-all duration-150 flex items-center justify-between gap-2 ${
+                  className={`p-2.5 rounded-xl border text-left transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer ${
                     isCurrent
                       ? 'bg-blue-50 border-blue-300'
                       : 'bg-slate-50 hover:bg-white hover:border-slate-300 border-slate-200'
@@ -244,6 +255,6 @@ export function LoginForm() {
           </div>
         </div>
       ) : null}
-    </section>
+    </Card>
   );
 }

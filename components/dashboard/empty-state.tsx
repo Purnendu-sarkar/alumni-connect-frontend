@@ -3,7 +3,9 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Inbox } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
+
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -21,10 +23,10 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div
+    <Card
       className={cn(
-        'flex flex-col items-center justify-center text-center p-8 sm:p-12 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50',
-        className,
+        'flex flex-col items-center justify-center text-center p-8 sm:p-12 border-2 border-dashed border-slate-200 bg-slate-50/50 shadow-none hover:border-slate-300',
+        className
       )}
     >
       <div className="p-3.5 rounded-full bg-slate-100 text-slate-500 mb-3.5">
@@ -35,6 +37,6 @@ export function EmptyState({
         {description}
       </p>
       {action}
-    </div>
+    </Card>
   );
 }

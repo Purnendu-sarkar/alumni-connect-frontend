@@ -3,6 +3,7 @@ import { ArrowUpRight, Award, Bookmark, Calendar, Globe, Sparkles } from 'lucide
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
 
 interface Story {
@@ -88,17 +89,13 @@ export default function StoriesPage() {
         </p>
       </div>
 
-      {/* Featured Cover Story */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-md grid grid-cols-1 lg:grid-cols-12">
+      {/* Featured Cover Story using shadcn Card */}
+      <Card className="p-0 overflow-hidden shadow-md grid grid-cols-1 lg:grid-cols-12 border-slate-200">
         <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold shadow-xs">
-                Featured Spotlight
-              </span>
-              <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
-                {featured.category}
-              </span>
+              <Badge variant="default" className="shadow-xs">Featured Spotlight</Badge>
+              <Badge variant="secondary">{featured.category}</Badge>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug m-0">
@@ -138,9 +135,9 @@ export default function StoriesPage() {
             — {featured.alumnus}, {featured.batch}
           </p>
         </div>
-      </div>
+      </Card>
 
-      {/* Stories Grid */}
+      {/* Stories Grid using shadcn Card */}
       <div>
         <SectionHeading
           eyebrow="CLASS RECORDS & SPOTLIGHTS"
@@ -150,26 +147,30 @@ export default function StoriesPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {restStories.map((story) => (
-            <article
+            <Card
               key={story.id}
-              className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:shadow-md hover:border-blue-300 transition-all duration-200 flex flex-col justify-between"
+              className="flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all duration-200"
             >
               <div>
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <Badge variant="neutral">{story.category}</Badge>
-                  <span className="text-[11px] text-slate-400 font-medium">{story.readTime}</span>
-                </div>
+                <CardHeader className="p-0 mb-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="neutral">{story.category}</Badge>
+                    <span className="text-[11px] text-slate-400 font-medium">{story.readTime}</span>
+                  </div>
+                </CardHeader>
 
-                <h3 className="text-base font-bold text-slate-900 leading-snug m-0">
-                  {story.title}
-                </h3>
+                <CardContent className="p-0 space-y-2">
+                  <h3 className="text-base font-bold text-slate-900 leading-snug m-0">
+                    {story.title}
+                  </h3>
 
-                <p className="text-xs text-slate-600 mt-2.5 line-clamp-3 leading-relaxed m-0">
-                  {story.excerpt}
-                </p>
+                  <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed m-0">
+                    {story.excerpt}
+                  </p>
+                </CardContent>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 space-y-1">
+              <CardFooter className="p-0 pt-4 mt-6 border-t border-slate-100 flex flex-col items-start space-y-0.5">
                 <p className="text-xs font-bold text-slate-900 m-0">{story.alumnus}</p>
                 <p className="text-[11px] text-slate-500 m-0">
                   {story.role} · {story.company}
@@ -177,14 +178,14 @@ export default function StoriesPage() {
                 <p className="text-[10px] text-slate-400 font-mono m-0 mt-1">
                   {story.batch} · Published {story.date}
                 </p>
-              </div>
-            </article>
+              </CardFooter>
+            </Card>
           ))}
         </div>
       </div>
 
-      {/* Share Your Story Banner */}
-      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      {/* Share Your Story Banner using shadcn Card */}
+      <Card className="bg-slate-50 border-slate-200 p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-none">
         <div>
           <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
             SHARE YOUR JOURNEY
@@ -197,10 +198,10 @@ export default function StoriesPage() {
           </p>
         </div>
 
-        <Button asChild size="default" className="shrink-0">
+        <Button asChild size="default" className="shrink-0 font-bold">
           <Link href="/register">Submit Alumni Story</Link>
         </Button>
-      </div>
+      </Card>
     </div>
   );
 }
