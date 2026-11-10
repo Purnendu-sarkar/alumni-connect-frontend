@@ -97,3 +97,94 @@ export function toggleUniversityStatus(
     body: JSON.stringify({ isActive }),
   });
 }
+
+export interface ModeratorInvitation {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  invitedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+export function inviteModerator(accessToken: string | null, email: string) {
+  return apiClient<{
+    id: string;
+    email: string;
+    expiresAt: string;
+    deliveredViaSmtp: boolean;
+    invitationUrl?: string;
+  }>('/admin/moderators/invite', {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function getModeratorInvitations(accessToken: string | null) {
+  return apiClient<ModeratorInvitation[]>('/admin/moderators/invitations', {
+    method: 'GET',
+    accessToken,
+  });
+}
+
+export function resendModeratorInvitation(accessToken: string | null, id: string) {
+  return apiClient<{
+    id: string;
+    email: string;
+    expiresAt: string;
+    deliveredViaSmtp: boolean;
+    invitationUrl?: string;
+  }>(`/admin/moderators/invitations/${id}/resend`, {
+    method: 'POST',
+    accessToken,
+  });
+}
+
+export function revokeModeratorInvitation(accessToken: string | null, id: string) {
+  return apiClient<{ success: boolean; message: string }>(`/admin/moderators/invitations/${id}`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
+export function toggleUserSuspension(accessToken: string | null, userId: string, isActive: boolean) {
+  return apiClient<{ id: string; isActive: boolean; email: string }>(`/admin/users/${userId}/status`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify({ isActive }),
+  });
+}
+
+export interface AuditLogItem {
+  id: string;
+  action: string;
+  actorName: string;
+  actorRole: string;
+  target: string;
+  details: string;
+  timestamp: string;
+}
+
+export interface AuditLogResponse {
+  logs: AuditLogItem[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export function getAuditLogs(accessToken: string | null, page = 1, limit = 50) {
+  return apiClient<AuditLogResponse>(`/admin/audit-logs?page=${page}&limit=${limit}`, {
+    method: 'GET',
+    accessToken,
+  });
+}

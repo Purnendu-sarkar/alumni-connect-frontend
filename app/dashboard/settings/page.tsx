@@ -2,35 +2,23 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import {
-  CheckCircle2,
-  Eye,
-  EyeOff,
-  KeyRound,
-  Lock,
-  LogOut,
-  Mail,
-  MessageSquare,
-  Shield,
-  ShieldCheck,
-  UserCheck,
-} from 'lucide-react';
+import { CheckCircle2, LogOut } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { changePassword } from '@/lib/api/auth.api';
+import { updateMe } from '@/lib/api/user.api';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SettingsPage() {
-  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   // Privacy states
   const [profileVisibility, setProfileVisibility] = useState<'VERIFIED_ONLY' | 'PUBLIC' | 'CONNECTIONS_ONLY'>('VERIFIED_ONLY');
   const [messagingPermission, setMessagingPermission] = useState<'VERIFIED_MEMBERS' | 'CONNECTIONS_ONLY'>('VERIFIED_MEMBERS');
   const [mentorshipStatus, setMentorshipStatus] = useState<'OPEN' | 'CLOSED'>('OPEN');
-  const [emailAlerts, setEmailAlerts] = useState(true);
 
   // Password states
   const [currentPassword, setCurrentPassword] = useState('');
@@ -38,18 +26,37 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passNotice, setPassNotice] = useState<string | null>(null);
   const [passError, setPassError] = useState<string | null>(null);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [savedSettingsNotice, setSavedSettingsNotice] = useState<string | null>(null);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
 
-  const handleSavePrivacy = (e: React.FormEvent) => {
+  const handleSavePrivacy = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSavedSettingsNotice('Privacy preferences successfully synchronized.');
-    setTimeout(() => setSavedSettingsNotice(null), 4000);
+    setIsSavingPrivacy(true);
+    try {
+      if (accessToken) {
+        await updateMe(accessToken, {
+          phonePublic: profileVisibility === 'PUBLIC',
+        });
+      }
+      setSavedSettingsNotice('Privacy preferences successfully synchronized.');
+      setTimeout(() => setSavedSettingsNotice(null), 4000);
+    } catch (err: unknown) {
+      setSavedSettingsNotice('Failed to update privacy preferences: ' + (err instanceof Error ? err.message : 'Server error'));
+    } finally {
+      setIsSavingPrivacy(false);
+    }
   };
 
-  const handleUpdatePassword = (e: React.FormEvent) => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPassError(null);
+    setPassNotice(null);
 
+    if (!currentPassword) {
+      setPassError('Please enter your current password.');
+      return;
+    }
     if (newPassword.length < 8) {
       setPassError('New password must contain at least 8 characters.');
       return;
@@ -59,11 +66,19 @@ export default function SettingsPage() {
       return;
     }
 
-    setPassNotice('Password successfully updated. Your active sessions remain secured.');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setTimeout(() => setPassNotice(null), 4000);
+    setIsUpdatingPassword(true);
+    try {
+      const res = await changePassword(accessToken, { currentPassword, newPassword });
+      setPassNotice(res?.message || 'Password successfully updated. Other active sessions have been revoked.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => setPassNotice(null), 5000);
+    } catch (err: unknown) {
+      setPassError(err instanceof Error ? err.message : 'Failed to update password. Please check your current password.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   return (
@@ -181,7 +196,9 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <Button type="submit">Save Privacy Preferences</Button>
+          <Button type="submit" disabled={isSavingPrivacy}>
+            {isSavingPrivacy ? 'Saving Preferences…' : 'Save Privacy Preferences'}
+          </Button>
         </form>
       </div>
 
@@ -236,8 +253,8 @@ export default function SettingsPage() {
             required
           />
 
-          <Button type="submit" style={{ marginTop: '1rem' }}>
-            Update Security Password
+          <Button type="submit" disabled={isUpdatingPassword} style={{ marginTop: '1rem' }}>
+            {isUpdatingPassword ? 'Updating Password…' : 'Update Security Password'}
           </Button>
         </form>
       </div>
@@ -246,7 +263,7 @@ export default function SettingsPage() {
       <div style={{ marginTop: '3rem', border: '2px solid var(--ink)', padding: '2rem', background: 'var(--surface)' }}>
         <SectionHeading eyebrow="DEVICE AUTHORIZATION" title="Active Sessions" />
         <p style={{ fontSize: '0.875rem', color: 'var(--muted)', margin: '0 0 1.25rem' }}>
-          Current session signed in from Windows Desktop (Edge / Chrome) · Last active just now.
+          Current session signed in from browser · Last active just now.
         </p>
 
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>

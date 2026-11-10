@@ -1,4 +1,4 @@
-export type UserRole = 'STUDENT' | 'ALUMNI' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'STUDENT' | 'ALUMNI' | 'MODERATOR' | 'SUPER_ADMIN';
 
 export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -17,6 +17,7 @@ export interface SessionUser {
   verified: boolean;
   verificationStatus?: VerificationStatus;
   rejectionReason?: string | null;
+  needPasswordChange?: boolean;
   avatarUrl?: string | null;
   department?: string | null;
   batch?: string | null;

@@ -6,6 +6,12 @@ export interface AuthSession {
   user: SessionUser;
 }
 
+export interface RegisterResult {
+  user: SessionUser;
+  deliveredViaSmtp: boolean;
+  debugToken?: string;
+}
+
 export interface RegisterInput {
   name: string;
   email: string;
@@ -32,7 +38,7 @@ export function login(input: { email: string; password: string }) {
 }
 
 export function register(input: RegisterInput) {
-  return apiClient<AuthSession>('/auth/register', { method: 'POST', body: JSON.stringify(input) });
+  return apiClient<RegisterResult>('/auth/register', { method: 'POST', body: JSON.stringify(input) });
 }
 
 export function refreshSession() {
@@ -78,8 +84,47 @@ export function resetPassword(token: string, newPassword: string) {
 }
 
 export function verifyEmail(token: string) {
-  return apiClient<void>('/auth/verify-email', {
+  return apiClient<{ success: boolean; message: string }>('/auth/verify-email', {
     method: 'POST',
     body: JSON.stringify({ token }),
+  });
+}
+
+export function resendVerificationEmail(email: string) {
+  return apiClient<{ success: boolean; message: string; debugToken?: string; verificationUrl?: string }>(
+    '/auth/resend-verification-email',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    },
+  );
+}
+
+export function validateSetupAccount(token: string) {
+  return apiClient<{
+    email: string;
+    role: UserRole;
+    expiresAt: string;
+    university: { name: string; slug: string };
+  }>(`/auth/setup-account/validate?token=${encodeURIComponent(token)}`, {
+    method: 'GET',
+  });
+}
+
+export function setupAccount(input: { token: string; name: string; password: string }) {
+  return apiClient<AuthSession>('/auth/setup-account', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function changePassword(
+  accessToken: string | null,
+  input: { currentPassword: string; newPassword: string },
+) {
+  return apiClient<{ success: boolean; message: string }>('/auth/change-password', {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(input),
   });
 }

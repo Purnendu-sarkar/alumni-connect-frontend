@@ -20,9 +20,6 @@ export default function DashboardEntryPage() {
       case 'MODERATOR':
         router.replace('/dashboard/moderator');
         break;
-      case 'ADMIN':
-        router.replace('/dashboard/admin');
-        break;
       case 'SUPER_ADMIN':
         router.replace('/dashboard/super-admin');
         break;

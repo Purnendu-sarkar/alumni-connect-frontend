@@ -35,7 +35,7 @@ interface PostedJob {
 
 export default function MyJobsPage() {
   const user = useAuthStore((state) => state.user);
-  const isAlumni = user?.role === 'ALUMNI' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const isAlumni = user?.role === 'ALUMNI' || user?.role === 'SUPER_ADMIN';
 
   const [activeTab, setActiveTab] = useState<'browse' | 'my-postings' | 'applications'>('browse');
   const [showPostModal, setShowPostModal] = useState(false);

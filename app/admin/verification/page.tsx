@@ -35,7 +35,7 @@ export default function AdminVerificationPage() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isStaff = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN' || user?.role === 'MODERATOR';
+  const isStaff = user?.role === 'SUPER_ADMIN';
 
   const query = useQuery({
     queryKey: ['admin-verifications', accessToken, statusFilter, roleFilter, search],

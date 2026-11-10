@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, Eye, EyeOff, GraduationCap, School } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Eye, EyeOff, GraduationCap, Mail, School } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -18,10 +18,14 @@ import { registerSchema, type RegisterValues } from './auth.schemas';
 export function RegisterForm() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const setSession = useAuthStore((state) => state.setSession);
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registeredSuccess, setRegisteredSuccess] = useState<{
+    email: string;
+    role: 'STUDENT' | 'ALUMNI';
+    debugToken?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -45,7 +49,6 @@ export function RegisterForm() {
   });
 
   const role = watch('role');
-  const employmentStatus = watch('employmentStatus');
 
   const submit = async (values: RegisterValues) => {
     setFormError(null);
@@ -64,12 +67,90 @@ export function RegisterForm() {
       const response = await registerAccount(payload);
       if (!response.data) throw new Error('Your profile could not be created.');
 
-      setSession(response.data);
-      router.replace('/dashboard/profile');
+      setRegisteredSuccess({
+        email: values.email,
+        role: values.role as 'STUDENT' | 'ALUMNI',
+        debugToken: response.data.debugToken,
+      });
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     }
   };
+
+  if (registeredSuccess) {
+    const isAlumni = registeredSuccess.role === 'ALUMNI';
+    return (
+      <section className="auth-card">
+        <p className="eyebrow" style={{ color: '#16a34a' }}>REGISTRATION RECEIVED</p>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Mail size={32} color="#16a34a" /> Check your inbox.
+        </h1>
+        <p className="lede">
+          We sent a verification link to <strong>{registeredSuccess.email}</strong>.
+        </p>
+
+        <div
+          style={{
+            margin: '1.5rem 0',
+            padding: '1.25rem',
+            border: '2px solid var(--ink)',
+            background: 'var(--surface)',
+            fontSize: '0.9rem',
+            lineHeight: 1.6,
+          }}
+        >
+          {isAlumni ? (
+            <div>
+              <p style={{ margin: 0, fontWeight: 700 }}>Alumni Verification Step:</p>
+              <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem' }}>
+                <li>Open the confirmation email and click <strong>Verify Email Address</strong>.</li>
+                <li>Your profile will then be reviewed by university administration to accredit your alumni standing.</li>
+                <li>You will receive an approval confirmation once accredited.</li>
+              </ol>
+            </div>
+          ) : (
+            <div>
+              <p style={{ margin: 0, fontWeight: 700 }}>Student Verification Step:</p>
+              <p style={{ margin: '0.5rem 0 0' }}>
+                Click the verification link in your email to confirm your student email and immediately activate your account for sign in.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {registeredSuccess.debugToken ? (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              background: '#fef3c7',
+              border: '1px solid #f59e0b',
+              borderRadius: '4px',
+              fontSize: '0.8rem',
+              marginBottom: '1.5rem',
+            }}
+          >
+            <strong>Development Helper:</strong>
+            <div style={{ marginTop: '0.25rem' }}>
+              <Link
+                href={`/verify-email?token=${registeredSuccess.debugToken}&role=${registeredSuccess.role}`}
+                style={{ color: '#b45309', textDecoration: 'underline' }}
+              >
+                Click here to verify email directly in dev mode
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+          <Button asChild style={{ width: '100%' }}>
+            <Link href="/login">
+              Proceed to Sign in <ArrowRight size={16} />
+            </Link>
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="auth-card auth-card--register">
@@ -109,8 +190,8 @@ export function RegisterForm() {
             <GraduationCap size={20} />
           </div>
           <div className="auth-role-btn__content">
-            <span className="auth-role-btn__title">Graduate / Alumni</span>
-            <span className="auth-role-btn__desc">Network, mentor & hire</span>
+            <span className="auth-role-btn__title">Alumni / Graduate</span>
+            <span className="auth-role-btn__desc">Post opportunities & mentor</span>
           </div>
           <div className="auth-role-btn__check">
             <CheckCircle2 size={18} />
@@ -118,121 +199,157 @@ export function RegisterForm() {
         </button>
       </div>
 
-      <form onSubmit={handleSubmit(submit)} noValidate className="auth-form-grid">
-        {/* Row 1: Full name & Email */}
-        <Input
-          label="Full name"
-          autoComplete="name"
-          placeholder="e.g. Sadia Rahman or পূর্ণেন্দু সরকার"
-          error={errors.name?.message}
-          {...register('name')}
-        />
-
-        <Input
-          label="Email address"
-          type="email"
-          autoComplete="email"
-          placeholder="your.email@example.com"
-          error={errors.email?.message}
-          {...register('email')}
-        />
-
-        {/* Row 2: University code & Department */}
-        <Input
-          label="University code"
-          autoComplete="organization"
-          placeholder="e.g. demo-university"
-          error={errors.universitySlug?.message}
-          {...register('universitySlug')}
-        />
-
-        <Input
-          label="Department / Program"
-          placeholder="e.g. CSE, EEE, BBA"
-          error={errors.department?.message}
-          {...register('department')}
-        />
-
-        {/* Row 3: Batch and Role-specific academic ID */}
-        <Input
-          label={role === 'STUDENT' ? 'Batch / Session' : 'Graduation / Passing Year'}
-          placeholder={role === 'STUDENT' ? 'e.g. 2026 or 16th' : 'e.g. 2020'}
-          error={errors.batch?.message}
-          {...register('batch')}
-        />
-
-        {role === 'STUDENT' ? (
+      <form onSubmit={handleSubmit(submit)} className="auth-form-grid" noValidate>
+        <div className="auth-form-field--full">
           <Input
-            label="Student ID (Optional)"
-            placeholder="e.g. 160101"
-            error={errors.studentId?.message}
-            {...register('studentId')}
+            label="Full Name"
+            placeholder="e.g. Tanzim Sakib"
+            error={errors.name?.message}
+            {...register('name')}
+            required
           />
-        ) : (
-          <label className="field">
-            <span className="field__label">Professional Status</span>
-            <select className="field__input" {...register('employmentStatus')}>
-              <option value="Employed">Currently Employed</option>
-              <option value="Seeking opportunities">Seeking Opportunities / Looking for Work</option>
-              <option value="Entrepreneur / Self-Employed">Entrepreneur / Self-Employed</option>
-              <option value="Higher Studies / Research">Higher Studies / Researcher</option>
-              <option value="Other">Other</option>
-            </select>
-          </label>
-        )}
+        </div>
 
-        {/* Row 4: Student semester or Alumni company details */}
+        <div className="auth-form-field--full">
+          <Input
+            label="University Email Address"
+            type="email"
+            placeholder="e.g. sakib.cse@demo.edu"
+            hint="Your institutional or permanent personal address."
+            error={errors.email?.message}
+            {...register('email')}
+            required
+          />
+        </div>
+
+        <div>
+          <Input
+            label="Department"
+            placeholder="e.g. Computer Science"
+            error={errors.department?.message}
+            {...register('department')}
+            required
+          />
+        </div>
+
+        <div>
+          <Input
+            label="Batch / Cohort"
+            placeholder="e.g. Batch 2018 or 18th"
+            error={errors.batch?.message}
+            {...register('batch')}
+            required
+          />
+        </div>
+
         {role === 'STUDENT' ? (
-          <div className="auth-form-field--full" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem 0.95rem' }}>
-            <Input
-              label="Current Semester / Year"
-              placeholder="e.g. 8th Semester / Final Year"
-              error={errors.currentSemester?.message}
-              {...register('currentSemester')}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', color: 'var(--muted)', paddingTop: '1.1rem' }}>
-              💡 Profile can be enriched with skills & interests later in dashboard.
-            </div>
-          </div>
-        ) : (
-          (employmentStatus === 'Employed' || employmentStatus === 'Entrepreneur / Self-Employed') ? (
-            <>
+          <>
+            <div>
               <Input
-                label="Company / Organization"
-                placeholder="e.g. Google, Pathao"
+                label="Student ID (Optional)"
+                placeholder="e.g. 180104001"
+                error={errors.studentId?.message}
+                {...register('studentId')}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Current Semester"
+                placeholder="e.g. 7th Semester"
+                error={errors.currentSemester?.message}
+                {...register('currentSemester')}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Admission Year"
+                placeholder="e.g. 2021"
+                error={errors.admissionYear?.message}
+                {...register('admissionYear')}
+              />
+            </div>
+
+            <div>
+              <Input
+                label="Expected Graduation Year"
+                placeholder="e.g. 2025"
+                error={errors.expectedGraduationYear?.message}
+                {...register('expectedGraduationYear')}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <Input
+                label="Graduation Year"
+                placeholder="e.g. 2022"
+                error={errors.graduationYear?.message}
+                {...register('graduationYear')}
+              />
+            </div>
+
+            <div>
+              <label className="input-group__label">Current Employment Status</label>
+              <select
+                className="input-control"
+                {...register('employmentStatus')}
+                style={{ width: '100%', height: '44px', background: 'var(--paper, #fff)' }}
+              >
+                <option value="Employed">Employed / Working</option>
+                <option value="Self-Employed">Self-Employed / Founder</option>
+                <option value="Higher Studies">Pursuing Higher Studies</option>
+                <option value="Open to Work">Open to Opportunities</option>
+              </select>
+            </div>
+
+            <div>
+              <Input
+                label="Current Company / Organization"
+                placeholder="e.g. Google, bKash, BRAC"
                 error={errors.currentCompany?.message}
                 {...register('currentCompany')}
               />
+            </div>
+
+            <div>
               <Input
-                label="Job Title / Designation"
-                placeholder="e.g. Software Engineer"
+                label="Job Title / Role"
+                placeholder="e.g. Senior Software Engineer"
                 error={errors.position?.message}
                 {...register('position')}
               />
-            </>
-          ) : (
-            <div className="auth-form-field--full" style={{ fontSize: '0.74rem', color: 'var(--muted)', padding: '0.2rem 0' }}>
-              💡 Employment details are optional and can be updated anytime from your profile.
             </div>
-          )
+          </>
         )}
 
-        {/* Row 5: Password and Confirm password side-by-side */}
+        <div className="auth-form-field--full">
+          <Input
+            label="Key Skills"
+            placeholder="e.g. React, Node.js, Python, Product Strategy (comma-separated)"
+            error={errors.skills?.message}
+            {...register('skills')}
+          />
+        </div>
+
         <div style={{ position: 'relative' }}>
           <Input
             label="Password"
             type={showPassword ? 'text' : 'password'}
-            autoComplete="new-password"
+            placeholder="••••••••••••"
             error={errors.password?.message}
             {...register('password')}
+            required
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             style={{
               position: 'absolute',
-              right: '10px',
-              top: '30px',
+              right: '12px',
+              top: '38px',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
@@ -246,19 +363,20 @@ export function RegisterForm() {
 
         <div style={{ position: 'relative' }}>
           <Input
-            label="Confirm password"
+            label="Confirm Password"
             type={showConfirmPassword ? 'text' : 'password'}
-            autoComplete="new-password"
+            placeholder="••••••••••••"
             error={errors.confirmPassword?.message}
             {...register('confirmPassword')}
+            required
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
             style={{
               position: 'absolute',
-              right: '10px',
-              top: '30px',
+              right: '12px',
+              top: '38px',
               background: 'none',
               border: 'none',
               cursor: 'pointer',

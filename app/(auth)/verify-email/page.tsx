@@ -3,9 +3,10 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowUpRight, CheckCircle2, Clock, ShieldAlert, Sparkles, UserCheck } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { verifyEmail } from '@/lib/api/auth.api';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -17,26 +18,22 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     if (!token) {
-      // In demo/test mode without token, show role-based feedback
-      const timer = setTimeout(() => setStatus('success'), 600);
-      return () => clearTimeout(timer);
+      setStatus('error');
+      setErrorMessage('No verification token was provided in the verification link.');
+      return;
     }
 
-    fetch('/api/v1/auth/verify-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || 'Verification token invalid or expired.');
-        }
+    verifyEmail(token)
+      .then(() => {
         setStatus('success');
       })
-      .catch((err) => {
-        // Fallback for visual mock testing
-        setStatus('success');
+      .catch((err: unknown) => {
+        setStatus('error');
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : 'This verification link is invalid, expired, or has already been used.',
+        );
       });
   }, [token]);
 
@@ -53,7 +50,7 @@ function VerifyEmailContent() {
   if (status === 'error') {
     return (
       <section className="auth-card">
-        <p className="eyebrow eyebrow--red">VERIFICATION EXPIRED</p>
+        <p className="eyebrow eyebrow--red">VERIFICATION EXPIRED OR INVALID</p>
         <h1>Link is no longer valid.</h1>
         <p className="lede">{errorMessage || 'This verification link has expired or was already verified.'}</p>
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.75rem' }}>
@@ -73,7 +70,7 @@ function VerifyEmailContent() {
   return (
     <section className="auth-card">
       <p className="eyebrow" style={{ color: isAlumni ? '#d97706' : '#16a34a' }}>
-        {isAlumni ? 'ACCREDITATION IN PROGRESS' : 'EMAIL CONFIRMED'}
+        {isAlumni ? 'EMAIL VERIFIED — ACCREDITATION PENDING' : 'EMAIL CONFIRMED — ACCOUNT ACTIVATED'}
       </p>
 
       {isAlumni ? (
@@ -83,7 +80,7 @@ function VerifyEmailContent() {
             <h1 style={{ margin: 0 }}>Under Administrative Verification.</h1>
           </div>
           <p className="lede">
-            Your university institutional email is confirmed! As a graduate, your alumni status has been queued for verification by the registrar administration to safeguard verified student mentorship.
+            Your university institutional email is confirmed! As a graduate, your alumni status has been queued for verification by the university administration to safeguard student mentorship integrity.
           </p>
 
           <div
@@ -96,18 +93,15 @@ function VerifyEmailContent() {
           >
             <p className="eyebrow" style={{ color: 'var(--ink)' }}>WHAT HAPPENS NEXT?</p>
             <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', lineHeight: '1.6' }}>
-              <li>University admins review your graduation batch, degree, and student record.</li>
+              <li>University administration reviews your graduation batch, department, and academic records.</li>
               <li>You will receive an official approval email once accredited.</li>
-              <li>You can log in now to preview your profile and prepare career postings.</li>
+              <li>After approval, you can sign in to access the Alumni Desk and mentor students.</li>
             </ul>
           </div>
 
           <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
             <Button asChild>
-              <Link href="/dashboard/alumni">Explore Alumni Desk <ArrowUpRight size={16} /></Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">Return to Sign in <ArrowUpRight size={16} /></Link>
             </Button>
           </div>
         </>
@@ -118,7 +112,7 @@ function VerifyEmailContent() {
             <h1 style={{ margin: 0 }}>Account Activated.</h1>
           </div>
           <p className="lede">
-            Welcome to the verified university network. Your student account is fully active and unlocked for alumni search, mentorship requests, and career discovery.
+            Welcome to the verified university network. Your email is verified and your account is ready to sign in.
           </p>
 
           <div
@@ -139,10 +133,7 @@ function VerifyEmailContent() {
 
           <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
             <Button asChild>
-              <Link href="/dashboard/student">Open Student Dashboard <ArrowUpRight size={16} /></Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/alumni">Browse Alumni Directory</Link>
+              <Link href="/login">Sign in Now <ArrowUpRight size={16} /></Link>
             </Button>
           </div>
         </>
