@@ -2,34 +2,27 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-import { refreshSession } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/store/auth-store';
 
 export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
-  const setSession = useAuthStore((state) => state.setSession);
-  const [checking, setChecking] = useState(!user);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   useEffect(() => {
-    if (user) {
-      setChecking(false);
-      return;
+    if (!isInitialized) return;
+
+    if (!user || isLoggingOut) {
+      router.replace('/login');
     }
-    refreshSession()
-      .then((response) => {
-        if (response.data) setSession(response.data);
-        else router.replace('/login');
-      })
-      .catch(() => router.replace('/login'))
-      .finally(() => setChecking(false));
-  }, [router, setSession, user]);
+  }, [isInitialized, isLoggingOut, router, user]);
 
   useEffect(() => {
-    if (!user || checking) return;
+    if (!user || !isInitialized || isLoggingOut) return;
 
     const role = user.role;
 
@@ -50,9 +43,9 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
         router.replace('/dashboard');
       }
     }
-  }, [user, checking, pathname, router]);
+  }, [user, isInitialized, isLoggingOut, pathname, router]);
 
-  if (checking || !user) {
+  if (!isInitialized || !user || isLoggingOut) {
     return (
       <main className="loading-screen" aria-live="polite">
         <div className="page-shell">

@@ -11,14 +11,10 @@ import {
   Menu,
   Search,
   Settings,
-  Shield,
-  Sparkles,
   User,
-  X,
 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +40,8 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const startLogout = useAuthStore((state) => state.startLogout);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
@@ -86,13 +84,16 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return;
+    startLogout();
     try {
       await logout();
     } catch {
       // Continue client cleanup even if network fails
+    } finally {
+      clearSession();
+      router.replace('/login');
     }
-    clearSession();
-    router.replace('/login');
   };
 
   const rolePrefix =

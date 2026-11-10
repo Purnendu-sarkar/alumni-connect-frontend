@@ -10,8 +10,12 @@ import { useAuthStore } from '@/store/auth-store';
 export function SignOutButton() {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
+  const startLogout = useAuthStore((state) => state.startLogout);
+  const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
   const signOut = async () => {
+    if (isLoggingOut) return;
+    startLogout();
     try {
       await logout();
     } finally {

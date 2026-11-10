@@ -1,9 +1,31 @@
 import { apiClient } from './client';
+import { useAuthStore } from '@/store/auth-store';
+import type { ApiResponse } from '@/types/api';
 import type { SessionUser, UserRole } from '@/types/domain';
 
 export interface AuthSession {
   accessToken: string;
   user: SessionUser;
+}
+
+let activeRefreshPromise: Promise<ApiResponse<AuthSession>> | null = null;
+
+export function refreshSession(): Promise<ApiResponse<AuthSession>> {
+  // If logout is in progress, immediately abort without sending network request
+  if (typeof window !== 'undefined' && useAuthStore.getState().isLoggingOut) {
+    return Promise.reject(new Error('Logout in progress.'));
+  }
+
+  // Single-flight deduplication: reuse active promise to prevent duplicate concurrent network requests
+  if (activeRefreshPromise) {
+    return activeRefreshPromise;
+  }
+
+  activeRefreshPromise = apiClient<AuthSession>('/auth/refresh', { method: 'POST' }).finally(() => {
+    activeRefreshPromise = null;
+  });
+
+  return activeRefreshPromise;
 }
 
 export interface RegisterResult {
@@ -39,10 +61,6 @@ export function login(input: { email: string; password: string }) {
 
 export function register(input: RegisterInput) {
   return apiClient<RegisterResult>('/auth/register', { method: 'POST', body: JSON.stringify(input) });
-}
-
-export function refreshSession() {
-  return apiClient<AuthSession>('/auth/refresh', { method: 'POST' });
 }
 
 export function logout() {
