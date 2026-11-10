@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -24,6 +24,21 @@ const DEFAULT_DEMO_ROLES: Array<{ role: UserRole; label: string; email: string }
   { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'demo.superadmin@demo.edu' },
 ];
 
+function getRoleHome(role?: UserRole): string {
+  switch (role) {
+    case 'STUDENT':
+      return '/student/dashboard';
+    case 'ALUMNI':
+      return '/alumni/dashboard';
+    case 'MODERATOR':
+      return '/moderator/dashboard';
+    case 'SUPER_ADMIN':
+      return '/admin/dashboard';
+    default:
+      return '/dashboard';
+  }
+}
+
 export function LoginForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -32,7 +47,7 @@ export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Demo capability state - default to enabled so demo buttons are immediately accessible
+  // Demo capability state
   const [demoCapabilities, setDemoCapabilities] = useState<DemoCapabilities | null>({
     enabled: true,
     environment: 'development',
@@ -43,7 +58,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (user) {
-      router.replace('/dashboard');
+      router.replace(getRoleHome(user.role));
     }
   }, [user, router]);
 
@@ -76,7 +91,7 @@ export function LoginForm() {
       const response = await login(values);
       if (!response.data) throw new Error('Your session could not be created.');
       setSession(response.data);
-      router.replace('/dashboard');
+      router.replace(getRoleHome(response.data.user.role));
     } catch (error) {
       setFormError(getAuthErrorMessage(error));
     }
@@ -90,7 +105,7 @@ export function LoginForm() {
       const response = await demoLogin(role);
       if (!response.data) throw new Error('Demo session could not be created.');
       setSession(response.data);
-      router.replace('/dashboard');
+      router.replace(getRoleHome(role));
     } catch (error) {
       setDemoError(getAuthErrorMessage(error));
     } finally {
@@ -99,86 +114,94 @@ export function LoginForm() {
   };
 
   return (
-    <section className="auth-card">
-      <p className="eyebrow">WELCOME BACK</p>
-      <h1>Continue the conversation.</h1>
-      <p>Sign in to reconnect with your university network.</p>
+    <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="space-y-1.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
+          WELCOME BACK
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight m-0">
+          Continue the conversation.
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 m-0">
+          Sign in to reconnect with your alumni network, mentors, and campus opportunities.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit(submit)} noValidate>
+      <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
         <Input
           label="Email address"
           type="email"
           autoComplete="email"
-          placeholder="your.email@example.com"
+          placeholder="your.email@demo.edu"
           error={errors.email?.message}
           {...register('email')}
         />
 
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           <Input
             label="Password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
+            placeholder="••••••••"
             error={errors.password?.message}
             {...register('password')}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '38px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--muted, #666)',
-            }}
+            className="absolute right-3 top-8.5 p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem', marginBottom: '0.75rem' }}>
-          <Link href="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--muted, #666)', textDecoration: 'underline' }}>
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+          >
             Forgot password?
           </Link>
         </div>
 
         {formError ? <FormAlert>{formError}</FormAlert> : null}
 
-        <Button type="submit" className="auth-card__submit" disabled={isSubmitting || Boolean(loggingInRole)}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
+        <Button
+          type="submit"
+          className="w-full justify-center font-bold"
+          size="default"
+          disabled={isSubmitting || Boolean(loggingInRole)}
+        >
+          {isSubmitting ? 'Signing in…' : 'Sign In to Campus Desk'}
         </Button>
       </form>
 
-      <p className="auth-card__switch">
-        New to the network? <Link href="/register">Create your profile.</Link>
-      </p>
+      <div className="text-center pt-2 border-t border-slate-100">
+        <p className="text-xs text-slate-500 m-0">
+          New to the network?{' '}
+          <Link href="/register" className="font-bold text-blue-600 hover:text-blue-800 transition-colors">
+            Create your account
+          </Link>
+        </p>
+      </div>
 
       {/* Development Demo Access */}
       {demoCapabilities?.enabled && demoCapabilities.roles?.length ? (
-        <div
-          style={{
-            marginTop: '2rem',
-            paddingTop: '1.5rem',
-            borderTop: '1px solid var(--border, #e5e5e5)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <Sparkles size={16} style={{ color: '#d97706' }} />
-            <p className="eyebrow" style={{ margin: 0, color: '#b45309' }}>
+        <div className="pt-6 border-t border-slate-200 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <Sparkles size={14} className="text-amber-600" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 font-mono">
               DEVELOPMENT DEMO ACCESS
-            </p>
+            </span>
           </div>
-          <p style={{ fontSize: '0.825rem', color: 'var(--muted, #666)', margin: '0 0 1rem', lineHeight: 1.4 }}>
-            Instantly test role-specific workflows with pre-seeded sandbox accounts. No passwords required.
+          <p className="text-xs text-slate-500 leading-relaxed m-0">
+            Instantly test role-specific workflows with pre-seeded sandbox accounts. No credentials required.
           </p>
 
           {demoError ? <FormAlert>{demoError}</FormAlert> : null}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.5rem' }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {demoCapabilities.roles.map((item) => {
               const isCurrent = loggingInRole === item.role;
               return (
@@ -188,41 +211,16 @@ export function LoginForm() {
                   type="button"
                   onClick={() => handleDemoLogin(item.role)}
                   disabled={Boolean(loggingInRole) || isSubmitting}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.625rem 0.875rem',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border, #d1d5db)',
-                    background: isCurrent ? '#f3f4f6' : '#fff',
-                    cursor: loggingInRole ? 'not-allowed' : 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    color: 'var(--foreground, #111827)',
-                    transition: 'all 0.15s ease',
-                    textAlign: 'left',
-                  }}
-                  onMouseOver={(e) => {
-                    if (!loggingInRole) {
-                      e.currentTarget.style.borderColor = '#9ca3af';
-                      e.currentTarget.style.background = '#f9fafb';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!loggingInRole) {
-                      e.currentTarget.style.borderColor = 'var(--border, #d1d5db)';
-                      e.currentTarget.style.background = '#fff';
-                    }
-                  }}
+                  className={`p-2.5 rounded-xl border text-left transition-all duration-150 flex items-center justify-between gap-2 ${
+                    isCurrent
+                      ? 'bg-blue-50 border-blue-300'
+                      : 'bg-slate-50 hover:bg-white hover:border-slate-300 border-slate-200'
+                  }`}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div className="flex items-center gap-2 min-w-0">
                     <span
+                      className="w-2 h-2 rounded-full shrink-0"
                       style={{
-                        display: 'inline-block',
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
                         backgroundColor:
                           item.role === 'SUPER_ADMIN'
                             ? '#7c3aed'
@@ -230,12 +228,14 @@ export function LoginForm() {
                             ? '#d97706'
                             : item.role === 'ALUMNI'
                             ? '#16a34a'
-                            : '#0284c7',
+                            : '#2563eb',
                       }}
                     />
-                    {isCurrent ? `Signing in as ${item.label}…` : `Continue as ${item.label}`}
-                  </span>
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                    <span className="text-xs font-bold text-slate-900 truncate">
+                      {isCurrent ? `Logging in…` : item.label}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono shrink-0">
                     {item.role.toLowerCase().replace('_', '-')}
                   </span>
                 </button>

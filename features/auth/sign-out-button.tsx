@@ -10,8 +10,25 @@ import { useAuthStore } from '@/store/auth-store';
 export function SignOutButton() {
   const router = useRouter();
   const clearSession = useAuthStore((state) => state.clearSession);
+
   const signOut = async () => {
-    try { await logout(); } finally { clearSession(); router.replace('/login'); }
+    try {
+      await logout();
+    } finally {
+      clearSession();
+      router.replace('/login');
+    }
   };
-  return <Button variant="ghost" size="sm" onClick={signOut}><LogOut size={16} /> Sign out</Button>;
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={signOut}
+      className="w-full justify-start text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-semibold"
+    >
+      <LogOut size={15} />
+      <span>Sign out</span>
+    </Button>
+  );
 }

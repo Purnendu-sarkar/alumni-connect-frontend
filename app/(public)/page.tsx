@@ -1,11 +1,16 @@
 import Link from 'next/link';
 import {
-  ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
   CalendarDays,
+  CheckCircle2,
   GraduationCap,
+  HeartHandshake,
   Search,
   ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Users,
 } from 'lucide-react';
 
 import { AlumniCard } from '@/components/alumni/alumni-card';
@@ -16,111 +21,244 @@ import { demoAlumni, demoJobs } from '@/features/shared/demo-data';
 import { formatCompactNumber } from '@/lib/utils/format';
 
 const proofPoints = [
-  ['03', 'WAYS TO GROW', 'Mentorship, referrals, and shared knowledge.'],
-  ['01', 'TRUSTED NETWORK', 'A verified space for your university community.'],
-  ['24/7', 'OPEN DOOR', 'Every valuable conversation starts with a hello.'],
+  {
+    number: '01',
+    title: 'Verified Institutional Community',
+    description: 'Every profile is authenticated against university graduation and enrollment records. Zero spam or commercial headhunters.',
+    icon: ShieldCheck,
+  },
+  {
+    number: '02',
+    title: 'Direct 1-on-1 Mentorship',
+    description: 'Book thirty-minute career advisory sessions with alumni who have walked your specific department and career roadmap.',
+    icon: HeartHandshake,
+  },
+  {
+    number: '03',
+    title: 'Alumni-Shared Career Openings',
+    description: 'Access curated internships, graduate programs, and software roles shared directly by alumni working inside hiring teams.',
+    icon: TrendingUp,
+  },
 ];
 
 export default function HomePage() {
   return (
-    <>
-      <section className="hero page-shell">
-        <p className="eyebrow">THE ALUMNI NETWORK / ISSUE 01</p>
-        <div className="hero__grid">
-          <div>
-            <h1>Your next big move has a familiar face.</h1>
-            <p className="lede">
-              Find the people who took the road before you. Ask better questions. Make work that
-              matters.
+    <div className="space-y-16 lg:space-y-24 py-8 md:py-12">
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-8 sm:p-12 lg:p-16 shadow-xl border border-slate-800">
+          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-3xl space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
+              <Sparkles size={14} className="text-blue-400" />
+              OFFICIAL ALUMNI & STUDENT ENGAGEMENT PLATFORM
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] m-0">
+              Your next big career move has a familiar face.
+            </h1>
+
+            <p className="text-base sm:text-xl text-slate-300 max-w-2xl leading-relaxed m-0">
+              Connect with the graduates who took the road before you. Seek authentic career guidance, discover curated campus opportunities, and strengthen your lifelong university network.
             </p>
-            <div className="hero__actions">
-              <Button asChild size="lg">
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+              <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md">
                 <Link href="/alumni">
-                  Find your people <ArrowUpRight size={18} />
+                  Find Your Alumni <ArrowRight size={16} />
                 </Link>
               </Button>
-              <Button asChild variant="secondary" size="lg">
-                <Link href="/register">Join the network</Link>
+              <Button asChild variant="outline" size="lg" className="border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-white font-semibold">
+                <Link href="/register">Join the Network</Link>
               </Button>
             </div>
+
+            <div className="pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="text-emerald-400" />
+                <span>Verified Members</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={16} className="text-blue-400" />
+                <span>1-on-1 Mentorship</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-cyan-400" />
+                <span>Zero Commercial Ads</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GraduationCap size={16} className="text-indigo-400" />
+                <span>Institutional Trust</span>
+              </div>
+            </div>
           </div>
-          <aside className="hero__statement">
-            <span>“</span>
-            <p>The best opportunity is usually one introduction away.</p>
-            <div>ALUMNICONNECT EDITORIAL DESK</div>
-          </aside>
-        </div>
-        <div className="hero__ticker">
-          <span>MENTORS</span><span>•</span><span>JOBS</span><span>•</span><span>IDEAS</span><span>•</span><span>YOUR PEOPLE</span>
         </div>
       </section>
 
-      <section className="proof-strip page-shell" aria-label="Network benefits">
-        {proofPoints.map(([number, title, description]) => (
-          <article key={title}>
-            <strong>{number}</strong>
-            <div><p className="eyebrow">{title}</p><p>{description}</p></div>
-          </article>
-        ))}
+      {/* Proof Points Strip */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {proofPoints.map((point) => {
+            const Icon = point.icon;
+            return (
+              <div
+                key={point.number}
+                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs hover:border-blue-300 hover:shadow-md transition-all duration-200"
+              >
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold">
+                    <Icon size={20} />
+                  </div>
+                  <span className="font-mono text-xs font-extrabold text-slate-400">
+                    STEP {point.number}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-slate-900 m-0">
+                  {point.title}
+                </h3>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
+                  {point.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="page-shell editorial-section">
+      {/* Directory Preview Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="THE DIRECTORY"
-          title="People worth knowing."
-          action={<Link href="/alumni" className="text-link">Explore every alumnus <ArrowUpRight size={16} /></Link>}
+          eyebrow="CAMPUS DIRECTORY"
+          title="Graduates Worth Knowing"
+          description="Search and connect across departments, graduation years, and leading industry employers."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/alumni" className="inline-flex items-center gap-1.5 font-bold">
+                Explore Full Directory <ArrowUpRight size={14} />
+              </Link>
+            </Button>
+          }
         />
-        <div className="directory-prompt">
-          <Search size={24} />
-          <p>Search by batch, department, company, or the one skill you want to learn next.</p>
-          <Link href="/alumni" aria-label="Explore the alumni directory"><ArrowDownRight size={26} /></Link>
-        </div>
-        <div className="alumni-grid">
-          {demoAlumni.slice(0, 3).map((alumnus) => <AlumniCard key={alumnus.id} alumnus={alumnus} />)}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {demoAlumni.slice(0, 3).map((alumnus) => (
+            <AlumniCard key={alumnus.id} alumnus={alumnus} />
+          ))}
         </div>
       </section>
 
-      <section className="callout-section">
-        <div className="page-shell callout-section__inner">
-          <p className="eyebrow">THE MENTORSHIP DESK</p>
-          <h2>One honest conversation can change your direction.</h2>
-          <p>Request a focused thirty-minute session with an alumnus who has built a path you are considering.</p>
-          <Button asChild variant="secondary"><Link href="/register">Request a mentor</Link></Button>
+      {/* Mentorship Callout Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-blue-600 text-white rounded-3xl p-8 sm:p-12 shadow-lg flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-3 max-w-xl">
+            <span className="text-xs font-bold uppercase tracking-widest text-blue-200 font-mono">
+              THE MENTORSHIP DESK
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight m-0">
+              One honest conversation can redefine your career direction.
+            </h2>
+            <p className="text-sm text-blue-100 leading-relaxed m-0">
+              Request a focused thirty-minute session with an alumnus who has successfully navigated the path you are considering. Review your portfolio, prepare for technical interviews, and receive candid industry perspective.
+            </p>
+          </div>
+          <div className="shrink-0 flex flex-col sm:flex-row gap-3">
+            <Button asChild size="lg" className="bg-white hover:bg-slate-100 text-blue-900 font-bold shadow-xs">
+              <Link href="/mentorship">Explore Mentors</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="border-blue-400 text-white hover:bg-blue-700 font-semibold">
+              <Link href="/register">Become a Mentor</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      <section className="page-shell editorial-section jobs-preview">
+      {/* Job Opportunities Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="ON THE BOARD"
-          title="Work worth showing up for."
-          action={<Link href="/jobs" className="text-link">See all opportunities <ArrowUpRight size={16} /></Link>}
+          title="Work Worth Showing Up For"
+          description="Curated campus and graduate opportunities submitted by alumni in good standing."
+          action={
+            <Button asChild variant="outline" size="sm">
+              <Link href="/jobs" className="inline-flex items-center gap-1.5 font-bold">
+                See All Opportunities <ArrowUpRight size={14} />
+              </Link>
+            </Button>
+          }
         />
-        <div className="job-list">{demoJobs.map((job) => <JobCard key={job.id} job={job} />)}</div>
-      </section>
 
-      <section className="page-shell stats-section">
-        <div><p className="eyebrow">A NETWORK WITH RECEIPTS</p><h2>Not another group chat.</h2></div>
-        <div className="stats-grid">
-          <article><strong>{formatCompactNumber(2400)}</strong><span>VERIFIED MEMBERS</span></article>
-          <article><strong>186</strong><span>MENTORS AVAILABLE</span></article>
-          <article><strong>42</strong><span>OPEN OPPORTUNITIES</span></article>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {demoJobs.slice(0, 3).map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
         </div>
       </section>
 
-      <section className="page-shell latest-section">
-        <div className="latest-section__title"><CalendarDays size={30} /><p className="eyebrow">UP NEXT</p><h2>The annual alumni homecoming.</h2></div>
-        <div>
-          <p className="event-date">12<br /><span>OCT</span></p>
-          <p>Return to campus for conversations, classes, and the people who made the place matter.</p>
-          <Button asChild variant="ghost"><Link href="/events">See event details <ArrowUpRight size={16} /></Link></Button>
+      {/* Network Metrics Stats */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
+          <div className="space-y-1">
+            <span className="text-3xl sm:text-4xl font-extrabold text-blue-400 font-mono">
+              {formatCompactNumber(2400)}+
+            </span>
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
+              Verified Members
+            </p>
+            <p className="text-[11px] text-slate-500 m-0">Graduates & Students across 12 faculties</p>
+          </div>
+
+          <div className="space-y-1 pt-6 md:pt-0">
+            <span className="text-3xl sm:text-4xl font-extrabold text-emerald-400 font-mono">
+              180+
+            </span>
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
+              Active Mentors
+            </p>
+            <p className="text-[11px] text-slate-500 m-0">Offering mock interviews & code reviews</p>
+          </div>
+
+          <div className="space-y-1 pt-6 md:pt-0">
+            <span className="text-3xl sm:text-4xl font-extrabold text-amber-400 font-mono">
+              40+
+            </span>
+            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
+              Curated Opportunities
+            </p>
+            <p className="text-[11px] text-slate-500 m-0">Direct referrals with hiring alumni</p>
+          </div>
         </div>
       </section>
 
-      <section className="page-shell join-banner">
-        <GraduationCap size={48} />
-        <div><p className="eyebrow">YOUR NAME BELONGS HERE</p><h2>Bring your story into the room.</h2></div>
-        <Button asChild size="lg"><Link href="/register">Create your profile <ShieldCheck size={18} /></Link></Button>
+      {/* Upcoming Event & Join Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-xs flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 shrink-0">
+              <CalendarDays size={28} />
+            </div>
+            <div>
+              <span className="text-xs font-bold tracking-widest uppercase text-blue-600 font-mono">
+                CAMPUS GATHERING
+              </span>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 m-0">
+                Annual Alumni Homecoming & Symposium
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1.5 max-w-lg leading-relaxed m-0">
+                Return to campus for keynotes, workshops, and roundtables with fellow graduates who are pioneering modern engineering and leadership.
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-3">
+            <Button asChild size="default">
+              <Link href="/events">Browse Events</Link>
+            </Button>
+            <Button asChild variant="outline" size="default">
+              <Link href="/register">Create Profile</Link>
+            </Button>
+          </div>
+        </div>
       </section>
-    </>
+    </div>
   );
 }

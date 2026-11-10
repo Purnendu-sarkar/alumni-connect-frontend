@@ -12,19 +12,19 @@ export default function DashboardEntryPage() {
     if (!user) return;
     switch (user.role) {
       case 'STUDENT':
-        router.replace('/dashboard/student');
+        router.replace('/student/dashboard');
         break;
       case 'ALUMNI':
-        router.replace('/dashboard/alumni');
+        router.replace('/alumni/dashboard');
         break;
       case 'MODERATOR':
-        router.replace('/dashboard/moderator');
+        router.replace('/moderator/dashboard');
         break;
       case 'SUPER_ADMIN':
-        router.replace('/dashboard/super-admin');
+        router.replace('/admin/dashboard');
         break;
       default:
-        router.replace('/dashboard/student');
+        router.replace('/student/dashboard');
     }
   }, [user, router]);
 

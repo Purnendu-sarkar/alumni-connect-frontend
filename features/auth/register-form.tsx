@@ -80,29 +80,24 @@ export function RegisterForm() {
   if (registeredSuccess) {
     const isAlumni = registeredSuccess.role === 'ALUMNI';
     return (
-      <section className="auth-card">
-        <p className="eyebrow" style={{ color: '#16a34a' }}>REGISTRATION RECEIVED</p>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Mail size={32} color="#16a34a" /> Check your inbox.
-        </h1>
-        <p className="lede">
-          We sent a verification link to <strong>{registeredSuccess.email}</strong>.
-        </p>
+      <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="space-y-1.5">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 font-mono">
+            REGISTRATION RECEIVED
+          </span>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2 m-0">
+            <Mail size={24} className="text-emerald-600" /> Check your inbox.
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 m-0">
+            We sent a verification link to <strong>{registeredSuccess.email}</strong>.
+          </p>
+        </div>
 
-        <div
-          style={{
-            margin: '1.5rem 0',
-            padding: '1.25rem',
-            border: '2px solid var(--ink)',
-            background: 'var(--surface)',
-            fontSize: '0.9rem',
-            lineHeight: 1.6,
-          }}
-        >
+        <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-700 space-y-2">
           {isAlumni ? (
             <div>
-              <p style={{ margin: 0, fontWeight: 700 }}>Alumni Verification Step:</p>
-              <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.25rem' }}>
+              <p className="font-bold text-slate-900 m-0">Alumni Verification Step:</p>
+              <ol className="list-decimal pl-4 mt-1 space-y-1 text-slate-600">
                 <li>Open the confirmation email and click <strong>Verify Email Address</strong>.</li>
                 <li>Your profile will then be reviewed by university administration to accredit your alumni standing.</li>
                 <li>You will receive an approval confirmation once accredited.</li>
@@ -110,30 +105,21 @@ export function RegisterForm() {
             </div>
           ) : (
             <div>
-              <p style={{ margin: 0, fontWeight: 700 }}>Student Verification Step:</p>
-              <p style={{ margin: '0.5rem 0 0' }}>
-                Click the verification link in your email to confirm your student email and immediately activate your account for sign in.
+              <p className="font-bold text-slate-900 m-0">Student Verification Step:</p>
+              <p className="mt-1 text-slate-600 m-0">
+                Click the verification link in your email to confirm your university email and immediately activate your account for sign in.
               </p>
             </div>
           )}
         </div>
 
         {registeredSuccess.debugToken ? (
-          <div
-            style={{
-              padding: '0.75rem 1rem',
-              background: '#fef3c7',
-              border: '1px solid #f59e0b',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <strong>Development Helper:</strong>
-            <div style={{ marginTop: '0.25rem' }}>
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+            <strong>Development Quick Verification:</strong>
+            <div>
               <Link
                 href={`/verify-email?token=${registeredSuccess.debugToken}&role=${registeredSuccess.role}`}
-                style={{ color: '#b45309', textDecoration: 'underline' }}
+                className="text-amber-800 underline font-semibold"
               >
                 Click here to verify email directly in dev mode
               </Link>
@@ -141,88 +127,96 @@ export function RegisterForm() {
           </div>
         ) : null}
 
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-          <Button asChild style={{ width: '100%' }}>
-            <Link href="/login">
-              Proceed to Sign in <ArrowRight size={16} />
-            </Link>
-          </Button>
-        </div>
+        <Button asChild className="w-full justify-center">
+          <Link href="/login">
+            Proceed to Sign In <ArrowRight size={15} />
+          </Link>
+        </Button>
       </section>
     );
   }
 
   return (
-    <section className="auth-card auth-card--register">
-      <p className="eyebrow">OPEN YOUR DOOR</p>
-      <h1>Be part of the record.</h1>
-      <p className="auth-card__desc">
-        Select your status and enter your academic details to join your university community.
-      </p>
+    <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="space-y-1.5">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
+          OPEN YOUR DOOR
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight m-0">
+          Be part of the campus record.
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 m-0">
+          Select your status and enter your academic details to join your verified community.
+        </p>
+      </div>
 
-      {/* Role Selection Buttons - High Contrast, Zero Color Conflict */}
-      <div className="auth-role-selector">
+      {/* Role Selection Buttons */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           type="button"
           onClick={() => setValue('role', 'STUDENT')}
-          className={`auth-role-btn ${role === 'STUDENT' ? 'auth-role-btn--active' : ''}`}
+          className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-150 ${
+            role === 'STUDENT'
+              ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20'
+              : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80'
+          }`}
           aria-pressed={role === 'STUDENT'}
         >
-          <div className="auth-role-btn__icon">
-            <School size={20} />
+          <div className={`p-2 rounded-xl shrink-0 ${role === 'STUDENT' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <School size={18} />
           </div>
-          <div className="auth-role-btn__content">
-            <span className="auth-role-btn__title">Current Student</span>
-            <span className="auth-role-btn__desc">Mentorship & campus jobs</span>
-          </div>
-          <div className="auth-role-btn__check">
-            <CheckCircle2 size={18} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-xs font-bold text-slate-900">Current Student</span>
+              {role === 'STUDENT' && <CheckCircle2 size={15} className="text-blue-600 shrink-0" />}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5 m-0 truncate">Mentorship & jobs</p>
           </div>
         </button>
 
         <button
           type="button"
           onClick={() => setValue('role', 'ALUMNI')}
-          className={`auth-role-btn ${role === 'ALUMNI' ? 'auth-role-btn--active' : ''}`}
+          className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all duration-150 ${
+            role === 'ALUMNI'
+              ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20'
+              : 'bg-slate-50 border-slate-200 hover:bg-slate-100/80'
+          }`}
           aria-pressed={role === 'ALUMNI'}
         >
-          <div className="auth-role-btn__icon">
-            <GraduationCap size={20} />
+          <div className={`p-2 rounded-xl shrink-0 ${role === 'ALUMNI' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border border-slate-200'}`}>
+            <GraduationCap size={18} />
           </div>
-          <div className="auth-role-btn__content">
-            <span className="auth-role-btn__title">Alumni / Graduate</span>
-            <span className="auth-role-btn__desc">Post opportunities & mentor</span>
-          </div>
-          <div className="auth-role-btn__check">
-            <CheckCircle2 size={18} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-xs font-bold text-slate-900">Alumni / Graduate</span>
+              {role === 'ALUMNI' && <CheckCircle2 size={15} className="text-blue-600 shrink-0" />}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5 m-0 truncate">Post jobs & mentor</p>
           </div>
         </button>
       </div>
 
-      <form onSubmit={handleSubmit(submit)} className="auth-form-grid" noValidate>
-        <div className="auth-form-field--full">
-          <Input
-            label="Full Name"
-            placeholder="e.g. Tanzim Sakib"
-            error={errors.name?.message}
-            {...register('name')}
-            required
-          />
-        </div>
+      <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
+        <Input
+          label="Full Name"
+          placeholder="e.g. Sabbir Ahmed"
+          error={errors.name?.message}
+          {...register('name')}
+          required
+        />
 
-        <div className="auth-form-field--full">
-          <Input
-            label="University Email Address"
-            type="email"
-            placeholder="e.g. sakib.cse@demo.edu"
-            hint="Your institutional or permanent personal address."
-            error={errors.email?.message}
-            {...register('email')}
-            required
-          />
-        </div>
+        <Input
+          label="University Email Address"
+          type="email"
+          placeholder="e.g. sabbir.cse@demo.edu"
+          hint="Your institutional or permanent personal address."
+          error={errors.email?.message}
+          {...register('email')}
+          required
+        />
 
-        <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Department"
             placeholder="e.g. Computer Science"
@@ -230,12 +224,10 @@ export function RegisterForm() {
             {...register('department')}
             required
           />
-        </div>
 
-        <div>
           <Input
             label="Batch / Cohort"
-            placeholder="e.g. Batch 2018 or 18th"
+            placeholder="e.g. Batch 2022"
             error={errors.batch?.message}
             {...register('batch')}
             required
@@ -243,166 +235,143 @@ export function RegisterForm() {
         </div>
 
         {role === 'STUDENT' ? (
-          <>
-            <div>
-              <Input
-                label="Student ID (Optional)"
-                placeholder="e.g. 180104001"
-                error={errors.studentId?.message}
-                {...register('studentId')}
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              label="Student ID (Optional)"
+              placeholder="e.g. 20221004"
+              error={errors.studentId?.message}
+              {...register('studentId')}
+            />
 
-            <div>
-              <Input
-                label="Current Semester"
-                placeholder="e.g. 7th Semester"
-                error={errors.currentSemester?.message}
-                {...register('currentSemester')}
-              />
-            </div>
+            <Input
+              label="Current Semester"
+              placeholder="e.g. 6th Semester"
+              error={errors.currentSemester?.message}
+              {...register('currentSemester')}
+            />
 
-            <div>
-              <Input
-                label="Admission Year"
-                placeholder="e.g. 2021"
-                error={errors.admissionYear?.message}
-                {...register('admissionYear')}
-              />
-            </div>
+            <Input
+              label="Admission Year"
+              placeholder="e.g. 2022"
+              error={errors.admissionYear?.message}
+              {...register('admissionYear')}
+            />
 
-            <div>
-              <Input
-                label="Expected Graduation Year"
-                placeholder="e.g. 2025"
-                error={errors.expectedGraduationYear?.message}
-                {...register('expectedGraduationYear')}
-              />
-            </div>
-          </>
+            <Input
+              label="Expected Graduation"
+              placeholder="e.g. 2026"
+              error={errors.expectedGraduationYear?.message}
+              {...register('expectedGraduationYear')}
+            />
+          </div>
         ) : (
-          <>
-            <div>
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Graduation Year"
-                placeholder="e.g. 2022"
+                placeholder="e.g. 2021"
                 error={errors.graduationYear?.message}
                 {...register('graduationYear')}
               />
+
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700">
+                  Employment Status
+                </label>
+                <select
+                  {...register('employmentStatus')}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="Employed">Employed / Working</option>
+                  <option value="Self-Employed">Self-Employed / Founder</option>
+                  <option value="Higher Studies">Pursuing Higher Studies</option>
+                  <option value="Open to Work">Open to Opportunities</option>
+                </select>
+              </div>
             </div>
 
-            <div>
-              <label className="input-group__label">Current Employment Status</label>
-              <select
-                className="input-control"
-                {...register('employmentStatus')}
-                style={{ width: '100%', height: '44px', background: 'var(--paper, #fff)' }}
-              >
-                <option value="Employed">Employed / Working</option>
-                <option value="Self-Employed">Self-Employed / Founder</option>
-                <option value="Higher Studies">Pursuing Higher Studies</option>
-                <option value="Open to Work">Open to Opportunities</option>
-              </select>
-            </div>
-
-            <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Current Company / Organization"
-                placeholder="e.g. Google, bKash, BRAC"
+                label="Current Employer / Organization"
+                placeholder="e.g. bKash, Google, Pathao"
                 error={errors.currentCompany?.message}
                 {...register('currentCompany')}
               />
-            </div>
 
-            <div>
               <Input
-                label="Job Title / Role"
+                label="Position / Designation"
                 placeholder="e.g. Senior Software Engineer"
                 error={errors.position?.message}
                 {...register('position')}
               />
             </div>
-          </>
+          </div>
         )}
 
-        <div className="auth-form-field--full">
-          <Input
-            label="Key Skills"
-            placeholder="e.g. React, Node.js, Python, Product Strategy (comma-separated)"
-            error={errors.skills?.message}
-            {...register('skills')}
-          />
-        </div>
+        <Input
+          label="Key Skills"
+          placeholder="e.g. React, Node.js, Python, System Design (comma-separated)"
+          error={errors.skills?.message}
+          {...register('skills')}
+        />
 
-        <div style={{ position: 'relative' }}>
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="••••••••••••"
-            error={errors.password?.message}
-            {...register('password')}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '38px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--muted, #666)',
-            }}
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-
-        <div style={{ position: 'relative' }}>
-          <Input
-            label="Confirm Password"
-            type={showConfirmPassword ? 'text' : 'password'}
-            placeholder="••••••••••••"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            style={{
-              position: 'absolute',
-              right: '12px',
-              top: '38px',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--muted, #666)',
-            }}
-            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-          >
-            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-
-        {formError ? (
-          <div className="auth-form-field--full">
-            <FormAlert>{formError}</FormAlert>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-8.5 p-1 text-slate-400 hover:text-slate-600"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
-        ) : null}
 
-        <div className="auth-form-field--full" style={{ marginTop: '0.25rem' }}>
-          <Button type="submit" className="auth-card__submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating profile…' : 'Create profile'}
-          </Button>
-
-          <p className="auth-card__switch">
-            Already have an account? <Link href="/login">Sign in.</Link>
-          </p>
+          <div className="relative">
+            <Input
+              label="Confirm Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              placeholder="••••••••••••"
+              error={errors.confirmPassword?.message}
+              {...register('confirmPassword')}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-8.5 p-1 text-slate-400 hover:text-slate-600"
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
+
+        {formError ? <FormAlert>{formError}</FormAlert> : null}
+
+        <Button
+          type="submit"
+          className="w-full justify-center font-bold"
+          size="default"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Creating profile…' : 'Create Verified Profile'}
+        </Button>
+
+        <p className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100 m-0">
+          Already registered?{' '}
+          <Link href="/login" className="font-bold text-blue-600 hover:text-blue-800 transition-colors">
+            Sign in to your account
+          </Link>
+        </p>
       </form>
     </section>
   );

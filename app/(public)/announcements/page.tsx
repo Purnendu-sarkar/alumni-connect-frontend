@@ -16,7 +16,6 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { SectionHeading } from '@/components/ui/section-heading';
 
 interface Announcement {
@@ -87,45 +86,43 @@ export default function AnnouncementsPage() {
   });
 
   return (
-    <section className="page-shell" style={{ padding: '4rem 0' }}>
-      <p className="eyebrow eyebrow--red">INSTITUTIONAL NOTICE BOARD</p>
-      <h1>University & Alumni Announcements</h1>
-      <p className="lede">
-        Official administrative bulletins, convocation notices, alumni association directives, and campus career initiatives.
-      </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
+      {/* Page Header */}
+      <div className="space-y-4 max-w-3xl">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">
+          <Megaphone size={14} /> Institutional Notice Board
+        </div>
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight m-0">
+          Official University Circulars
+        </h1>
+        <p className="text-base sm:text-lg text-slate-600 leading-relaxed m-0">
+          Official administrative bulletins, convocation notices, alumni association directives, and campus career initiatives.
+        </p>
+      </div>
 
       {/* Filter and Search Bar */}
-      <div
-        style={{
-          margin: '3rem 0 2rem',
-          display: 'flex',
-          gap: '1rem',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: '240px' }}>
-          <Input
-            placeholder="Search notices by keyword or title…"
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search notices by keyword, title, or circular number…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-1.5 flex-wrap">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              style={{
-                border: '2px solid var(--ink)',
-                background: category === cat ? 'var(--ink)' : 'var(--paper)',
-                color: category === cat ? 'var(--paper)' : 'var(--ink)',
-                padding: '0.45rem 0.85rem',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                category === cat
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
             >
               {cat}
             </button>
@@ -133,55 +130,59 @@ export default function AnnouncementsPage() {
         </div>
       </div>
 
-      {/* Pinned & Active Bulletins */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Bulletins List */}
+      <div className="space-y-6">
         {filtered.map((item) => (
           <article
             key={item.id}
-            style={{
-              border: '2px solid var(--ink)',
-              padding: '1.75rem',
-              background: item.isPinned ? 'var(--surface)' : 'var(--paper)',
-              position: 'relative',
-            }}
+            className={`bg-white rounded-2xl border p-6 shadow-xs hover:shadow-md hover:border-blue-300 transition-all duration-200 space-y-4 ${
+              item.isPinned ? 'border-blue-200 bg-blue-50/20' : 'border-slate-200'
+            }`}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {item.isPinned && (
-                  <Badge variant="error">
-                    <Pin size={12} style={{ display: 'inline', marginRight: '3px' }} /> Official Pinned Notice
-                  </Badge>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">
+                    <Pin size={11} /> Pinned Notice
+                  </span>
                 )}
                 <Badge variant="neutral">{item.category}</Badge>
-                <span style={{ fontSize: '0.75rem', color: 'var(--quiet)', fontFamily: 'monospace' }}>
+                <span className="text-[11px] font-mono text-slate-400">
                   {item.issueNo}
                 </span>
               </div>
-              <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>
+              <span className="text-xs font-semibold text-slate-500">
                 {item.date}
               </span>
             </div>
 
-            <h2 style={{ fontSize: '1.45rem', margin: '0.25rem 0 0.5rem' }}>{item.title}</h2>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--quiet)', fontWeight: 600 }}>
-              Issued by: {item.department}
-            </p>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug m-0">
+                {item.title}
+              </h2>
+              <p className="text-xs font-semibold text-slate-500 mt-1 m-0">
+                Issued by: {item.department}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed m-0">
+                {item.summary}
+              </p>
+            </div>
 
-            <p style={{ margin: '0.75rem 0 1.25rem', color: 'var(--muted)', fontSize: '0.9rem', lineHeight: 1.6 }}>
-              {item.summary}
-            </p>
-
-            <div style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--line)', paddingTop: '1rem' }}>
-              <Button size="sm" variant="secondary">
-                <FileText size={14} /> Read Full Circular
+            <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
+              <Button size="sm" variant="outline">
+                <FileText size={13} /> View Circular Details
               </Button>
-              <Button size="sm" variant="ghost">
-                <Download size={14} /> Download PDF (Official Seal)
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => alert(`Downloading official PDF copy of ${item.issueNo}…`)}
+              >
+                <Download size={13} /> Official Seal PDF
               </Button>
             </div>
           </article>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
