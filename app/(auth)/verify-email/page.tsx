@@ -11,7 +11,9 @@ import { verifyEmail } from '@/lib/api/auth.api';
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-  const role = (searchParams.get('role') || 'STUDENT').toUpperCase();
+  const [resolvedRole, setResolvedRole] = useState<string>(
+    (searchParams.get('role') || 'STUDENT').toUpperCase(),
+  );
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [errorMessage, setErrorMessage] = useState('');
@@ -24,7 +26,10 @@ function VerifyEmailContent() {
     }
 
     verifyEmail(token)
-      .then(() => {
+      .then((res) => {
+        if (res.data?.role) {
+          setResolvedRole(res.data.role.toUpperCase());
+        }
         setStatus('success');
       })
       .catch((err: unknown) => {
@@ -65,7 +70,7 @@ function VerifyEmailContent() {
     );
   }
 
-  const isAlumni = role === 'ALUMNI';
+  const isAlumni = resolvedRole === 'ALUMNI';
 
   return (
     <section className="auth-card">

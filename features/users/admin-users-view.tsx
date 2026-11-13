@@ -29,11 +29,12 @@ import { TableSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import {
-  getVerifications,
+  getAdminUsers,
   toggleUserSuspension,
+  type AdminUserItem,
 } from '@/lib/api/admin.api';
 import { useAuthStore } from '@/store/auth-store';
-import type { UserRole, VerificationItem } from '@/types/domain';
+import type { UserRole } from '@/types/domain';
 
 interface AdminUsersViewProps {
   currentRole: UserRole;
@@ -46,15 +47,17 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
   const accessToken = useAuthStore((state) => state.accessToken);
 
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>(roleFilterPreset || 'ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
   const [search, setSearch] = useState('');
-  const [suspendingUser, setSuspendingUser] = useState<VerificationItem | null>(null);
+  const [targetUser, setTargetUser] = useState<{ user: AdminUserItem; nextIsActive: boolean } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const usersQuery = useQuery({
-    queryKey: ['admin-users-list', accessToken, roleFilter, search],
+    queryKey: ['admin-users-list', accessToken, roleFilter, statusFilter, search],
     queryFn: () =>
-      getVerifications(accessToken, {
+      getAdminUsers(accessToken, {
         role: roleFilter === 'ALL' ? undefined : roleFilter,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
         search: search.trim() || undefined,
         limit: 100,
       }),
@@ -66,7 +69,7 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
       toggleUserSuspension(accessToken, userId, isActive),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
-      setSuspendingUser(null);
+      setTargetUser(null);
       setActionNotice(`User account ${vars.isActive ? 'restored to active' : 'suspended'}.`);
       setTimeout(() => setActionNotice(null), 4000);
     },
@@ -75,7 +78,7 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
     },
   });
 
-  const users: VerificationItem[] = usersQuery.data?.data ?? [];
+  const users: AdminUserItem[] = usersQuery.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -128,6 +131,7 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
             { id: 'STUDENT', label: 'Students' },
             { id: 'ALUMNI', label: 'Alumni' },
             { id: 'MODERATOR', label: 'Moderators' },
+            { id: 'SUPER_ADMIN', label: 'Admins' },
           ].map((item) => (
             <button
               key={item.id}
@@ -136,6 +140,27 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 roleFilter === item.id
                   ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto text-xs border-l pl-3 border-slate-200">
+          {[
+            { id: 'ALL', label: 'All Status' },
+            { id: 'ACTIVE', label: 'Active' },
+            { id: 'SUSPENDED', label: 'Suspended' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setStatusFilter(item.id as any)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                statusFilter === item.id
+                  ? 'bg-blue-600 text-white'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -164,6 +189,7 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
                   <th className="p-3.5">Role</th>
                   <th className="p-3.5">Department & Batch</th>
                   <th className="p-3.5">Institutional ID</th>
+                  <th className="p-3.5">Account Status</th>
                   <th className="p-3.5">Verification</th>
                   <th className="p-3.5 pr-5 text-right">Actions</th>
                 </tr>
@@ -195,6 +221,18 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
                     </td>
 
                     <td className="p-3.5">
+                      {usr.isActive ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 size={12} /> Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Ban size={12} /> Suspended
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="p-3.5">
                       <StatusBadge status={usr.verificationStatus} />
                     </td>
 
@@ -205,14 +243,25 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
                             Details
                           </Link>
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSuspendingUser(usr)}
-                          className="text-rose-600 hover:bg-rose-50"
-                        >
-                          <Ban size={13} /> Suspend
-                        </Button>
+                        {usr.isActive ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setTargetUser({ user: usr, nextIsActive: false })}
+                            className="text-rose-600 hover:bg-rose-50"
+                          >
+                            <Ban size={13} /> Suspend
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setTargetUser({ user: usr, nextIsActive: true })}
+                            className="text-emerald-600 hover:bg-emerald-50"
+                          >
+                            <UserCheck size={13} /> Restore
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -223,21 +272,25 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
         </div>
       )}
 
-      {/* Suspend Confirmation Dialog */}
-      {suspendingUser ? (
+      {/* Suspend / Restore Confirmation Dialog */}
+      {targetUser ? (
         <ConfirmDialog
-          isOpen={Boolean(suspendingUser)}
-          onClose={() => setSuspendingUser(null)}
+          isOpen={Boolean(targetUser)}
+          onClose={() => setTargetUser(null)}
           onConfirm={() =>
             suspendMutation.mutate({
-              userId: suspendingUser.id,
-              isActive: false,
+              userId: targetUser.user.id,
+              isActive: targetUser.nextIsActive,
             })
           }
-          title={`Suspend Account: ${suspendingUser.name}`}
-          description={`Suspending will invalidate all active sessions for ${suspendingUser.email}. They will be unable to log in until reinstated.`}
-          confirmLabel="Suspend User"
-          variant="destructive"
+          title={`${targetUser.nextIsActive ? 'Restore' : 'Suspend'} Account: ${targetUser.user.name}`}
+          description={
+            targetUser.nextIsActive
+              ? `Restoring this account will allow ${targetUser.user.email} to sign in and interact on the platform.`
+              : `Suspending will invalidate all active sessions for ${targetUser.user.email}. They will be unable to log in until reinstated.`
+          }
+          confirmLabel={targetUser.nextIsActive ? 'Restore User' : 'Suspend User'}
+          variant={targetUser.nextIsActive ? 'primary' : 'destructive'}
           isLoading={suspendMutation.isPending}
         />
       ) : null}

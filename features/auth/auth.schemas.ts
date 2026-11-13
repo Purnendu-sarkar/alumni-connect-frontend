@@ -25,7 +25,8 @@ export const registerSchema = z
       .trim()
       .min(2, 'Enter your university code.')
       .max(80)
-      .regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only.'),
+      .regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only.')
+      .optional(),
     role: z.enum(['STUDENT', 'ALUMNI']),
     department: z.string().trim().min(1, 'Department is required.').max(100),
     batch: z.string().trim().min(1, 'Batch / graduation year is required.').max(100),
@@ -37,6 +38,7 @@ export const registerSchema = z
     expectedGraduationYear: z.string().trim().max(20).optional(),
 
     // Alumni fields
+    degree: z.string().trim().max(100).optional(),
     graduationYear: z.string().trim().max(20).optional(),
     academicId: z.string().trim().max(100).optional(),
     employmentStatus: z.string().trim().max(100).optional(),
@@ -52,6 +54,27 @@ export const registerSchema = z
         code: 'custom',
         path: ['confirmPassword'],
         message: 'Passwords do not match.',
+      });
+    }
+    if (data.role === 'STUDENT' && (!data.studentId || !data.studentId.trim())) {
+      context.addIssue({
+        code: 'custom',
+        path: ['studentId'],
+        message: 'University Student ID is required.',
+      });
+    }
+    if (data.role === 'ALUMNI' && (!data.academicId || !data.academicId.trim())) {
+      context.addIssue({
+        code: 'custom',
+        path: ['academicId'],
+        message: 'Academic / Student ID is required.',
+      });
+    }
+    if (data.role === 'ALUMNI' && (!data.graduationYear || !data.graduationYear.trim())) {
+      context.addIssue({
+        code: 'custom',
+        path: ['graduationYear'],
+        message: 'Graduation year is required.',
       });
     }
   });

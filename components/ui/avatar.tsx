@@ -70,7 +70,7 @@ function Avatar({ name, src, size = 'md', className, children, ...props }: Simpl
     .slice(0, 2)
     .toUpperCase() || 'U';
 
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') ?? 'http://localhost:5000';
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') ?? 'http://localhost:5001';
   const fullSrc = src?.startsWith('/') ? `${baseUrl}${src}` : src;
 
   const sizeClasses = {

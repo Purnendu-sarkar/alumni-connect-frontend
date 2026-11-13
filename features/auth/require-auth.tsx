@@ -26,19 +26,32 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
 
     const role = user.role;
 
-    if (pathname.startsWith('/dashboard/super-admin') || pathname.startsWith('/dashboard/admin')) {
+    if (
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/dashboard/super-admin') ||
+      pathname.startsWith('/dashboard/admin')
+    ) {
       if (role !== 'SUPER_ADMIN') {
         router.replace('/dashboard');
       }
-    } else if (pathname.startsWith('/dashboard/moderator')) {
+    } else if (
+      pathname.startsWith('/moderator') ||
+      pathname.startsWith('/dashboard/moderator')
+    ) {
       if (role !== 'MODERATOR' && role !== 'SUPER_ADMIN') {
         router.replace('/dashboard');
       }
-    } else if (pathname.startsWith('/dashboard/student')) {
+    } else if (
+      pathname.startsWith('/student') ||
+      pathname.startsWith('/dashboard/student')
+    ) {
       if (role !== 'STUDENT' && role !== 'SUPER_ADMIN') {
         router.replace('/dashboard');
       }
-    } else if (pathname.startsWith('/dashboard/alumni')) {
+    } else if (
+      pathname.startsWith('/alumni') ||
+      pathname.startsWith('/dashboard/alumni')
+    ) {
       if (role !== 'ALUMNI' && role !== 'SUPER_ADMIN') {
         router.replace('/dashboard');
       }

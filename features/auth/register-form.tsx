@@ -44,7 +44,7 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: 'STUDENT',
-      universitySlug: process.env.NEXT_PUBLIC_UNIVERSITY_SLUG ?? 'demo-university',
+      universitySlug: process.env.NEXT_PUBLIC_UNIVERSITY_SLUG || undefined,
       employmentStatus: 'Employed',
     },
   });
@@ -241,10 +241,11 @@ export function RegisterForm() {
           {role === 'STUDENT' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
-                label="Student ID (Optional)"
+                label="University Student ID"
                 placeholder="e.g. 20221004"
                 error={errors.studentId?.message}
                 {...register('studentId')}
+                required
               />
 
               <Input
@@ -272,10 +273,28 @@ export function RegisterForm() {
             <div className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Input
+                  label="University / Student ID"
+                  placeholder="e.g. 180104"
+                  error={errors.academicId?.message}
+                  {...register('academicId')}
+                  required
+                />
+
+                <Input
+                  label="Degree / Major"
+                  placeholder="e.g. B.Sc. in Computer Science"
+                  error={errors.degree?.message}
+                  {...register('degree')}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
                   label="Graduation Year"
                   placeholder="e.g. 2021"
                   error={errors.graduationYear?.message}
                   {...register('graduationYear')}
+                  required
                 />
 
                 <div className="space-y-1">

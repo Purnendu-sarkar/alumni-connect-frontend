@@ -44,7 +44,10 @@ export function AdminVerificationView({ currentRole, basePath, statusFilterPrese
   const [statusFilter, setStatusFilter] = useState<VerificationStatus>(statusFilterPreset || 'PENDING');
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
-  const [rejectingUser, setRejectingUser] = useState<VerificationItem | null>(null);
+  const [rejectingUser, setRejectingUser] = useState<{
+    user: VerificationItem;
+    action: 'REJECTED' | 'REVOKED';
+  } | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
@@ -61,8 +64,15 @@ export function AdminVerificationView({ currentRole, basePath, statusFilterPrese
   });
 
   const reviewMutation = useMutation({
-    mutationFn: ({ userId, status, reason }: { userId: string; status: 'APPROVED' | 'REJECTED'; reason?: string }) =>
-      reviewVerification(accessToken, userId, { status, reason }),
+    mutationFn: ({
+      userId,
+      status,
+      reason,
+    }: {
+      userId: string;
+      status: 'APPROVED' | 'REJECTED' | 'REVOKED';
+      reason?: string;
+    }) => reviewVerification(accessToken, userId, { status, reason }),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
@@ -71,7 +81,9 @@ export function AdminVerificationView({ currentRole, basePath, statusFilterPrese
       setActionNotice(
         vars.status === 'APPROVED'
           ? 'Member identity verified! Network and directory privileges unlocked.'
-          : 'Verification returned to user with feedback.'
+          : vars.status === 'REVOKED'
+            ? 'Accreditation revoked and reset to pending.'
+            : 'Verification returned to user with feedback.',
       );
       setTimeout(() => setActionNotice(null), 4000);
     },
@@ -208,13 +220,26 @@ export function AdminVerificationView({ currentRole, basePath, statusFilterPrese
                   </span>
                 )}
 
-                {item.verificationStatus !== 'REJECTED' ? (
+                {item.verificationStatus === 'APPROVED' ? (
                   <Button
                     size="sm"
                     variant="ghost"
                     disabled={reviewMutation.isPending}
                     onClick={() => {
-                      setRejectingUser(item);
+                      setRejectingUser({ user: item, action: 'REVOKED' });
+                      setRejectionReason('Accreditation revoked by administrator.');
+                    }}
+                    className="text-amber-700 hover:bg-amber-50"
+                  >
+                    Revoke
+                  </Button>
+                ) : item.verificationStatus !== 'REJECTED' ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={reviewMutation.isPending}
+                    onClick={() => {
+                      setRejectingUser({ user: item, action: 'REJECTED' });
                       setRejectionReason('Student ID or graduation batch record does not match institutional records.');
                     }}
                     className="text-rose-600 hover:bg-rose-50"
@@ -228,21 +253,29 @@ export function AdminVerificationView({ currentRole, basePath, statusFilterPrese
         </div>
       )}
 
-      {/* Reject Modal */}
+      {/* Reject / Revoke Modal */}
       {rejectingUser ? (
         <ConfirmDialog
           isOpen={Boolean(rejectingUser)}
           onClose={() => setRejectingUser(null)}
           onConfirm={() =>
             reviewMutation.mutate({
-              userId: rejectingUser.id,
-              status: 'REJECTED',
+              userId: rejectingUser.user.id,
+              status: rejectingUser.action,
               reason: rejectionReason,
             })
           }
-          title={`Reject Verification for ${rejectingUser.name}`}
-          description={`Provide clear feedback to ${rejectingUser.name} explaining what academic information must be corrected.`}
-          confirmLabel="Reject Submission"
+          title={
+            rejectingUser.action === 'REVOKED'
+              ? `Revoke Accreditation for ${rejectingUser.user.name}`
+              : `Reject Verification for ${rejectingUser.user.name}`
+          }
+          description={
+            rejectingUser.action === 'REVOKED'
+              ? `Provide the reason for revoking alumni accreditation for ${rejectingUser.user.name}.`
+              : `Provide clear feedback to ${rejectingUser.user.name} explaining what academic information must be corrected.`
+          }
+          confirmLabel={rejectingUser.action === 'REVOKED' ? 'Revoke Accreditation' : 'Reject Submission'}
           variant="destructive"
           isLoading={reviewMutation.isPending}
         >

@@ -26,10 +26,128 @@ export function getVerifications(
   });
 }
 
+export interface AdminUserItem {
+  id: string;
+  name: string;
+  email: string;
+  batch: string | null;
+  department: string | null;
+  studentId: string | null;
+  academicId: string | null;
+  currentSemester: string | null;
+  graduationYear: string | null;
+  employmentStatus: string | null;
+  currentCompany: string | null;
+  position: string | null;
+  avatarUrl: string | null;
+  verified: boolean;
+  verificationStatus: VerificationStatus;
+  isActive: boolean;
+  isDemo: boolean;
+  needPasswordChange: boolean;
+  createdAt: string;
+  updatedAt: string;
+  role: { id: string; name: UserRole };
+}
+
+export interface AdminUsersQueryParams {
+  page?: number;
+  limit?: number;
+  role?: UserRole;
+  status?: 'ACTIVE' | 'SUSPENDED';
+  verificationStatus?: VerificationStatus;
+  search?: string;
+}
+
+export function getAdminUsers(
+  accessToken: string | null,
+  filters: AdminUsersQueryParams = {},
+) {
+  const params = new URLSearchParams();
+  if (filters.page) params.set('page', String(filters.page));
+  if (filters.limit) params.set('limit', String(filters.limit));
+  if (filters.role) params.set('role', filters.role);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.verificationStatus) params.set('verificationStatus', filters.verificationStatus);
+  if (filters.search) params.set('search', filters.search);
+
+  const queryStr = params.toString() ? `?${params.toString()}` : '';
+  return apiClient<AdminUserItem[]>(`/admin/users${queryStr}`, {
+    accessToken,
+  });
+}
+
+export interface AdminUserDetail {
+  id: string;
+  name: string;
+  email: string;
+  department: string | null;
+  batch: string | null;
+  studentId: string | null;
+  currentSemester: string | null;
+  admissionYear: string | null;
+  expectedGraduationYear: string | null;
+  graduationYear: string | null;
+  academicId: string | null;
+  employmentStatus: string | null;
+  currentCompany: string | null;
+  position: string | null;
+  bio: string | null;
+  headline: string | null;
+  location: string | null;
+  phone: string | null;
+  phonePublic: boolean;
+  linkedinUrl: string | null;
+  websiteUrl: string | null;
+  githubUrl: string | null;
+  skills: string[];
+  interests: string[];
+  avatarUrl: string | null;
+  verified: boolean;
+  verificationStatus: VerificationStatus;
+  rejectionReason: string | null;
+  verifiedAt: string | null;
+  isActive: boolean;
+  isDemo: boolean;
+  needPasswordChange: boolean;
+  createdAt: string;
+  updatedAt: string;
+  role: { id: string; name: UserRole; description?: string };
+  university: { id: string; name: string; slug: string; domain: string };
+  refreshTokens: Array<{
+    id: string;
+    createdAt: string;
+    expiresAt: string;
+    revokedAt: string | null;
+  }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    createdAt: string;
+    metadata: any;
+    actor?: { id: string; name: string; email: string };
+  }>;
+}
+
+export function getAdminUserDetail(accessToken: string | null, userId: string) {
+  return apiClient<AdminUserDetail>(`/admin/users/${userId}`, {
+    accessToken,
+  });
+}
+
+export function terminateUserSessions(accessToken: string | null, userId: string) {
+  return apiClient<{ success: boolean; message: string }>(`/admin/users/${userId}/sessions`, {
+    method: 'DELETE',
+    accessToken,
+  });
+}
+
 export function reviewVerification(
   accessToken: string | null,
   userId: string,
-  input: { status: 'APPROVED' | 'REJECTED'; reason?: string },
+  input: { status: 'APPROVED' | 'REJECTED' | 'REVOKED'; reason?: string },
 ) {
   return apiClient<VerificationItem>(`/admin/users/${userId}/verification`, {
     method: 'PATCH',
@@ -154,11 +272,16 @@ export function revokeModeratorInvitation(accessToken: string | null, id: string
   });
 }
 
-export function toggleUserSuspension(accessToken: string | null, userId: string, isActive: boolean) {
+export function toggleUserSuspension(
+  accessToken: string | null,
+  userId: string,
+  isActive: boolean,
+  reason?: string,
+) {
   return apiClient<{ id: string; isActive: boolean; email: string }>(`/admin/users/${userId}/status`, {
     method: 'PATCH',
     accessToken,
-    body: JSON.stringify({ isActive }),
+    body: JSON.stringify({ isActive, reason }),
   });
 }
 

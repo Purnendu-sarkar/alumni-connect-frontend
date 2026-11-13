@@ -38,7 +38,7 @@ export interface RegisterInput {
   name: string;
   email: string;
   password: string;
-  universitySlug: string;
+  universitySlug?: string;
   role: Extract<UserRole, 'STUDENT' | 'ALUMNI'>;
   department: string;
   batch: string;
@@ -46,6 +46,7 @@ export interface RegisterInput {
   currentSemester?: string;
   admissionYear?: string;
   expectedGraduationYear?: string;
+  degree?: string;
   graduationYear?: string;
   academicId?: string;
   employmentStatus?: string;
@@ -102,7 +103,7 @@ export function resetPassword(token: string, newPassword: string) {
 }
 
 export function verifyEmail(token: string) {
-  return apiClient<{ success: boolean; message: string }>('/auth/verify-email', {
+  return apiClient<{ role?: string; success?: boolean; message?: string }>('/auth/verify-email', {
     method: 'POST',
     body: JSON.stringify({ token }),
   });
