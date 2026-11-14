@@ -1,11 +1,11 @@
 'use client';
 
-import { ArrowLeft, CheckCircle2, KeyRound, Mail } from 'lucide-react';
-import Link from 'next/link';
 import { useState } from 'react';
+import Link from 'next/link';
+import { ArrowLeft, CheckCircle2, KeyRound, Mail } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
 import { forgotPassword } from '@/lib/api/auth.api';
 
@@ -39,50 +39,44 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <section className="auth-card">
-      <Link href="/login" className="back-link" style={{ marginBottom: '1rem', display: 'inline-flex' }}>
-        <ArrowLeft size={16} /> Back to sign in
+    <div className="w-full max-w-[490px] bg-white rounded-[32px] sm:rounded-[36px] border border-white/90 shadow-[0_24px_50px_-12px_rgba(15,23,42,0.12),0_10px_24px_-6px_rgba(37,99,235,0.08),0_0_1px_1px_rgba(255,255,255,1)] p-8 sm:p-11 space-y-6 relative z-10">
+      <Link
+        href="/login"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
+      >
+        <ArrowLeft size={14} /> Back to sign in
       </Link>
 
-      <p className="eyebrow">RECOVER ACCESS</p>
-      <h1>Reset your password</h1>
-      <p>Enter your university or account email address to receive password recovery instructions.</p>
+      <div className="space-y-1">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-sans">
+          RECOVER ACCESS
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight m-0 pt-0.5">
+          Reset your password
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 m-0 pt-0.5">
+          Enter your university or account email address to receive password recovery instructions.
+        </p>
+      </div>
 
       {submitted ? (
-        <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
-          <div
-            style={{
-              padding: '1.25rem',
-              borderRadius: '8px',
-              background: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              color: '#166534',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-              <CheckCircle2 size={18} />
-              Recovery link dispatched
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-sm text-emerald-800">
+              <CheckCircle2 size={18} className="text-emerald-600" />
+              <span>Recovery link dispatched</span>
             </div>
-            <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', lineHeight: 1.5 }}>
-              If an account is associated with <strong>{email}</strong>, a secure single-use reset link has been
+            <p className="m-0 text-slate-600 leading-relaxed">
+              If an account is associated with <strong className="text-slate-900">{email}</strong>, a secure single-use reset link has been
               sent. The link expires in 15 minutes.
             </p>
           </div>
 
-          <div
-            style={{
-              padding: '1rem',
-              borderRadius: '8px',
-              background: '#f8fafc',
-              border: '1px dashed #cbd5e1',
-              fontSize: '0.85rem',
-              color: '#475569',
-            }}
-          >
-            <strong>Local Academic / Viva Testing:</strong>
-            <p style={{ margin: '0.25rem 0 0' }}>
+          <div className="p-4 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-600 space-y-2">
+            <strong className="text-slate-800">Local Academic / Viva Testing:</strong>
+            <p className="m-0 leading-relaxed">
               • If Mailpit is running, view the email in Mailpit Web UI at{' '}
-              <a href="http://localhost:8025" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>
+              <a href="http://localhost:8025" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">
                 http://localhost:8025
               </a>
               .<br />
@@ -90,43 +84,61 @@ export default function ForgotPasswordPage() {
             </p>
 
             {debugUrl ? (
-              <div style={{ marginTop: '0.75rem' }}>
-                <Button asChild variant="secondary" style={{ width: '100%' }}>
+              <div className="pt-1">
+                <Button asChild variant="secondary" className="w-full h-10 rounded-xl text-xs font-semibold justify-center gap-2">
                   <a href={debugUrl}>
-                    <KeyRound size={16} /> Open Reset Password Screen
+                    <KeyRound size={15} /> Open Reset Password Screen
                   </a>
                 </Button>
               </div>
             ) : null}
           </div>
 
-          <p className="auth-card__switch">
-            Remembered your password? <Link href="/login">Sign in here.</Link>
-          </p>
+          <div className="text-center pt-2 border-t border-slate-100">
+            <p className="text-xs text-slate-500 m-0">
+              Remembered your password?{' '}
+              <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700">
+                Sign in here
+              </Link>
+            </p>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} style={{ marginTop: '1.5rem' }}>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <Input
-            label="Account email address"
+            label="Account email address *"
             type="email"
             placeholder="your.email@example.edu"
+            leftIcon={<Mail size={18} />}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
           />
 
-          {error ? <FormAlert>{error}</FormAlert> : null}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-          <Button type="submit" className="auth-card__submit" disabled={isSubmitting}>
-            <Mail size={16} /> {isSubmitting ? 'Sending instructions…' : 'Send reset link'}
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-12 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 justify-center gap-2"
+          >
+            <Mail size={16} />
+            <span>{isSubmitting ? 'Sending instructions…' : 'Send reset link'}</span>
           </Button>
 
-          <p className="auth-card__switch">
-            Remembered your credentials? <Link href="/login">Return to login.</Link>
+          <p className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100 m-0">
+            Remembered your credentials?{' '}
+            <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700">
+              Return to login
+            </Link>
           </p>
         </form>
       )}
-    </section>
+    </div>
   );
 }

@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ShieldAlert, Sparkles, User } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { setupAccount, validateSetupAccount } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -80,9 +81,9 @@ function SetupAccountContent() {
       setIsSuccess(true);
       setTimeout(() => {
         if (session?.user?.role === 'SUPER_ADMIN') {
-          router.push('/dashboard/super-admin');
+          router.push('/admin/dashboard');
         } else if (session?.user?.role === 'MODERATOR') {
-          router.push('/dashboard/moderator');
+          router.push('/moderator/dashboard');
         } else {
           router.push('/dashboard');
         }
@@ -96,127 +97,157 @@ function SetupAccountContent() {
 
   if (tokenValid === false) {
     return (
-      <section className="auth-card">
-        <p className="eyebrow eyebrow--red">ACCESS RESTRICTED</p>
-        <h1>Invalid setup token.</h1>
-        <p className="lede">
-          {tokenErrorMessage || 'This account initialization token is missing, expired, or has already been consumed.'}
-        </p>
-        <div style={{ marginTop: '1.5rem' }}>
-          <Button asChild>
-            <Link href="/login">Return to Sign in</Link>
+      <div className="w-full max-w-[490px] bg-white rounded-[32px] sm:rounded-[36px] border border-white/90 shadow-[0_24px_50px_-12px_rgba(15,23,42,0.12),0_10px_24px_-6px_rgba(37,99,235,0.08),0_0_1px_1px_rgba(255,255,255,1)] p-8 sm:p-11 space-y-6 relative z-10">
+        <div className="space-y-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-rose-600 font-sans">
+            ACCESS RESTRICTED
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2 m-0 pt-0.5">
+            <ShieldAlert size={28} className="text-rose-600 shrink-0" />
+            <span>Invalid setup token.</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 m-0 pt-1 leading-relaxed">
+            {tokenErrorMessage || 'This account initialization token is missing, expired, or has already been consumed.'}
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Button asChild className="w-full h-12 rounded-xl text-sm font-semibold justify-center">
+            <Link href="/login">Return to Sign In</Link>
           </Button>
         </div>
-      </section>
+      </div>
     );
   }
 
   if (tokenValid === null) {
     return (
-      <section className="auth-card">
-        <p className="eyebrow">VERIFYING INVITATION</p>
-        <h1>Validating token…</h1>
-        <p className="lede">Please wait while we verify your invitation credentials with the server.</p>
-      </section>
+      <div className="w-full max-w-[480px] bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-900/5 p-8 sm:p-10 space-y-4 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+          <Sparkles size={24} className="animate-spin text-blue-600" />
+        </div>
+        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight m-0">
+          Validating invitation…
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 m-0">
+          Please wait while we verify your invitation credentials with the university server.
+        </p>
+      </div>
     );
   }
 
   if (isSuccess) {
     return (
-      <section className="auth-card">
-        <p className="eyebrow" style={{ color: '#16a34a' }}>INITIALIZATION COMPLETE</p>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <CheckCircle2 size={36} color="#16a34a" /> Welcome aboard.
-        </h1>
-        <p className="lede">
-          Your credentials have been securely activated. Redirecting to your dashboard…
-        </p>
-        <div style={{ marginTop: '1.5rem' }}>
-          <Button asChild>
-            <Link href={assignedRole === 'SUPER_ADMIN' ? '/dashboard/super-admin' : '/dashboard/moderator'}>
+      <div className="w-full max-w-[490px] bg-white rounded-[32px] sm:rounded-[36px] border border-white/90 shadow-[0_24px_50px_-12px_rgba(15,23,42,0.12),0_10px_24px_-6px_rgba(37,99,235,0.08),0_0_1px_1px_rgba(255,255,255,1)] p-8 sm:p-11 space-y-6 relative z-10">
+        <div className="space-y-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 font-sans">
+            INITIALIZATION COMPLETE
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5 m-0 pt-0.5">
+            <CheckCircle2 size={32} className="text-emerald-600 shrink-0" />
+            <span>Welcome aboard.</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 m-0 pt-1 leading-relaxed">
+            Your credentials have been securely activated. Redirecting to your administrative desk…
+          </p>
+        </div>
+
+        <div className="pt-2">
+          <Button asChild className="w-full h-12 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 justify-center">
+            <Link href={assignedRole === 'SUPER_ADMIN' ? '/admin/dashboard' : '/moderator/dashboard'}>
               Open Dashboard Now
             </Link>
           </Button>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="auth-card">
-      <p className="eyebrow">STAFF & MODERATOR INVITATION</p>
-      <h1>Configure your account.</h1>
-      <p className="lede">
-        You have been invited to join the platform administration desk for {tokenData?.university?.name || 'your university'}.
-      </p>
+    <div className="w-full max-w-[490px] bg-white rounded-[32px] sm:rounded-[36px] border border-white/80 shadow-[0_25px_60px_-15px_rgba(11,31,58,0.13),0_10px_30px_-5px_rgba(11,31,58,0.06),0_0_0_1px_rgba(255,255,255,0.9)] p-8 sm:p-11 space-y-6 relative z-10">
+      <div className="space-y-1">
+        <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-sans">
+          STAFF & MODERATOR INVITATION
+        </span>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight m-0 pt-0.5">
+          Configure your account.
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 m-0 pt-0.5">
+          You have been invited to join the platform administration desk for {tokenData?.university?.name || 'your university'}.
+        </p>
+      </div>
 
       {tokenData?.email && (
-        <div
-          style={{
-            padding: '0.85rem 1rem',
-            background: 'var(--surface)',
-            border: '2px solid var(--ink)',
-            marginBottom: '1.5rem',
-            fontSize: '0.85rem',
-          }}
-        >
-          <p style={{ margin: 0, fontWeight: 700 }}>
+        <div className="p-4 bg-blue-50/70 border border-blue-100/90 rounded-2xl text-xs space-y-1">
+          <p className="m-0 font-bold text-slate-900">
             ASSIGNED EMAIL:{' '}
-            <span style={{ fontWeight: 400, color: 'var(--muted)' }}>{tokenData.email}</span>
+            <span className="font-medium text-slate-600">{tokenData.email}</span>
           </p>
-          <p style={{ margin: '0.25rem 0 0', fontWeight: 700 }}>
+          <p className="m-0 pt-0.5 font-bold text-slate-900">
             ROLE ASSIGNMENT:{' '}
-            <span style={{ fontWeight: 400, color: 'var(--muted)' }}>
+            <span className="font-semibold text-blue-700">
               {tokenData.role ?? assignedRole}
             </span>
           </p>
         </div>
       )}
 
-      {error && <FormAlert>{error}</FormAlert>}
+      {error ? (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
 
-      <form onSubmit={handleSubmit} noValidate>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <Input
-          label="Full Name"
+          label="Full Name *"
           placeholder="e.g. Dr. Shamsul Haque"
+          leftIcon={<User size={18} />}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
         />
 
-        <Input
-          label="New Password (min 8 characters)"
-          type="password"
+        <PasswordInput
+          label="New Password (min 8 characters) *"
           placeholder="••••••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
 
-        <Input
-          label="Confirm Password"
-          type="password"
+        <PasswordInput
+          label="Confirm Password *"
           placeholder="••••••••••••"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
         />
 
-        <Button type="submit" disabled={isSubmitting} style={{ width: '100%', marginTop: '1rem' }}>
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full h-12 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20 justify-center"
+        >
           {isSubmitting ? 'Securing Account…' : 'Activate Account'}
         </Button>
       </form>
 
-      <p className="auth-card__switch">
-        Need assistance? <Link href="/login">Contact administrator</Link>
-      </p>
-    </section>
+      <div className="text-center pt-1 border-t border-slate-100">
+        <p className="text-xs text-slate-500 m-0">
+          Need assistance?{' '}
+          <Link href="/login" className="font-bold text-blue-600 hover:text-blue-700">
+            Contact administrator
+          </Link>
+        </p>
+      </div>
+    </div>
   );
 }
 
 export default function SetupAccountPage() {
   return (
-    <Suspense fallback={<div className="page-shell"><p className="eyebrow">LOADING SETUP...</p></div>}>
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500 font-medium">Loading setup…</div>}>
       <SetupAccountContent />
     </Suspense>
   );

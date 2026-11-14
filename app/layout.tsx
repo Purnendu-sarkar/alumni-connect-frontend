@@ -36,30 +36,6 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              tailwind.config = {
-                theme: {
-                  extend: {
-                    colors: {
-                      brand: {
-                        navy: '#0B1F3A',
-                        blue: '#2563EB',
-                        sky: '#0284C7',
-                      },
-                    },
-                    fontFamily: {
-                      sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                      mono: ['JetBrains Mono', 'monospace'],
-                    },
-                  },
-                },
-              };
-            `,
-          }}
-        />
       </head>
       <body className="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen">
         <Providers>{children}</Providers>
