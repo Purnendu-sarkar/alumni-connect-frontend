@@ -20,8 +20,8 @@ function syncAuthCookies(role?: string) {
     document.cookie = `ac_role=${role}; path=/; max-age=604800; SameSite=Lax`;
     document.cookie = `ac_auth=1; path=/; max-age=604800; SameSite=Lax`;
   } else {
-    document.cookie = 'ac_role=; path=/; max-age=0; SameSite=Lax';
-    document.cookie = 'ac_auth=; path=/; max-age=0; SameSite=Lax';
+    document.cookie = 'ac_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0; SameSite=Lax';
+    document.cookie = 'ac_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; max-age=0; SameSite=Lax';
   }
 }
 

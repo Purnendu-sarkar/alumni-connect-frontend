@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, Key, Lock, ShieldAlert } from 'lucide-react';
+import { Check, CheckCircle2, Key, Lock, ShieldAlert, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { changePassword } from '@/lib/api/auth.api';
 import { useAuthStore } from '@/store/auth-store';
+import { changePasswordSchema } from '@/features/auth/auth.schemas';
 import type { UserRole } from '@/types/domain';
 
 interface SecuritySettingsViewProps {
@@ -20,12 +21,23 @@ interface SecuritySettingsViewProps {
 
 export function SecuritySettingsView({ currentRole, basePath }: SecuritySettingsViewProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  // Real-time password requirement checks matching backend Zod schema
+  const hasMinLength = newPassword.length >= 12;
+  const hasLower = /[a-z]/.test(newPassword);
+  const hasUpper = /[A-Z]/.test(newPassword);
+  const hasNumber = /\d/.test(newPassword);
+  const hasSymbol = /[^A-Za-z0-9]/.test(newPassword);
+  const passwordsMatch = newPassword === confirmPassword && confirmPassword.length > 0;
+  const isPasswordValid = hasMinLength && hasLower && hasUpper && hasNumber && hasSymbol;
 
   const changeMutation = useMutation({
     mutationFn: () =>
@@ -35,6 +47,7 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
       }),
     onSuccess: () => {
       setFormSuccess('Your password has been changed successfully. All active sessions have been updated.');
+      updateUser({ needPasswordChange: false });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -51,13 +64,14 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
     setFormError(null);
     setFormSuccess(null);
 
-    if (newPassword.length < 8) {
-      setFormError('New password must be at least 8 characters long.');
-      return;
-    }
+    const validation = changePasswordSchema.safeParse({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
 
-    if (newPassword !== confirmPassword) {
-      setFormError('New password and confirmation password do not match.');
+    if (!validation.success) {
+      setFormError(validation.error.issues[0]?.message || 'Please meet all password security requirements.');
       return;
     }
 
@@ -73,6 +87,18 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
         title="Security & Password"
         description="Update your secret password and monitor active institutional sessions."
       />
+
+      {user?.needPasswordChange ? (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-3">
+          <ShieldAlert size={20} className="text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold text-slate-900 m-0">Mandatory Password Update Required</p>
+            <p className="text-slate-600 m-0 mt-0.5">
+              Your account currently requires an initial or reset password update. Please create a strong, institutional-grade password before accessing full dashboard features.
+            </p>
+          </div>
+        </div>
+      ) : null}
 
       {formSuccess ? (
         <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
@@ -100,9 +126,49 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            hint="Minimum 8 characters with at least one number and uppercase letter."
             required
           />
+
+          {/* Real-time Password Strength Criteria Checklist */}
+          {newPassword.length > 0 ? (
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-1.5 animate-in fade-in">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 m-0 mb-1">
+                Password Security Requirements
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
+                <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+                  {hasMinLength ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                  <span>Minimum 12 characters</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${hasUpper ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+                  {hasUpper ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                  <span>Uppercase letter (A-Z)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${hasLower ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+                  {hasLower ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                  <span>Lowercase letter (a-z)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+                  {hasNumber ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                  <span>Numeric digit (0-9)</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${hasSymbol ? 'text-emerald-600 font-semibold' : 'text-slate-500'}`}>
+                  {hasSymbol ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                  <span>Special symbol (!@#$%^&*)</span>
+                </div>
+                {confirmPassword.length > 0 ? (
+                  <div className={`flex items-center gap-1.5 ${passwordsMatch ? 'text-emerald-600 font-semibold' : 'text-red-500'}`}>
+                    {passwordsMatch ? <Check size={13} className="shrink-0" /> : <X size={13} className="shrink-0" />}
+                    <span>Passwords match</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500 m-0">
+              Password must be at least 12 characters, including uppercase, lowercase, number, and special symbol.
+            </p>
+          )}
 
           <Input
             label="Confirm New Password *"
@@ -114,7 +180,11 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
           />
 
           <div className="pt-4 border-t border-slate-100 flex justify-end">
-            <Button type="submit" size="sm" disabled={changeMutation.isPending}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={changeMutation.isPending || !isPasswordValid || !passwordsMatch}
+            >
               <Key size={14} /> {changeMutation.isPending ? 'Updating…' : 'Update Password'}
             </Button>
           </div>

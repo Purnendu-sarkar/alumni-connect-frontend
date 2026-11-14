@@ -29,13 +29,13 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FormAlert } from '@/components/ui/form-alert';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { getAdminStats, getAuditLogs } from '@/lib/api/admin.api';
 import { useAuthStore } from '@/store/auth-store';
-import { demoReports, demoJobs, demoAnnouncements, demoEvents } from '@/features/shared/demo-data';
 
 export default function SuperAdminDashboardPage() {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -56,12 +56,13 @@ export default function SuperAdminDashboardPage() {
   const stats = statsQuery.data?.data;
   const isLoading = statsQuery.isLoading;
 
-  const totalUsers = stats?.totalUsers ?? 1248;
-  const pendingVerifications = stats?.pendingVerifications ?? 14;
-  const approvedUsers = stats?.approvedUsers ?? 1205;
-  const totalJobs = stats?.totalJobs ?? 42;
-  const pendingJobs = stats?.pendingJobs ?? 3;
-  const openReports = demoReports.filter((r) => r.status === 'OPEN').length;
+  const totalUsers = stats?.totalUsers ?? 0;
+  const pendingVerifications = stats?.pendingVerifications ?? 0;
+  const approvedUsers = stats?.approvedUsers ?? 0;
+  const totalJobs = stats?.totalJobs ?? 0;
+  const pendingJobs = stats?.pendingJobs ?? 0;
+  const openReports = 0;
+  const auditLogs = auditLogsQuery.data?.data?.logs ?? [];
 
   return (
     <div className="space-y-8">
@@ -97,6 +98,19 @@ export default function SuperAdminDashboardPage() {
         }
       />
 
+      {/* Query Error State */}
+      {statsQuery.isError ? (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center justify-between gap-4 animate-in fade-in">
+          <div>
+            <p className="font-bold text-rose-950 m-0">Unable to load live system metrics</p>
+            <p className="text-rose-700 m-0 mt-0.5">There was a problem fetching aggregated metrics from the database.</p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => statsQuery.refetch()}>
+            <RefreshCw size={12} /> Retry
+          </Button>
+        </div>
+      ) : null}
+
       {/* Primary KPI Stats */}
       {isLoading ? (
         <CardGridSkeleton count={4} />
@@ -105,10 +119,9 @@ export default function SuperAdminDashboardPage() {
           <StatCard
             label="Total Registered Users"
             value={totalUsers.toLocaleString()}
-            subtext="Students, alumni & faculty"
+            subtext={`${approvedUsers} verified active members`}
             icon={Users}
             iconColor="#2563EB"
-            trend={{ value: '840 Students · 380 Alumni', positive: true }}
             href="/admin/users"
           />
           <StatCard
@@ -373,52 +386,32 @@ export default function SuperAdminDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {[
-              {
-                id: 'log-1',
-                action: 'USER_VERIFIED',
-                actor: 'Super Admin',
-                target: 'Sadia Jahan (Batch 2024)',
-                time: '12 minutes ago',
-              },
-              {
-                id: 'log-2',
-                action: 'JOB_APPROVED',
-                actor: 'Moderator Staff',
-                target: 'Junior Cloud Developer at bKash',
-                time: '1 hour ago',
-              },
-              {
-                id: 'log-3',
-                action: 'MODERATOR_INVITED',
-                actor: 'Super Admin',
-                target: 'moderator.cse@campus.edu',
-                time: '3 hours ago',
-              },
-              {
-                id: 'log-4',
-                action: 'ANNOUNCEMENT_POSTED',
-                actor: 'Super Admin',
-                target: 'Official Campus Career Fair 2026',
-                time: 'Yesterday',
-              },
-            ].map((entry) => (
-              <div
-                key={entry.id}
-                className="p-3 bg-slate-50 rounded-lg flex items-start justify-between gap-3 text-xs"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
-                      {entry.action}
-                    </span>
-                    <span className="text-slate-500 text-[11px]">{entry.actor}</span>
+            {auditLogs.length > 0 ? (
+              auditLogs.slice(0, 4).map((entry) => (
+                <div
+                  key={entry.id}
+                  className="p-3 bg-slate-50 rounded-lg flex items-start justify-between gap-3 text-xs"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.5 rounded">
+                        {entry.action}
+                      </span>
+                      <span className="text-slate-500 text-[11px]">{entry.actorName || 'System'}</span>
+                    </div>
+                    <p className="text-slate-900 font-medium m-0">{entry.target || entry.details}</p>
                   </div>
-                  <p className="text-slate-900 font-medium m-0">{entry.target}</p>
+                  <span className="text-[11px] text-slate-400 shrink-0">
+                    {entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString() : 'Recent'}
+                  </span>
                 </div>
-                <span className="text-[11px] text-slate-400 shrink-0">{entry.time}</span>
+              ))
+            ) : (
+              <div className="py-6 text-center text-xs text-slate-400 space-y-1">
+                <p className="m-0 font-medium">No recent audit log events</p>
+                <p className="m-0 text-[11px]">System administrative actions will be recorded here.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

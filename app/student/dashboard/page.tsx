@@ -31,15 +31,8 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import {
-  demoAnnouncements,
-  demoEvents,
-  demoJobs,
-  demoMentorships,
-  demoNotifications,
-} from '@/features/shared/demo-data';
-import { getMyJobs } from '@/lib/api/jobs.api';
-import { getMe } from '@/lib/api/user.api';
+import { getJobs, getMyJobs } from '@/lib/api/jobs.api';
+import { getMe, getMyConnections } from '@/lib/api/user.api';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function StudentDashboardPage() {
@@ -54,22 +47,35 @@ export default function StudentDashboardPage() {
     enabled: Boolean(accessToken),
   });
 
+  const publicJobsQuery = useQuery({
+    queryKey: ['public-jobs'],
+    queryFn: () => getJobs(),
+  });
+
   const profileQuery = useQuery({
     queryKey: ['my-profile', accessToken],
     queryFn: () => getMe(accessToken),
     enabled: Boolean(accessToken),
   });
 
+  const connectionsQuery = useQuery({
+    queryKey: ['my-connections', accessToken],
+    queryFn: () => getMyConnections(accessToken),
+    enabled: Boolean(accessToken),
+  });
+
   const applications = jobsQuery.data?.data?.applications ?? [];
+  const publishedJobs = publicJobsQuery.data?.data ?? [];
   const profile = profileQuery.data?.data;
+  const connections = connectionsQuery.data?.data ?? [];
 
-  // Profile completion calculation
-  const completionPercentage = profile?.completionPercentage || (user?.verificationStatus === 'APPROVED' ? 85 : 60);
+  const activeConnections = connections.filter((c) => c.status === 'ACCEPTED');
+  const pendingConnections = connections.filter((c) => c.status === 'PENDING');
 
-  const activeMentorships = demoMentorships.filter((m) => m.status === 'ACTIVE');
-  const pendingMentorships = demoMentorships.filter((m) => m.status === 'REQUESTED');
-  const upcomingEvents = demoEvents.slice(0, 2);
-  const recentNotices = demoAnnouncements.slice(0, 2);
+  // Dynamic server-calculated profile completion & onboarding metrics
+  const completionPercentage = profile?.completionPercentage ?? (user?.onboardingCompleted ? 100 : 70);
+  const missingFields = (profile as any)?.missingRequiredFields ?? [];
+  const isOnboardingIncomplete = !user?.onboardingCompleted && completionPercentage < 100;
 
   return (
     <div className="space-y-6">
@@ -77,7 +83,7 @@ export default function StudentDashboardPage() {
       <PageHeader
         eyebrow={user?.university?.name ? user.university.name.toUpperCase() : 'STUDENT DESK'}
         title={`Welcome back, ${firstName}.`}
-        description={`Enrolled Student Member · ${user?.department || 'Computer Science & Engineering'} · Batch ${user?.batch || '2022'}`}
+        description={`Enrolled Student Member · ${user?.department || 'Computer Science & Engineering'} · Batch ${user?.batch || '2024'}`}
         badge={<StatusBadge status={user?.verificationStatus || 'APPROVED'} label={user?.verificationStatus === 'APPROVED' ? 'Verified Student' : 'Verification Pending'} />}
         actions={
           <div className="flex items-center gap-2">
@@ -94,6 +100,28 @@ export default function StudentDashboardPage() {
           </div>
         }
       />
+
+      {/* Persistent Non-Blocking Onboarding Guidance Banner */}
+      {isOnboardingIncomplete ? (
+        <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-start gap-3">
+            <Sparkles size={20} className="text-blue-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-slate-900 m-0">
+                Complete Your Student Profile ({completionPercentage}% completed)
+              </p>
+              <p className="text-slate-600 m-0 mt-0.5">
+                {missingFields.length > 0
+                  ? `Please provide your ${missingFields.join(', ')} to boost visibility across the university network.`
+                  : 'Add your biography, technical skills, resume, and profile photo to unlock mentorship and career referrals.'}
+              </p>
+            </div>
+          </div>
+          <Button size="sm" asChild className="shrink-0">
+            <Link href="/student/profile/edit">Complete Profile Now</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {/* Verification Notice Banner if not approved */}
       {user?.verificationStatus !== 'APPROVED' ? (
@@ -120,25 +148,25 @@ export default function StudentDashboardPage() {
           value={`${completionPercentage}%`}
           icon={UserRound}
           iconColor="#2563EB"
-          subtext={completionPercentage < 100 ? 'Add bio, resume & skills' : 'All credentials verified'}
+          subtext={completionPercentage < 100 ? (missingFields.length > 0 ? `Missing: ${missingFields[0]}` : 'Add bio & skills') : 'All credentials verified'}
           href="/student/profile/edit"
           actionLabel="Complete Profile"
         />
         <StatCard
           label="Active Connections"
-          value={3}
+          value={activeConnections.length}
           icon={Handshake}
           iconColor="#16A34A"
-          subtext="2 pending requests"
+          subtext={`${pendingConnections.length} pending requests`}
           href="/student/connections"
           actionLabel="View Connections"
         />
         <StatCard
           label="Mentorship Status"
-          value={activeMentorships.length > 0 ? `${activeMentorships.length} Active` : 'No Mentors'}
+          value="Hub Ready"
           icon={Compass}
           iconColor="#7C3AED"
-          subtext={`${pendingMentorships.length} requests in review`}
+          subtext="Request alumni mentors"
           href="/student/mentorship"
           actionLabel="Mentorship Hub"
         />
@@ -198,7 +226,7 @@ export default function StudentDashboardPage() {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 m-0">Recommended Career Openings</h2>
+              <h2 className="text-base font-bold text-slate-900 m-0">Career Openings</h2>
               <p className="text-xs text-slate-500 m-0">Opportunities posted directly by alumni in your field.</p>
             </div>
             <Button asChild variant="ghost" size="sm">
@@ -207,29 +235,39 @@ export default function StudentDashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {demoJobs.slice(0, 3).map((job) => (
-              <div
-                key={job.id}
-                className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-sm font-bold text-slate-900 m-0">{job.title}</h3>
-                    <Badge variant="neutral">{job.employmentType || 'Full-time'}</Badge>
+            {publishedJobs.length > 0 ? (
+              publishedJobs.slice(0, 3).map((job) => (
+                <div
+                  key={job.id}
+                  className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-bold text-slate-900 m-0">{job.title}</h3>
+                      <Badge variant="neutral">{job.employmentType || 'Full-time'}</Badge>
+                    </div>
+                    <p className="text-xs text-slate-600 m-0">
+                      <strong>{job.company}</strong> · {job.location || 'Remote'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 m-0 mt-1">
+                      {job.postedBy?.name ? `Shared by ${job.postedBy.name} · ` : ''}Closes {job.expiresAt ? new Date(job.expiresAt).toLocaleDateString() : 'Open'}
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-600 m-0">
-                    <strong>{job.company}</strong> · {job.location || 'Remote'}
-                  </p>
-                  <p className="text-[11px] text-slate-400 m-0 mt-1">
-                    Shared by {job.postedBy?.name} · Closes {new Date(job.expiresAt || '').toLocaleDateString()}
-                  </p>
-                </div>
 
-                <Button size="sm" asChild className="shrink-0 self-end sm:self-center">
-                  <Link href={`/student/jobs/${job.id}`}>Apply Now</Link>
-                </Button>
+                  <Button size="sm" asChild className="shrink-0 self-end sm:self-center">
+                    <Link href={`/student/jobs/${job.id}`}>Apply Now</Link>
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="p-8 bg-white rounded-xl border border-slate-200 text-center space-y-2">
+                <BriefcaseBusiness size={28} className="mx-auto text-slate-300" />
+                <p className="text-sm font-semibold text-slate-700 m-0">No active job postings at this moment</p>
+                <p className="text-xs text-slate-400 m-0 max-w-sm mx-auto">
+                  Alumni regularly post career openings and internship opportunities. Check back soon.
+                </p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -246,18 +284,10 @@ export default function StudentDashboardPage() {
               </Link>
             </div>
 
-            <div className="space-y-2.5">
-              {upcomingEvents.map((ev) => (
-                <div key={ev.id} className="p-3 bg-slate-50 rounded-lg text-xs space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-slate-900 truncate">{ev.title}</span>
-                    <span className="text-[10px] text-blue-700 font-bold px-1.5 py-0.2 bg-blue-100 rounded">
-                      {ev.day} {ev.month}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 m-0">{ev.location}</p>
-                </div>
-              ))}
+            <div className="p-6 bg-slate-50 rounded-lg text-center space-y-1.5">
+              <Calendar size={22} className="mx-auto text-slate-300" />
+              <p className="text-xs font-semibold text-slate-700 m-0">No upcoming events scheduled</p>
+              <p className="text-[11px] text-slate-400 m-0">Department seminars & alumni meetups will appear here.</p>
             </div>
           </div>
 
@@ -272,13 +302,10 @@ export default function StudentDashboardPage() {
               </Link>
             </div>
 
-            <div className="space-y-2.5">
-              {recentNotices.map((ann) => (
-                <div key={ann.id} className="p-3 bg-slate-50 rounded-lg text-xs space-y-1">
-                  <p className="font-bold text-slate-900 m-0 truncate">{ann.title}</p>
-                  <p className="text-[11px] text-slate-500 m-0">{ann.date} · {ann.author}</p>
-                </div>
-              ))}
+            <div className="p-6 bg-slate-50 rounded-lg text-center space-y-1.5">
+              <Megaphone size={22} className="mx-auto text-slate-300" />
+              <p className="text-xs font-semibold text-slate-700 m-0">No announcements yet</p>
+              <p className="text-[11px] text-slate-400 m-0">Official institutional updates will be published here.</p>
             </div>
           </div>
         </div>

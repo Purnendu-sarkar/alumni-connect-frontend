@@ -45,3 +45,10 @@ export function sendConnectionRequest(
     body: JSON.stringify(input),
   });
 }
+
+export function getMyConnections(accessToken: string | null) {
+  return apiClient<Array<{ id: string; status: string; recipientId: string; requesterId: string }>>(
+    '/connections',
+    { accessToken },
+  );
+}

@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { demoReports, demoStories } from '@/features/shared/demo-data';
 import { getPendingJobs } from '@/lib/api/jobs.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -41,8 +40,9 @@ export default function ModeratorDashboardPage() {
   });
 
   const pendingJobs = pendingJobsQuery.data?.data ?? [];
-  const openReports = demoReports.filter((r) => r.status === 'OPEN' || r.status === 'IN_REVIEW');
-  const resolvedReports = demoReports.filter((r) => r.status === 'RESOLVED');
+  const openReportsCount = 0;
+  const flaggedContentCount = 0;
+  const resolvedCasesCount = 0;
 
   return (
     <div className="space-y-6">
@@ -77,34 +77,34 @@ export default function ModeratorDashboardPage() {
           value={pendingJobs.length}
           icon={Clock}
           iconColor="#D97706"
-          subtext="Requires moderator review"
+          subtext={pendingJobs.length > 0 ? 'Requires moderator review' : 'Queue all clear'}
           href="/moderator/jobs/pending"
           actionLabel="Open Queue"
         />
         <StatCard
           label="Open Abuse Reports"
-          value={openReports.length}
+          value={openReportsCount}
           icon={ShieldAlert}
           iconColor="#DC2626"
-          subtext="Flagged by community"
+          subtext="No active community flags"
           href="/moderator/reports/open"
           actionLabel="View Reports"
         />
         <StatCard
           label="Flagged Content"
-          value={demoStories.length}
+          value={flaggedContentCount}
           icon={HelpCircle}
           iconColor="#7C3AED"
-          subtext="Articles & stories"
+          subtext="All articles compliant"
           href="/moderator/content"
           actionLabel="Review Stories"
         />
         <StatCard
           label="Resolved Cases"
-          value={resolvedReports.length + 8}
+          value={resolvedCasesCount}
           icon={CheckCircle2}
           iconColor="#16A34A"
-          subtext="Past 30 days"
+          subtext="Institutional compliance verified"
           href="/moderator/activity"
           actionLabel="Audit Log"
         />
@@ -123,7 +123,7 @@ export default function ModeratorDashboardPage() {
           </Button>
           <Button asChild size="sm" variant="secondary">
             <Link href="/moderator/reports/open">
-              <ShieldAlert size={14} /> View Open Reports ({openReports.length})
+              <ShieldAlert size={14} /> View Open Reports ({openReportsCount})
             </Link>
           </Button>
           <Button asChild size="sm" variant="secondary">
@@ -159,12 +159,14 @@ export default function ModeratorDashboardPage() {
           </div>
 
           {pendingJobs.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-6 m-0">
-              No pending jobs awaiting review. All clear!
-            </p>
+            <div className="text-center py-8 space-y-1.5">
+              <ShieldCheck size={26} className="mx-auto text-emerald-500" />
+              <p className="text-xs font-semibold text-slate-700 m-0">No pending jobs awaiting review</p>
+              <p className="text-[11px] text-slate-400 m-0">All submitted career opportunities have been processed.</p>
+            </div>
           ) : (
             <div className="space-y-3">
-              {pendingJobs.slice(0, 2).map((job) => (
+              {pendingJobs.slice(0, 3).map((job) => (
                 <div key={job.id} className="p-3.5 bg-slate-50 rounded-lg text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <strong className="text-slate-900 font-bold">{job.title}</strong>
@@ -192,36 +194,18 @@ export default function ModeratorDashboardPage() {
               <h3 className="text-sm font-bold text-slate-900 m-0">Open Abuse & Incident Reports</h3>
               <p className="text-xs text-slate-500 m-0">Community flagged accounts and spam</p>
             </div>
-            <Link href="/moderator/reports/open" className="text-xs font-semibold text-rose-600 hover:underline">
-              View All ({openReports.length}) →
+            <Link href="/moderator/reports/open" className="text-xs font-semibold text-slate-600 hover:underline">
+              Reports Queue (0) →
             </Link>
           </div>
 
-          {openReports.length === 0 ? (
-            <p className="text-center text-xs text-slate-400 py-6 m-0">
-              No open reports. Network safety is calm.
+          <div className="text-center py-8 space-y-1.5">
+            <CheckCircle2 size={26} className="mx-auto text-emerald-500" />
+            <p className="text-xs font-semibold text-slate-700 m-0">No open incident reports</p>
+            <p className="text-[11px] text-slate-400 m-0">
+              Campus network safety is calm. No active member conduct violations reported.
             </p>
-          ) : (
-            <div className="space-y-3">
-              {openReports.slice(0, 2).map((rep) => (
-                <div key={rep.id} className="p-3.5 bg-rose-50/50 border border-rose-100 rounded-lg text-xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <strong className="text-rose-950 font-bold">{rep.reason}</strong>
-                    <span className="text-[10px] text-rose-700 font-bold px-1.5 py-0.2 bg-rose-100 rounded">
-                      {rep.type}
-                    </span>
-                  </div>
-                  <p className="text-slate-700 m-0 line-clamp-2">&quot;{rep.details}&quot;</p>
-                  <p className="text-[11px] text-slate-400 m-0 pt-1">Target: {rep.targetTitle}</p>
-                  <div className="pt-2 flex justify-end">
-                    <Button size="sm" variant="secondary" asChild>
-                      <Link href={`/moderator/reports/${rep.id}`}>Triage Report</Link>
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

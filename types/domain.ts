@@ -18,6 +18,8 @@ export interface SessionUser {
   verificationStatus?: VerificationStatus;
   rejectionReason?: string | null;
   needPasswordChange?: boolean;
+  onboardingCompleted?: boolean;
+  isMentorshipAvailable?: boolean;
   avatarUrl?: string | null;
   department?: string | null;
   batch?: string | null;
@@ -56,7 +58,9 @@ export interface UserProfile {
   rejectionReason: string | null;
   verifiedAt: string | null;
   onboardingCompleted: boolean;
+  isMentorshipAvailable?: boolean;
   completionPercentage?: number;
+  missingRequiredFields?: string[];
   createdAt: string;
   updatedAt: string;
   role: { id: string; name: UserRole };

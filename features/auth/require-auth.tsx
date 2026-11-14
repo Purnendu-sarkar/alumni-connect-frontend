@@ -26,6 +26,23 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
 
     const role = user.role;
 
+    // Enforce mandatory password update if needPasswordChange is active
+    if (user.needPasswordChange) {
+      const securityPath =
+        role === 'SUPER_ADMIN'
+          ? '/admin/settings/security'
+          : role === 'MODERATOR'
+          ? '/moderator/settings/security'
+          : role === 'ALUMNI'
+          ? '/alumni/settings/security'
+          : '/student/settings/security';
+
+      if (pathname !== securityPath) {
+        router.replace(securityPath);
+        return;
+      }
+    }
+
     if (
       pathname.startsWith('/admin') ||
       pathname.startsWith('/dashboard/super-admin') ||
@@ -38,21 +55,21 @@ export function RequireAuth({ children }: Readonly<{ children: ReactNode }>) {
       pathname.startsWith('/moderator') ||
       pathname.startsWith('/dashboard/moderator')
     ) {
-      if (role !== 'MODERATOR' && role !== 'SUPER_ADMIN') {
+      if (role !== 'MODERATOR') {
         router.replace('/dashboard');
       }
     } else if (
       pathname.startsWith('/student') ||
       pathname.startsWith('/dashboard/student')
     ) {
-      if (role !== 'STUDENT' && role !== 'SUPER_ADMIN') {
+      if (role !== 'STUDENT') {
         router.replace('/dashboard');
       }
     } else if (
       pathname.startsWith('/alumni') ||
       pathname.startsWith('/dashboard/alumni')
     ) {
-      if (role !== 'ALUMNI' && role !== 'SUPER_ADMIN') {
+      if (role !== 'ALUMNI') {
         router.replace('/dashboard');
       }
     }

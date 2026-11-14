@@ -27,30 +27,43 @@ export function DashboardShell({ requiredRole, children }: DashboardShellProps) 
   useEffect(() => {
     if (!user) return;
 
-    if (requiredRole && user.role !== requiredRole) {
-      // Super admin can access moderator tools if needed, but otherwise enforce strict role isolation
-      const isSuperAdminAccessingMod = user.role === 'SUPER_ADMIN' && requiredRole === 'MODERATOR';
-      if (!isSuperAdminAccessingMod) {
-        // Redirect to user's authorized role desk
-        switch (user.role) {
-          case 'STUDENT':
-            router.replace('/student/dashboard');
-            break;
-          case 'ALUMNI':
-            router.replace('/alumni/dashboard');
-            break;
-          case 'MODERATOR':
-            router.replace('/moderator/dashboard');
-            break;
-          case 'SUPER_ADMIN':
-            router.replace('/admin/dashboard');
-            break;
-          default:
-            router.replace('/login');
-        }
+    // Enforce mandatory password update
+    if (user.needPasswordChange) {
+      const securityPath =
+        user.role === 'SUPER_ADMIN'
+          ? '/admin/settings/security'
+          : user.role === 'MODERATOR'
+          ? '/moderator/settings/security'
+          : user.role === 'ALUMNI'
+          ? '/alumni/settings/security'
+          : '/student/settings/security';
+
+      if (pathname !== securityPath) {
+        router.replace(securityPath);
+        return;
       }
     }
-  }, [user, requiredRole, router]);
+
+    if (requiredRole && user.role !== requiredRole) {
+      // Strict role isolation per Master Specification
+      switch (user.role) {
+        case 'STUDENT':
+          router.replace('/student/dashboard');
+          break;
+        case 'ALUMNI':
+          router.replace('/alumni/dashboard');
+          break;
+        case 'MODERATOR':
+          router.replace('/moderator/dashboard');
+          break;
+        case 'SUPER_ADMIN':
+          router.replace('/admin/dashboard');
+          break;
+        default:
+          router.replace('/login');
+      }
+    }
+  }, [user, requiredRole, router, pathname]);
 
   // Close mobile drawer on route changes
   useEffect(() => {

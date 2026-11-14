@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const passwordSchema = z
+export const passwordSchema = z
   .string()
   .min(12, 'Use at least 12 characters.')
   .max(128, 'Use at most 128 characters.')
@@ -81,3 +81,16 @@ export const registerSchema = z
 
 export type LoginValues = z.infer<typeof loginSchema>;
 export type RegisterValues = z.infer<typeof registerSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, 'Current password is required.'),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(1, 'Please confirm your new password.'),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'New password and confirmation password do not match.',
+    path: ['confirmPassword'],
+  });
+
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;

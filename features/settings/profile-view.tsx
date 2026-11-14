@@ -48,13 +48,14 @@ export function ProfileView({ currentRole, basePath }: ProfileViewProps) {
   const profile: Partial<UserProfile> = profileQuery.data?.data || {
     name: user?.name,
     email: user?.email,
-    department: user?.department || 'Computer Science & Engineering',
-    batch: user?.batch || '2022',
-    verificationStatus: user?.verificationStatus || 'APPROVED',
+    department: user?.department,
+    batch: user?.batch,
+    verificationStatus: user?.verificationStatus,
     university: user?.university,
-    bio: 'Proud student member of the university community focusing on software engineering, distributed systems, and collaborative development.',
-    skills: ['JavaScript', 'TypeScript', 'Node.js', 'React', 'PostgreSQL'],
-    location: 'Dhaka, Bangladesh',
+    avatarUrl: user?.avatarUrl,
+    bio: '',
+    skills: [],
+    location: '',
   };
 
   return (
@@ -153,11 +154,11 @@ export function ProfileView({ currentRole, basePath }: ProfileViewProps) {
           </div>
 
           {/* Skills */}
-          {profile.skills && profile.skills.length > 0 ? (
-            <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 m-0">
-                Skills & Technical Expertise
-              </h3>
+          <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 m-0">
+              Skills & Technical Expertise
+            </h3>
+            {profile.skills && profile.skills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {profile.skills.map((skill) => (
                   <span
@@ -168,8 +169,10 @@ export function ProfileView({ currentRole, basePath }: ProfileViewProps) {
                   </span>
                 ))}
               </div>
-            </div>
-          ) : null}
+            ) : (
+              <p className="text-xs text-slate-400 m-0">No technical skills listed yet. Add skills in Edit Profile to increase your discoverability.</p>
+            )}
+          </div>
 
           {/* Quick shortcuts to settings */}
           <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

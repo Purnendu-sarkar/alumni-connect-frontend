@@ -1,12 +1,14 @@
-import { apiClient } from './client';
+import { apiClient, ApiClientError } from './client';
 import { useAuthStore } from '@/store/auth-store';
-import type { ApiResponse } from '@/types/api';
+import type { ApiErrorPayload, ApiResponse } from '@/types/api';
 import type { SessionUser, UserRole } from '@/types/domain';
 
 export interface AuthSession {
   accessToken: string;
   user: SessionUser;
 }
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5001/api/v1';
 
 let activeRefreshPromise: Promise<ApiResponse<AuthSession>> | null = null;
 
@@ -21,9 +23,31 @@ export function refreshSession(): Promise<ApiResponse<AuthSession>> {
     return activeRefreshPromise;
   }
 
-  activeRefreshPromise = apiClient<AuthSession>('/auth/refresh', { method: 'POST' }).finally(() => {
-    activeRefreshPromise = null;
-  });
+  activeRefreshPromise = fetch(`${apiUrl}/auth/refresh`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+  })
+    .then(async (response) => {
+      const payload = (await response.json().catch(() => null)) as
+        | ApiResponse<AuthSession>
+        | ApiErrorPayload
+        | null;
+
+      if (!response.ok || !payload?.success) {
+        const errorMsg =
+          (payload as ApiErrorPayload)?.message ?? 'Session refresh failed';
+        throw new ApiClientError(response.status, errorMsg);
+      }
+
+      return payload as ApiResponse<AuthSession>;
+    })
+    .finally(() => {
+      activeRefreshPromise = null;
+    });
 
   return activeRefreshPromise;
 }

@@ -62,20 +62,20 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Role-based authorization gates
+    // Role-based authorization gates: strict isolation per SSOT
     if (isAdminRoute && userRole !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL(getRoleHome(userRole || 'STUDENT'), request.url));
     }
 
-    if (isModeratorRoute && userRole !== 'MODERATOR' && userRole !== 'SUPER_ADMIN') {
+    if (isModeratorRoute && userRole !== 'MODERATOR') {
       return NextResponse.redirect(new URL(getRoleHome(userRole || 'STUDENT'), request.url));
     }
 
-    if (isStudentRoute && userRole !== 'STUDENT' && userRole !== 'SUPER_ADMIN') {
+    if (isStudentRoute && userRole !== 'STUDENT') {
       return NextResponse.redirect(new URL(getRoleHome(userRole || 'STUDENT'), request.url));
     }
 
-    if (isAlumniRoute && userRole !== 'ALUMNI' && userRole !== 'SUPER_ADMIN') {
+    if (isAlumniRoute && userRole !== 'ALUMNI') {
       return NextResponse.redirect(new URL(getRoleHome(userRole || 'STUDENT'), request.url));
     }
   }
