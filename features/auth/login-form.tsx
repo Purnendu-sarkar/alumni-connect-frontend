@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { Info, LogIn, Mail } from 'lucide-react';
+import { CheckCircle2, Info, LogIn, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -46,6 +46,21 @@ export function LoginForm() {
   const user = useAuthStore((state) => state.user);
   const setSession = useAuthStore((state) => state.setSession);
   const [formError, setFormError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const reason = params.get('reason');
+      if (reason === 'password_changed') {
+        setInfoMessage('Your password has been changed successfully. Please sign in with your new credentials.');
+      } else if (reason === 'reset_completed') {
+        setInfoMessage('Your password has been reset successfully. Please sign in with your new password.');
+      } else if (reason === 'session_expired') {
+        setInfoMessage('Your session has expired. Please sign in again.');
+      }
+    }
+  }, []);
 
   // Demo capability state
   const [demoCapabilities, setDemoCapabilities] = useState<DemoCapabilities | null>({
@@ -131,6 +146,13 @@ export function LoginForm() {
           Sign in to reconnect with your alumni network, mentors, and campus opportunities.
         </p>
       </div>
+
+      {infoMessage ? (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+          <span>{infoMessage}</span>
+        </div>
+      ) : null}
 
       {/* Form Fields */}
       <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>

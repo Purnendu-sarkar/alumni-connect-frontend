@@ -167,13 +167,13 @@ export default function AuthLayout({ children }: Readonly<{ children: ReactNode 
         <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl pointer-events-none z-0" />
         <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-sky-500/15 blur-3xl pointer-events-none z-0" />
 
-        {/* ORGANIC 3-WAVE RIVER DIVIDER (কার্ডের পাশ থেকে শুরু হয়ে নদীর ৩টি মৃদু তরঙ্গে প্রবাহিত)
+        {/* ORGANIC 3-WAVE RIVER DIVIDER (starts snugly from card perimeter and flows downward)
             - At top (y=0): Starts at x=100 (from the card's side, 0% cut at the top edge)
             - Upper section (y=0 to 90): Stays wide so header pills are 100% visible
             - Wave 1: Curves gently inward (trough at y=280, x=40)
             - Wave 2: Swells gently toward card (crest at y=520, x=74)
             - Wave 3: Curves gently inward (trough at y=760, x=38)
-            - Bottom (y=1000): Ends smoothly at x=50 ("তারপরে শেষটা ঠিক আছে")! */}
+            - Bottom (y=1000): Ends smoothly at x=50 to align cleanly! */}
         <svg
           viewBox="0 0 100 1000"
           preserveAspectRatio="none"

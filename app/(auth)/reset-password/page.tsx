@@ -52,6 +52,9 @@ function ResetPasswordForm() {
     setIsSubmitting(true);
     try {
       await resetPassword(token, password);
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/reset-password');
+      }
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password. The link may have expired or was already used.');
@@ -119,7 +122,7 @@ function ResetPasswordForm() {
           </div>
 
           <Button asChild className="w-full h-12 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 justify-center">
-            <Link href="/login">Sign in with your new password</Link>
+            <Link href="/login?reason=reset_completed">Sign in with your new password</Link>
           </Button>
         </div>
       ) : (

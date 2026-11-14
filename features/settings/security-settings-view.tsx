@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useMutation } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Check, CheckCircle2, Key, Lock, ShieldAlert, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -20,9 +21,11 @@ interface SecuritySettingsViewProps {
 }
 
 export function SecuritySettingsView({ currentRole, basePath }: SecuritySettingsViewProps) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
-  const updateUser = useAuthStore((state) => state.updateUser);
+  const clearSession = useAuthStore((state) => state.clearSession);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -46,13 +49,19 @@ export function SecuritySettingsView({ currentRole, basePath }: SecuritySettings
         newPassword,
       }),
     onSuccess: () => {
-      setFormSuccess('Your password has been changed successfully. All active sessions have been updated.');
-      updateUser({ needPasswordChange: false });
+      setFormSuccess('Password changed successfully. Please sign in again with your new password.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setFormError(null);
-      setTimeout(() => setFormSuccess(null), 5000);
+
+      // Immediately clear client session and cache to prevent stale refresh failures
+      clearSession();
+      queryClient.clear();
+
+      setTimeout(() => {
+        router.push('/login?reason=password_changed');
+      }, 1500);
     },
     onError: (err: unknown) => {
       setFormError(err instanceof Error ? err.message : 'Failed to change password. Verify your current password.');

@@ -249,7 +249,7 @@ export default function GivingPage() {
   };
 
   const formatBDT = (amount: number) => {
-    return `৳${amount.toLocaleString('en-IN')}`;
+    return `BDT ${amount.toLocaleString('en-US')}`;
   };
 
   return (
@@ -467,7 +467,7 @@ export default function GivingPage() {
           {!successReceipt ? (
             <form onSubmit={handleContributeSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>SELECT CONTRIBUTION AMOUNT (অনুদান নির্বাচন করুন)</Label>
+                <Label>SELECT CONTRIBUTION AMOUNT</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {[1000, 2500, 5000, 10000].map((tier) => (
                     <Button
@@ -488,7 +488,7 @@ export default function GivingPage() {
 
                 <Input
                   type="number"
-                  placeholder="Or enter custom amount in ৳ (e.g. 25000)"
+                  placeholder="Or enter custom amount in BDT (e.g. 25000)"
                   value={customAmount}
                   onChange={(e) => {
                     setCustomAmount(e.target.value);

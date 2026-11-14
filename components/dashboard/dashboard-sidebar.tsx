@@ -15,6 +15,7 @@ import {
   Handshake,
   HelpCircle,
   Inbox,
+  Key,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -89,6 +90,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
             { href: '/student/messages', label: 'Messages', icon: MessageSquare },
             { href: '/student/notifications', label: 'Notifications', icon: Inbox },
             { href: '/student/settings', label: 'Settings', icon: Settings },
+            { href: '/student/settings/security', label: 'Security & Password', icon: Key },
           ],
         },
       ];
@@ -127,11 +129,12 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
           ],
         },
         {
-          title: 'Communication',
+          title: 'Communication & Settings',
           items: [
             { href: '/alumni/messages', label: 'Messages', icon: MessageSquare },
             { href: '/alumni/notifications', label: 'Notifications', icon: Inbox },
             { href: '/alumni/settings', label: 'Settings', icon: Settings },
+            { href: '/alumni/settings/security', label: 'Security & Password', icon: Key },
           ],
         },
       ];
@@ -165,6 +168,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
           items: [
             { href: '/moderator/notifications', label: 'Notifications', icon: Inbox },
             { href: '/moderator/settings', label: 'Settings', icon: Settings },
+            { href: '/moderator/settings/security', label: 'Security & Password', icon: Key },
           ],
         },
       ];
@@ -204,6 +208,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
           title: 'Platform System',
           items: [
             { href: '/admin/settings', label: 'System Settings', icon: Settings },
+            { href: '/admin/settings/security', label: 'Security & Password', icon: Key },
           ],
         },
       ];
