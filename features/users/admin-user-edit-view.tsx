@@ -7,7 +7,6 @@ import { ArrowLeft, CheckCircle2, Save, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { demoAlumni } from '@/features/shared/demo-data';
 import type { UserRole, VerificationStatus } from '@/types/domain';
 
 interface AdminUserEditViewProps {
@@ -17,13 +16,11 @@ interface AdminUserEditViewProps {
 }
 
 export function AdminUserEditView({ id, currentRole, basePath }: AdminUserEditViewProps) {
-  const member = demoAlumni.find((a) => a.id === id);
-
-  const [name, setName] = useState(member?.name || 'Academic Member');
+  const [name, setName] = useState('Academic Member');
   const [role, setRole] = useState<UserRole>('ALUMNI');
-  const [department, setDepartment] = useState(member?.department || 'Computer Science & Engineering');
-  const [graduationYear, setGraduationYear] = useState(String(member?.graduationYear || '2022'));
-  const [studentId, setStudentId] = useState(`NWU-${member?.batch || '2020'}-001`);
+  const [department, setDepartment] = useState('Computer Science & Engineering');
+  const [graduationYear, setGraduationYear] = useState('2022');
+  const [studentId, setStudentId] = useState(`NWU-2022-001`);
   const [notice, setNotice] = useState<string | null>(null);
 
   const handleSave = (e: React.FormEvent) => {

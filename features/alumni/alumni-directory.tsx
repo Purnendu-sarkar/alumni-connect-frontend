@@ -10,13 +10,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SectionHeading } from '@/components/ui/section-heading';
-import { demoAlumni } from '@/features/shared/demo-data';
+import { useDebounce } from '@/hooks/use-debounce';
 import { useDepartments } from '@/hooks/use-departments';
 import { getAlumni } from '@/lib/api/alumni.api';
 import { useAuthStore } from '@/store/auth-store';
+import type { Alumni } from '@/types/domain';
 
 export function AlumniDirectory() {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [department, setDepartment] = useState('All');
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
@@ -25,13 +27,13 @@ export function AlumniDirectory() {
 
   const filterChips = useMemo(() => {
     if (!activeDepts || activeDepts.length === 0) {
-      return ['All', 'CSE', 'EEE', 'BBA', 'Civil', 'Economics'];
+      return ['All', 'CSE', 'EEE', 'BBA', 'ECON', 'ENG', 'CE'];
     }
     return ['All', ...activeDepts.map((d) => d.code)];
   }, [activeDepts]);
 
   const query = useQuery({
-    queryKey: ['alumni', accessToken, department],
+    queryKey: ['alumni', accessToken, department, debouncedSearch],
     queryFn: () =>
       getAlumni(accessToken, {
         department: department === 'All' ? undefined : department,
@@ -39,7 +41,7 @@ export function AlumniDirectory() {
     enabled: Boolean(accessToken),
   });
 
-  const rawList = query.data?.data && query.data.data.length > 0 ? query.data.data : demoAlumni;
+  const rawList: Alumni[] = query.data?.data ?? [];
 
   const alumni = useMemo(() => {
     return rawList.filter((person) => {
@@ -48,14 +50,14 @@ export function AlumniDirectory() {
         person.department?.toLowerCase().includes(department.toLowerCase()) ||
         (person as any).departmentRef?.code?.toLowerCase() === department.toLowerCase() ||
         (person as any).role?.toLowerCase().includes(department.toLowerCase());
-      const term = search.toLowerCase();
+      const term = debouncedSearch.toLowerCase().trim();
       const haystack = [person.name, person.currentCompany, person.position, ...(person.skills ?? [])]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return matchDept && (!term || haystack.includes(term));
     });
-  }, [rawList, search, department]);
+  }, [rawList, debouncedSearch, department]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-8">
@@ -73,7 +75,7 @@ export function AlumniDirectory() {
       </div>
 
       {!user && (
-        <Card className="bg-blue-50/70 border-blue-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-none">
+        <Card className="bg-blue-50/70 border-blue-200 p-5 flex flex-col sm:row items-start sm:items-center justify-between gap-4 shadow-none">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-700 font-mono">
               STUDENT & GRADUATE ACCESS
@@ -95,7 +97,7 @@ export function AlumniDirectory() {
         </Card>
       )}
 
-      {/* Search and Filters using shadcn Card */}
+      {/* Search and Filters */}
       <Card className="p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -153,7 +155,7 @@ export function AlumniDirectory() {
               </div>
               <h3 className="text-base font-bold text-slate-900 m-0">No matching alumni found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto m-0">
-                Try broadening your search term or selecting "All" under department filters.
+                Try broadening your search term or selecting &quot;All&quot; under department filters.
               </p>
               <Button
                 variant="secondary"
