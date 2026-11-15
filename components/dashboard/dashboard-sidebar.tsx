@@ -144,6 +144,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
         {
           items: [
             { href: '/moderator/dashboard', label: 'Moderation Desk', icon: LayoutDashboard },
+            { href: '/moderator/profile', label: 'Staff Profile', icon: UserRound },
             { href: '/moderator/activity', label: 'Moderation Activity', icon: FileText },
           ],
         },
@@ -178,6 +179,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
         {
           items: [
             { href: '/admin/dashboard', label: 'Platform Console', icon: LayoutDashboard },
+            { href: '/admin/profile', label: 'Admin Profile', icon: UserRound },
             { href: '/admin/analytics', label: 'Platform Analytics', icon: Layers },
             { href: '/admin/activity-logs', label: 'Security Audit Logs', icon: ShieldAlert },
           ],
