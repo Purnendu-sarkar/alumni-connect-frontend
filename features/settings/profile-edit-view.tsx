@@ -14,6 +14,7 @@ import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { MediaUploader } from '@/components/media/media-uploader';
+import { useDepartments } from '@/hooks/use-departments';
 import { getMe, updateMe } from '@/lib/api/user.api';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserProfile, UserRole } from '@/types/domain';
@@ -72,6 +73,8 @@ export function ProfileEditView({ currentRole, basePath }: ProfileEditViewProps)
     enabled: Boolean(accessToken),
   });
 
+  const { departments, isLoading: isDepartmentsLoading } = useDepartments();
+
   const {
     register,
     handleSubmit,
@@ -106,6 +109,8 @@ export function ProfileEditView({ currentRole, basePath }: ProfileEditViewProps)
       isMentorshipAvailable: false,
     },
   });
+
+  const currentDeptValue = watch('department');
 
   // Prepopulate form cleanly without mock defaults or side-effects in queryFn
   useEffect(() => {
@@ -320,7 +325,29 @@ export function ProfileEditView({ currentRole, basePath }: ProfileEditViewProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">Department</label>
-                  <Input {...register('department')} placeholder="e.g. Computer Science & Engineering" />
+                  {departments.length > 0 ? (
+                    <select
+                      {...register('department')}
+                      className="w-full h-10 px-3 text-sm bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
+                    >
+                      <option value="">Select Department...</option>
+                      {currentDeptValue &&
+                        !departments.some(
+                          (d) => d.name === currentDeptValue || d.code === currentDeptValue,
+                        ) && (
+                          <option value={currentDeptValue}>{currentDeptValue} (Current)</option>
+                        )}
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name} ({dept.code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : isDepartmentsLoading ? (
+                    <div className="h-10 bg-slate-100 animate-pulse rounded-lg" />
+                  ) : (
+                    <Input {...register('department')} placeholder="e.g. Computer Science & Engineering" />
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">Batch Year</label>
@@ -360,7 +387,29 @@ export function ProfileEditView({ currentRole, basePath }: ProfileEditViewProps)
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">Department</label>
-                  <Input {...register('department')} placeholder="e.g. Computer Science" />
+                  {departments.length > 0 ? (
+                    <select
+                      {...register('department')}
+                      className="w-full h-10 px-3 text-sm bg-white border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-900"
+                    >
+                      <option value="">Select Department...</option>
+                      {currentDeptValue &&
+                        !departments.some(
+                          (d) => d.name === currentDeptValue || d.code === currentDeptValue,
+                        ) && (
+                          <option value={currentDeptValue}>{currentDeptValue} (Current)</option>
+                        )}
+                      {departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name} ({dept.code})
+                        </option>
+                      ))}
+                    </select>
+                  ) : isDepartmentsLoading ? (
+                    <div className="h-10 bg-slate-100 animate-pulse rounded-lg" />
+                  ) : (
+                    <Input {...register('department')} placeholder="e.g. Computer Science" />
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700">Graduation Year</label>

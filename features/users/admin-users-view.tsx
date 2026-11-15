@@ -33,6 +33,7 @@ import {
   toggleUserSuspension,
   type AdminUserItem,
 } from '@/lib/api/admin.api';
+import { useDepartments } from '@/hooks/use-departments';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -48,16 +49,20 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
 
   const [roleFilter, setRoleFilter] = useState<UserRole | 'ALL'>(roleFilterPreset || 'ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [targetUser, setTargetUser] = useState<{ user: AdminUserItem; nextIsActive: boolean } | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
+  const { departments: activeDepts } = useDepartments();
+
   const usersQuery = useQuery({
-    queryKey: ['admin-users-list', accessToken, roleFilter, statusFilter, search],
+    queryKey: ['admin-users-list', accessToken, roleFilter, statusFilter, departmentFilter, search],
     queryFn: () =>
       getAdminUsers(accessToken, {
         role: roleFilter === 'ALL' ? undefined : roleFilter,
         status: statusFilter === 'ALL' ? undefined : statusFilter,
+        department: departmentFilter === 'ALL' ? undefined : departmentFilter,
         search: search.trim() || undefined,
         limit: 100,
       }),
@@ -167,6 +172,21 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
               {item.label}
             </button>
           ))}
+
+          {activeDepts && activeDepts.length > 0 && (
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200 focus:outline-hidden focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            >
+              <option value="ALL">All Departments</option>
+              {activeDepts.map((d) => (
+                <option key={d.id} value={d.name}>
+                  {d.code} - {d.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

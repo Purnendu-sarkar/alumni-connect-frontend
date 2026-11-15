@@ -57,6 +57,7 @@ export interface AdminUsersQueryParams {
   status?: 'ACTIVE' | 'SUSPENDED';
   verificationStatus?: VerificationStatus;
   search?: string;
+  department?: string;
 }
 
 export function getAdminUsers(
@@ -70,6 +71,7 @@ export function getAdminUsers(
   if (filters.status) params.set('status', filters.status);
   if (filters.verificationStatus) params.set('verificationStatus', filters.verificationStatus);
   if (filters.search) params.set('search', filters.search);
+  if (filters.department) params.set('department', filters.department);
 
   const queryStr = params.toString() ? `?${params.toString()}` : '';
   return apiClient<AdminUserItem[]>(`/admin/users${queryStr}`, {

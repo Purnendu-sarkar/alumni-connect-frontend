@@ -30,6 +30,7 @@ import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { demoAlumni } from '@/features/shared/demo-data';
+import { useDepartments } from '@/hooks/use-departments';
 import { getAlumni } from '@/lib/api/alumni.api';
 import { sendConnectionRequest } from '@/lib/api/user.api';
 import { useAuthStore } from '@/store/auth-store';
@@ -44,6 +45,8 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
+
+  const { departments: activeDepts } = useDepartments();
 
   const [search, setSearch] = useState('');
   const [department, setDepartment] = useState('All');
@@ -81,7 +84,8 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
     return rawList.filter((person) => {
       const matchDept =
         department === 'All' ||
-        person.department?.toLowerCase().includes(department.toLowerCase());
+        person.department?.toLowerCase().includes(department.toLowerCase()) ||
+        (person as any).departmentRef?.code?.toLowerCase() === department.toLowerCase();
 
       const matchBatch =
         batchFilter === 'All' || person.batch === batchFilter;
@@ -143,7 +147,9 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
     setTimeout(() => setMentorSuccess(null), 5000);
   };
 
-  const departments = ['All', 'Computer Science', 'EEE', 'Business Administration', 'Economics', 'Civil'];
+  const departments = activeDepts && activeDepts.length > 0
+    ? ['All', ...activeDepts.map((d) => d.code)]
+    : ['All', 'Computer Science', 'EEE', 'Business Administration', 'Economics', 'Civil'];
   const batches = ['All', '2014', '2015', '2016', '2018', '2019', '2020'];
 
   return (

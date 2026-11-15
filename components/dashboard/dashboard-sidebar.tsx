@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
 import {
   BriefcaseBusiness,
+  Building2,
   Calendar,
   CheckCircle2,
   Clock,
@@ -209,6 +210,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
         {
           title: 'Platform System',
           items: [
+            { href: '/admin/departments', label: 'Academic Departments', icon: Building2 },
             { href: '/admin/settings', label: 'System Settings', icon: Settings },
             { href: '/admin/settings/security', label: 'Security & Password', icon: Key },
           ],

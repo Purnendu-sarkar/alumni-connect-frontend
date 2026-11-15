@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { demoAlumni } from '@/features/shared/demo-data';
+import { useDepartments } from '@/hooks/use-departments';
 import { getAlumni } from '@/lib/api/alumni.api';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -19,6 +20,15 @@ export function AlumniDirectory() {
   const [department, setDepartment] = useState('All');
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
+
+  const { departments: activeDepts } = useDepartments();
+
+  const filterChips = useMemo(() => {
+    if (!activeDepts || activeDepts.length === 0) {
+      return ['All', 'CSE', 'EEE', 'BBA', 'Civil', 'Economics'];
+    }
+    return ['All', ...activeDepts.map((d) => d.code)];
+  }, [activeDepts]);
 
   const query = useQuery({
     queryKey: ['alumni', accessToken, department],
@@ -36,6 +46,7 @@ export function AlumniDirectory() {
       const matchDept =
         department === 'All' ||
         person.department?.toLowerCase().includes(department.toLowerCase()) ||
+        (person as any).departmentRef?.code?.toLowerCase() === department.toLowerCase() ||
         (person as any).role?.toLowerCase().includes(department.toLowerCase());
       const term = search.toLowerCase();
       const haystack = [person.name, person.currentCompany, person.position, ...(person.skills ?? [])]
@@ -101,7 +112,7 @@ export function AlumniDirectory() {
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono hidden sm:inline mr-1">
             Faculty:
           </span>
-          {['All', 'CSE', 'EEE', 'BBA', 'Civil', 'Economics'].map((item) => (
+          {filterChips.map((item) => (
             <Button
               key={item}
               variant={department === item ? 'default' : 'outline'}

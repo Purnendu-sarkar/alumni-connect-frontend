@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { register as registerAccount, type RegisterInput } from '@/lib/api/auth.api';
+import { useDepartments } from '@/hooks/use-departments';
 import { useAuthStore } from '@/store/auth-store';
 import { getAuthErrorMessage } from './auth-error';
 import { registerSchema, type RegisterValues } from './auth.schemas';
@@ -37,6 +38,7 @@ import { registerSchema, type RegisterValues } from './auth.schemas';
 export function RegisterForm() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const { departments, isLoading: isDepartmentsLoading } = useDepartments();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [formError, setFormError] = useState<string | null>(null);
   const [registeredSuccess, setRegisteredSuccess] = useState<{
@@ -334,14 +336,52 @@ export function RegisterForm() {
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <Input
-                  label="Department *"
-                  placeholder="e.g. Computer Science"
-                  leftIcon={<Building2 size={18} />}
-                  error={errors.department?.message}
-                  {...register('department')}
-                  required
-                />
+                {departments.length > 0 ? (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                      Department *
+                    </label>
+                    <div className="relative">
+                      <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <Building2 size={18} />
+                      </div>
+                      <select
+                        {...register('department')}
+                        defaultValue=""
+                        className="w-full h-11 pl-10 pr-4 text-sm bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
+                        required
+                      >
+                        <option value="" disabled>
+                          Select academic department...
+                        </option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.name}>
+                            {dept.name} ({dept.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {errors.department?.message && (
+                      <p className="text-xs text-rose-500 mt-1">{errors.department.message}</p>
+                    )}
+                  </div>
+                ) : isDepartmentsLoading ? (
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700 tracking-wide">
+                      Department *
+                    </label>
+                    <div className="h-11 bg-slate-100 animate-pulse rounded-xl" />
+                  </div>
+                ) : (
+                  <Input
+                    label="Department *"
+                    placeholder="e.g. Computer Science"
+                    leftIcon={<Building2 size={18} />}
+                    error={errors.department?.message}
+                    {...register('department')}
+                    required
+                  />
+                )}
 
                 <Input
                   label="Batch / Cohort *"

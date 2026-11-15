@@ -1,9 +1,15 @@
 import Link from 'next/link';
-import { ArrowUpRight, Bell, Key, Server, Shield, User } from 'lucide-react';
+import { ArrowUpRight, Bell, Building2, Key, Server, Shield, User } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/page-header';
 
 export default function AdminSettingsPage() {
   const sections = [
+    {
+      title: 'Academic Departments',
+      description: 'Manage institutional faculties, academic department codes, active offerings, and member enrollments.',
+      href: '/admin/departments',
+      icon: Building2,
+    },
     {
       title: 'General & Campus Policy',
       description: 'University name, domain restrictions, authentication rules, and governance policies.',
