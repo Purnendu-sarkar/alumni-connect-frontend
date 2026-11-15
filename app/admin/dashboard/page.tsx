@@ -34,7 +34,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
-import { getAdminStats, getAuditLogs } from '@/lib/api/admin.api';
+import { getAdminStats, getAuditLogs, type AuditLogItem } from '@/lib/api/admin.api';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function SuperAdminDashboardPage() {
@@ -49,7 +49,7 @@ export default function SuperAdminDashboardPage() {
 
   const auditLogsQuery = useQuery({
     queryKey: ['admin-audit-logs-summary', accessToken],
-    queryFn: () => getAuditLogs(accessToken, 1, 5),
+    queryFn: () => getAuditLogs(accessToken, { page: 1, limit: 5 }),
     enabled: Boolean(accessToken),
   });
 
@@ -62,7 +62,7 @@ export default function SuperAdminDashboardPage() {
   const totalJobs = stats?.totalJobs ?? 0;
   const pendingJobs = stats?.pendingJobs ?? 0;
   const openReports = 0;
-  const auditLogs = auditLogsQuery.data?.data?.logs ?? [];
+  const auditLogs: AuditLogItem[] = Array.isArray(auditLogsQuery.data?.data) ? auditLogsQuery.data.data : [];
 
   return (
     <div className="space-y-8">
@@ -387,7 +387,7 @@ export default function SuperAdminDashboardPage() {
 
           <div className="space-y-3">
             {auditLogs.length > 0 ? (
-              auditLogs.slice(0, 4).map((entry) => (
+              auditLogs.slice(0, 4).map((entry: AuditLogItem) => (
                 <div
                   key={entry.id}
                   className="p-3 bg-slate-50 rounded-lg flex items-start justify-between gap-3 text-xs"

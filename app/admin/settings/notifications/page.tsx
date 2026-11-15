@@ -1,5 +1,5 @@
-import { NotificationsView } from '@/features/notifications/notifications-view';
+import { NotificationPreferencesView } from '@/features/settings/notification-preferences-view';
 
 export default function AdminSettingsNotificationsPage() {
-  return <NotificationsView currentRole="SUPER_ADMIN" basePath="/admin" />;
+  return <NotificationPreferencesView currentRole="SUPER_ADMIN" basePath="/admin" />;
 }

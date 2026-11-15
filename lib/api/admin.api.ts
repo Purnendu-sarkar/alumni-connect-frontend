@@ -288,11 +288,33 @@ export function toggleUserSuspension(
 export interface AuditLogItem {
   id: string;
   action: string;
+  actorId?: string | null;
   actorName: string;
+  actorEmail?: string | null;
   actorRole: string;
   target: string;
+  targetType?: string | null;
+  targetId?: string | null;
+  result?: 'SUCCESS' | 'FAILURE';
+  ip?: string | null;
+  userAgent?: string | null;
+  requestId?: string | null;
   details: string;
+  metadata?: Record<string, unknown> | null;
   timestamp: string;
+}
+
+export interface AuditLogQueryFilters {
+  page?: number;
+  limit?: number;
+  search?: string;
+  action?: string;
+  actorId?: string;
+  actorRole?: string;
+  targetType?: string;
+  result?: 'SUCCESS' | 'FAILURE';
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface AuditLogResponse {
@@ -305,8 +327,30 @@ export interface AuditLogResponse {
   };
 }
 
-export function getAuditLogs(accessToken: string | null, page = 1, limit = 50) {
-  return apiClient<AuditLogResponse>(`/admin/audit-logs?page=${page}&limit=${limit}`, {
+export function getAuditLogs(
+  accessToken?: string | null,
+  filtersOrPage: AuditLogQueryFilters | number = {},
+  limit?: number,
+) {
+  const filters: AuditLogQueryFilters =
+    typeof filtersOrPage === 'number'
+      ? { page: filtersOrPage, limit: limit ?? 50 }
+      : filtersOrPage;
+
+  const query = new URLSearchParams();
+  if (filters.page) query.set('page', String(filters.page));
+  if (filters.limit) query.set('limit', String(filters.limit));
+  if (filters.search) query.set('search', filters.search);
+  if (filters.action) query.set('action', filters.action);
+  if (filters.actorId) query.set('actorId', filters.actorId);
+  if (filters.actorRole) query.set('actorRole', filters.actorRole);
+  if (filters.targetType) query.set('targetType', filters.targetType);
+  if (filters.result) query.set('result', filters.result);
+  if (filters.startDate) query.set('startDate', filters.startDate);
+  if (filters.endDate) query.set('endDate', filters.endDate);
+
+  const qs = query.toString();
+  return apiClient<AuditLogItem[]>(`/admin/audit-logs${qs ? `?${qs}` : ''}`, {
     method: 'GET',
     accessToken,
   });

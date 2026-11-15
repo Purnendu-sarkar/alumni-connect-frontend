@@ -14,6 +14,8 @@ import {
   User,
 } from 'lucide-react';
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { Avatar } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -24,10 +26,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { logout } from '@/lib/api/auth.api';
+import {
+  getNotifications,
+  getSafeRoleNotificationLink,
+  getUnreadNotificationCount,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type NotificationItem,
+} from '@/lib/api/notifications';
 import { cn } from '@/lib/utils/cn';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
-import { demoNotifications } from '@/features/shared/demo-data';
 
 interface DashboardHeaderProps {
   onToggleMobileMenu?: () => void;
@@ -43,13 +52,61 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
   const startLogout = useAuthStore((state) => state.startLogout);
   const isLoggingOut = useAuthStore((state) => state.isLoggingOut);
 
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState(demoNotifications);
 
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  // Real-time unread count query with 30s polling
+  const { data: countData } = useQuery({
+    queryKey: ['notifications', 'unread-count', user?.id],
+    queryFn: async () => {
+      const res = await getUnreadNotificationCount();
+      return res.data?.unreadCount ?? 0;
+    },
+    enabled: Boolean(user?.id),
+    refetchInterval: 30_000,
+  });
+
+  const unreadCount = countData ?? 0;
+
+  // Header preview: top 5 latest notifications
+  const { data: recentNotifications = [] } = useQuery({
+    queryKey: ['notifications', 'header-preview', user?.id],
+    queryFn: async () => {
+      const res = await getNotifications({ limit: 5 });
+      return res.data ?? [];
+    },
+    enabled: Boolean(user?.id && showNotifications),
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => markAllNotificationsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const markSingleReadMutation = useMutation({
+    mutationFn: (id: string) => markNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+
+  const handleMarkAllRead = () => {
+    markAllReadMutation.mutate();
+  };
+
+  const handleNotificationClick = (notif: NotificationItem) => {
+    if (!notif.isRead) {
+      markSingleReadMutation.mutate(notif.id);
+    }
+    setShowNotifications(false);
+    const safeTarget = getSafeRoleNotificationLink(notif.link, user?.role);
+    router.push(safeTarget);
+  };
 
   // Generate breadcrumb pieces
   const pathParts = pathname.split('/').filter(Boolean);
@@ -79,9 +136,6 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
     router.push(`${base}/directory?search=${encodeURIComponent(searchQuery.trim())}`);
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  };
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -164,8 +218,8 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
           >
             <Bell size={19} />
             {unreadCount > 0 ? (
-              <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-xs">
-                {unreadCount}
+              <span className="absolute top-1 right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-blue-600 text-[9px] font-bold text-white shadow-xs">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             ) : null}
           </button>
@@ -185,7 +239,8 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 cursor-pointer"
+                    disabled={markAllReadMutation.isPending}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
                   >
                     <Check size={12} /> Mark read
                   </button>
@@ -193,16 +248,17 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
               </div>
 
               <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                {notifications.length === 0 ? (
+                {recentNotifications.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-500">
                     No new notifications right now.
                   </div>
                 ) : (
-                  notifications.map((notif) => (
+                  recentNotifications.map((notif) => (
                     <div
                       key={notif.id}
+                      onClick={() => handleNotificationClick(notif)}
                       className={cn(
-                        'p-3.5 text-xs transition-colors hover:bg-slate-50',
+                        'p-3.5 text-xs transition-colors hover:bg-slate-100/70 cursor-pointer text-left w-full block',
                         !notif.isRead && 'bg-blue-50/40'
                       )}
                     >
@@ -212,8 +268,15 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
                           <span className="h-1.5 w-1.5 rounded-full bg-blue-600 shrink-0 mt-1" />
                         ) : null}
                       </div>
-                      <p className="text-slate-600 mt-1 m-0 leading-relaxed text-[11px]">{notif.message}</p>
-                      <span className="text-[10px] text-slate-400 mt-1.5 block font-mono">{notif.createdAt}</span>
+                      <p className="text-slate-600 mt-1 m-0 leading-relaxed text-[11px]">{notif.body}</p>
+                      <span className="text-[10px] text-slate-400 mt-1.5 block font-mono">
+                        {new Date(notif.createdAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
                     </div>
                   ))
                 )}
