@@ -114,6 +114,10 @@ export interface MyJobsResponse {
 
 export interface ModeratorQueueParams {
   status?: string;
+  mine?: boolean;
+  category?: string;
+  q?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -148,8 +152,8 @@ export function getJobById(jobId: string) {
   return apiClient<Job>(`/jobs/${jobId}`, { tenant: true });
 }
 
-export function getOwnerJobDetail(jobId: string) {
-  return apiClient<Job>(`/jobs/${jobId}/owner`, { tenant: true });
+export function getOwnerJobDetail(jobId: string, accessToken?: string | null) {
+  return apiClient<Job>(`/jobs/${jobId}/owner-view`, { accessToken, tenant: true });
 }
 
 export function createJob(accessToken: string | null, data: CreateJobInput) {
@@ -163,7 +167,7 @@ export function createJob(accessToken: string | null, data: CreateJobInput) {
 
 export function updateJob(accessToken: string | null, jobId: string, data: UpdateJobInput) {
   return apiClient<Job>(`/jobs/${jobId}`, {
-    method: 'PUT',
+    method: 'PATCH',
     accessToken,
     tenant: true,
     body: JSON.stringify(data),
@@ -196,7 +200,7 @@ export function duplicateJob(accessToken: string | null, jobId: string) {
 
 export function closeJob(accessToken: string | null, jobId: string, reason?: string) {
   return apiClient<{ success: boolean; status: string }>(`/jobs/${jobId}/close`, {
-    method: 'POST',
+    method: 'PATCH',
     accessToken,
     tenant: true,
     body: JSON.stringify({ reason }),
@@ -228,7 +232,7 @@ export function applyToJob(
   input: ApplyJobInput | string = {},
 ) {
   const payload = typeof input === 'string' ? { coverLetter: input, message: input } : input;
-  return apiClient<{ id: string; jobId: string }>(`/jobs/${jobId}/apply`, {
+  return apiClient<{ id: string; jobId: string }>(`/jobs/${jobId}/applications`, {
     method: 'POST',
     accessToken,
     tenant: true,
@@ -237,7 +241,7 @@ export function applyToJob(
 }
 
 export function getMyApplications(accessToken?: string | null, page = 1, limit = 20) {
-  return apiClient<ApplicationCandidateRecord[]>(`/applications/mine?page=${page}&limit=${limit}`, {
+  return apiClient<ApplicationCandidateRecord[]>(`/applications/my?page=${page}&limit=${limit}`, {
     accessToken,
     tenant: true,
   });
@@ -285,7 +289,7 @@ export function getApplicationDetail(accessToken: string | null, applicationId: 
 
 export function withdrawApplication(accessToken: string | null, applicationId: string, note?: string) {
   return apiClient<{ success: boolean; status: string }>(`/applications/${applicationId}/withdraw`, {
-    method: 'POST',
+    method: 'PATCH',
     accessToken,
     tenant: true,
     body: JSON.stringify({ note }),
@@ -309,14 +313,27 @@ export function updateApplicationStatus(
 
 export async function uploadResume(accessToken: string | null, file: File) {
   const formData = new FormData();
-  formData.append('resume', file);
+  formData.append('file', file);
 
-  return apiClient<{ key: string; originalName: string; size: number; url: string }>('/upload/resume', {
+  const res = await apiClient<{ resumeKey: string; sizeBytes: number }>('/uploads/resume', {
     method: 'POST',
     accessToken,
     tenant: true,
     body: formData,
   });
+
+  return {
+    ...res,
+    data: res.data
+      ? {
+          key: res.data.resumeKey,
+          resumeKey: res.data.resumeKey,
+          originalName: file.name,
+          size: res.data.sizeBytes,
+          url: '',
+        }
+      : undefined,
+  };
 }
 
 export function getApplicationResumeSignedUrl(accessToken: string | null, applicationId: string) {
@@ -333,11 +350,15 @@ export function getApplicationResumeSignedUrl(accessToken: string | null, applic
 export function getModeratorJobsQueue(accessToken: string | null, params: ModeratorQueueParams = {}) {
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
+  if (params.mine !== undefined) query.set('mine', String(params.mine));
+  if (params.category && params.category !== 'All') query.set('category', params.category);
+  if (params.q) query.set('q', params.q);
+  else if (params.search) query.set('q', params.search);
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
 
   const qs = query.toString();
-  return apiClient<Job[]>(`/moderator/jobs/queue${qs ? `?${qs}` : ''}`, {
+  return apiClient<Job[]>(`/moderator/jobs${qs ? `?${qs}` : ''}`, {
     accessToken,
     tenant: true,
   });

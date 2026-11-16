@@ -51,8 +51,9 @@ export function JobApplyModal({ job, isOpen, onClose, onSuccess }: JobApplyModal
 
     try {
       const res = await uploadResume(accessToken, file);
-      if (res.data?.key) {
-        setUploadedResumeKey(res.data.key);
+      const resumeKey = res.data?.resumeKey || res.data?.key;
+      if (resumeKey) {
+        setUploadedResumeKey(resumeKey);
         setUploadedResumeName(file.name);
       }
     } catch (err: unknown) {
