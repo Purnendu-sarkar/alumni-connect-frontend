@@ -222,59 +222,7 @@ export interface EventRecord {
   category: 'CAREER' | 'ACADEMIC' | 'ALUMNI_GALA' | 'WORKSHOP';
 }
 
-export const demoEvents: EventRecord[] = [
-  {
-    id: 'event-1',
-    title: 'Annual Alumni Homecoming & Tech Symposium 2026',
-    type: 'In person',
-    location: 'University Grand Auditorium · Khulna Campus',
-    date: '2026-12-12',
-    time: '10:00 AM – 5:00 PM',
-    day: '12',
-    month: 'DEC',
-    description:
-      'The largest annual gathering of graduates and current students. Featuring keynote panels on emerging AI in South Asia, campus career clinics, and departmental reunions.',
-    speaker: 'Engr. Rafiqul Alam',
-    speakerRole: 'Founding Dean & Tech Advisory Chair',
-    isRegistered: true,
-    attendeesCount: 284,
-    category: 'ALUMNI_GALA',
-  },
-  {
-    id: 'event-2',
-    title: 'Career Stories: Navigating Your First 3 Years in Tech',
-    type: 'Online Webinar',
-    location: 'Zoom Virtual Hall (Link provided upon RSVP)',
-    date: '2026-11-26',
-    time: '7:30 PM – 9:00 PM',
-    day: '26',
-    month: 'NOV',
-    description:
-      'Four alumni from Batch 2020 and 2021 share honest reflections on switching jobs, negotiating early offers, coping with imposter syndrome, and finding mentors.',
-    speaker: 'Tanvir Hossain & Panelists',
-    speakerRole: 'Engineering Manager, Brain Station 23',
-    isRegistered: false,
-    attendeesCount: 142,
-    category: 'CAREER',
-  },
-  {
-    id: 'event-3',
-    title: 'Hands-on Workshop: Production DevOps with AWS & Terraform',
-    type: 'Campus Workshop',
-    location: 'Computer Lab 3, CSE Building',
-    date: '2026-12-05',
-    time: '2:00 PM – 5:30 PM',
-    day: '05',
-    month: 'DEC',
-    description:
-      'Interactive hands-on session for 3rd and 4th-year CSE/EEE students. Provision multi-tier cloud infrastructure from scratch using GitOps workflows.',
-    speaker: 'Arif Uddin',
-    speakerRole: 'Solutions Architect, Grameenphone',
-    isRegistered: false,
-    attendeesCount: 45,
-    category: 'WORKSHOP',
-  },
-];
+export const demoEvents: EventRecord[] = [];
 
 export interface AnnouncementRecord {
   id: string;
@@ -288,41 +236,7 @@ export interface AnnouncementRecord {
   attachments?: string[];
 }
 
-export const demoAnnouncements: AnnouncementRecord[] = [
-  {
-    id: 'ann-1',
-    title: 'Official Launch of AlumniConnect Institutional Mentorship Cohort 2026-27',
-    date: 'November 2, 2026',
-    author: 'Registrar & Alumni Relations Office',
-    authorRole: 'University Administration',
-    category: 'IMPORTANT',
-    priority: 'HIGH',
-    content:
-      'We are proud to inaugurate the formal university-wide mentorship initiative. All accredited alumni are invited to register availability in their Alumni Desk, while enrolled students can connect directly for academic and professional guidance.',
-  },
-  {
-    id: 'ann-2',
-    title: 'Verification Requirements for Graduating Batch of 2026',
-    date: 'October 25, 2026',
-    author: 'Academic Records Directorate',
-    authorRole: 'Super Admin Desk',
-    category: 'CAMPUS_UPDATE',
-    priority: 'NORMAL',
-    content:
-      'Final-year students who have completed credit requirements must submit their institutional ID in their profile settings. Once verified by the department moderator, your account will transition smoothly into Alumni accreditation.',
-  },
-  {
-    id: 'ann-3',
-    title: 'Upcoming Campus Career Fair & Placement Clinic',
-    date: 'October 18, 2026',
-    author: 'Student Career Advisory Wing',
-    authorRole: 'Moderator Desk',
-    category: 'CAREER',
-    priority: 'NORMAL',
-    content:
-      'Over 25 corporate and engineering institutions will participate in this semesters on-campus recruitment drive. Alumni hiring managers are encouraged to post their open positions on the Alumni Jobs board.',
-  },
-];
+export const demoAnnouncements: AnnouncementRecord[] = [];
 
 export interface StoryRecord {
   id: string;

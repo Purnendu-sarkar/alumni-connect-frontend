@@ -1,5 +1,5 @@
-import { EventsListView } from '@/features/events/events-list-view';
+import { AdminEventsView } from '@/features/events/admin-events-view';
 
 export default function AdminEventsPage() {
-  return <EventsListView currentRole="SUPER_ADMIN" basePath="/admin" />;
+  return <AdminEventsView />;
 }

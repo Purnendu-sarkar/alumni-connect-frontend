@@ -166,6 +166,13 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
           ],
         },
         {
+          title: 'Campus & Bulletins',
+          items: [
+            { href: '/moderator/events', label: 'Campus Events', icon: Calendar },
+            { href: '/moderator/announcements', label: 'Announcements', icon: Megaphone },
+          ],
+        },
+        {
           title: 'System & Account',
           items: [
             { href: '/moderator/notifications', label: 'Notifications', icon: Inbox },

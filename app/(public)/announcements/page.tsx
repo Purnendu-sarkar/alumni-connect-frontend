@@ -1,94 +1,67 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Bell,
-  Calendar,
-  Download,
-  ExternalLink,
-  FileText,
   Megaphone,
-  Pin,
   Search,
-  ShieldCheck,
+  Filter,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeading } from '@/components/ui/section-heading';
-
-interface Announcement {
-  id: string;
-  issueNo: string;
-  title: string;
-  department: string;
-  category: 'Convocation' | 'Reunion' | 'Academic' | 'Career' | 'General';
-  date: string;
-  summary: string;
-  isPinned?: boolean;
-}
-
-const ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 'ann-1',
-    issueNo: 'CIRCULAR-2026-089',
-    title: 'Registration Protocol for the 5th University Convocation Ceremony',
-    department: 'Office of the University Registrar',
-    category: 'Convocation',
-    date: 'Oct 28, 2026',
-    summary: 'Detailed instructions regarding graduate eligibility, convocation robe distribution schedules, guest passes, and photo session protocols for batches 2021 through 2024.',
-    isPinned: true,
-  },
-  {
-    id: 'ann-2',
-    issueNo: 'CIRCULAR-2026-074',
-    title: 'Grand Alumni Homecoming 2026: Campus Reunion & Dinner Passes',
-    department: 'Alumni Relations Committee',
-    category: 'Reunion',
-    date: 'Oct 15, 2026',
-    summary: 'Early bird registration is now open for the annual homecoming gathering. Featuring networking roundtables, department visits, and interactive panel sessions.',
-    isPinned: true,
-  },
-  {
-    id: 'ann-3',
-    issueNo: 'CIRCULAR-2026-061',
-    title: 'Alumni Industry Career Fair 2026 — Exclusive Student Registration',
-    department: 'Career Services Center (CSC)',
-    category: 'Career',
-    date: 'Sep 30, 2026',
-    summary: 'Over 25 alumni-founded tech firms and partner enterprises will conduct direct on-campus interviews for software engineering, embedded systems, and business analyst roles.',
-  },
-  {
-    id: 'ann-4',
-    issueNo: 'CIRCULAR-2026-049',
-    title: 'Alumni Endowment Scholarship Fund for Undergraduate Research',
-    department: 'Department of Computer Science & Engineering',
-    category: 'Academic',
-    date: 'Sep 12, 2026',
-    summary: 'Applications are formally invited for the newly launched research grant funded by the North Western University Alumni Association.',
-  },
-];
+import { EmptyState } from '@/components/dashboard/empty-state';
+import { AnnouncementCard } from '@/components/announcements/announcement-card';
+import { getAnnouncements } from '@/lib/api/announcements.api';
+import type { AnnouncementCategory } from '@/types/domain';
 
 export default function AnnouncementsPage() {
-  const [category, setCategory] = useState<string>('All');
+  const [category, setCategory] = useState<string>('ALL');
   const [search, setSearch] = useState<string>('');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
 
-  const categories = ['All', 'Convocation', 'Reunion', 'Career', 'Academic'];
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const filtered = ANNOUNCEMENTS.filter((item) => {
-    const matchCat = category === 'All' || item.category === category;
-    const matchSearch =
-      !search ||
-      item.title.toLowerCase().includes(search.toLowerCase()) ||
-      item.summary.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
+  const {
+    data: responseData,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['public-announcements', category, debouncedSearch, page],
+    queryFn: () =>
+      getAnnouncements({
+        category: category !== 'ALL' ? (category as AnnouncementCategory) : undefined,
+        q: debouncedSearch.trim() || undefined,
+        page,
+        limit: 12,
+      }),
   });
 
+  const announcements = responseData?.data || [];
+  const meta = responseData?.meta;
+
+  const categories = [
+    { id: 'ALL', label: 'All Notices' },
+    { id: 'GENERAL', label: 'General' },
+    { id: 'ACADEMIC', label: 'Academic' },
+    { id: 'CAREER', label: 'Career & Placement' },
+    { id: 'EVENT', label: 'Campus Events' },
+    { id: 'SECURITY_SYSTEM', label: 'Security & System' },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-10">
       {/* Page Header */}
       <div className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">
@@ -98,92 +71,124 @@ export default function AnnouncementsPage() {
           Official University Circulars
         </h1>
         <p className="text-base sm:text-lg text-slate-600 leading-relaxed m-0">
-          Official administrative bulletins, convocation notices, alumni association directives, and campus career initiatives.
+          Verified academic notices, convocation directives, alumni endowment initiatives, and administrative circulars published directly by university departments.
         </p>
       </div>
 
-      {/* Filter and Search Bar using shadcn Card */}
-      <Card className="p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      {/* Filter and Search Bar */}
+      <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input
             type="text"
-            placeholder="Search notices by keyword, title, or circular number…"
+            placeholder="Search circulars by keywords, topic, or department…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 text-xs"
           />
         </div>
+      </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {categories.map((cat) => (
-            <Button
-              key={cat}
-              variant={category === cat ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setCategory(cat)}
-            >
-              {cat}
-            </Button>
-          ))}
-        </div>
-      </Card>
-
-      {/* Bulletins List using shadcn Card */}
-      <div className="space-y-6">
-        {filtered.map((item) => (
-          <Card
-            key={item.id}
-            className={`p-6 hover:shadow-md hover:border-blue-300 transition-all duration-200 space-y-4 ${
-              item.isPinned ? 'border-blue-200 bg-blue-50/20' : ''
+      {/* Category Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            type="button"
+            onClick={() => {
+              setCategory(cat.id);
+              setPage(1);
+            }}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              category === cat.id
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <CardHeader className="p-0">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {item.isPinned && (
-                    <Badge variant="destructive" className="flex items-center gap-1">
-                      <Pin size={11} /> Pinned Notice
-                    </Badge>
-                  )}
-                  <Badge variant="neutral">{item.category}</Badge>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    {item.issueNo}
-                  </span>
-                </div>
-                <span className="text-xs font-semibold text-slate-500">
-                  {item.date}
-                </span>
-              </div>
-            </CardHeader>
-
-            <CardContent className="p-0 space-y-1.5">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug m-0">
-                {item.title}
-              </h2>
-              <p className="text-xs font-semibold text-slate-500 m-0">
-                Issued by: {item.department}
-              </p>
-              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed m-0">
-                {item.summary}
-              </p>
-            </CardContent>
-
-            <CardFooter className="p-0 pt-4 border-t border-slate-100 flex items-center gap-3">
-              <Button size="sm" variant="outline">
-                <FileText size={13} /> View Circular Details
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => alert(`Downloading official PDF copy of ${item.issueNo}…`)}
-              >
-                <Download size={13} /> Official Seal PDF
-              </Button>
-            </CardFooter>
-          </Card>
+            {cat.label}
+          </button>
         ))}
       </div>
+
+      {/* Announcements Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="p-6 bg-white rounded-xl border border-slate-200 space-y-3">
+              <Skeleton className="h-5 w-1/4" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-4 w-1/3" />
+            </div>
+          ))}
+        </div>
+      ) : isError ? (
+        <EmptyState
+          icon={Megaphone}
+          title="Failed to load notices"
+          description="Could not communicate with the bulletin server. Please try refreshing."
+          action={
+            <Button size="sm" onClick={() => refetch()}>
+              Retry
+            </Button>
+          }
+        />
+      ) : announcements.length === 0 ? (
+        <EmptyState
+          icon={Megaphone}
+          title="No notices found"
+          description={
+            debouncedSearch || category !== 'ALL'
+              ? 'No announcements match your current filter selections.'
+              : 'There are currently no active public announcements published.'
+          }
+          action={
+            debouncedSearch || category !== 'ALL' ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSearch('');
+                  setCategory('ALL');
+                }}
+              >
+                Reset Filters
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {announcements.map((ann) => (
+            <AnnouncementCard key={ann.id} announcement={ann} basePath="" />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-4">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-xs font-semibold text-slate-600 px-2">
+            Page {meta.page} of {meta.totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= meta.totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

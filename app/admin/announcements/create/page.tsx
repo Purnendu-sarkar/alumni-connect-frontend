@@ -1,5 +1,5 @@
 import { AnnouncementCreateForm } from '@/features/announcements/announcement-create-form';
 
-export default function AdminAnnouncementCreatePage() {
+export default function AdminCreateAnnouncementPage() {
   return <AnnouncementCreateForm currentRole="SUPER_ADMIN" basePath="/admin" />;
 }

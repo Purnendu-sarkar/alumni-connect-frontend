@@ -208,3 +208,124 @@ export interface Job {
     actor?: { id: string; name: string } | null;
   }>;
 }
+
+// ================= FEATURE 8: EVENTS & RSVP =================
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
+export type EventMode = 'IN_PERSON' | 'ONLINE' | 'HYBRID';
+export type RsvpStatus = 'GOING' | 'MAYBE' | 'NOT_GOING' | 'WAITLISTED' | 'CANCELLED';
+
+export interface EventCard {
+  id: string;
+  title: string;
+  slug?: string;
+  description: string;
+  category: string;
+  organizer?: string | null;
+  mode: EventMode;
+  venue?: string | null;
+  onlineUrl?: string | null;
+  startsAt: string;
+  endsAt: string;
+  rsvpDeadline?: string | null;
+  capacity?: number | null;
+  waitlistEnabled: boolean;
+  bannerUrl?: string | null;
+  bannerKey?: string | null;
+  bannerPublicId?: string | null;
+  status: EventStatus;
+  cancelledAt?: string | null;
+  cancelReason?: string | null;
+  goingCount: number;
+  waitlistedCount: number;
+  spotsRemaining?: number | null;
+  isFull: boolean;
+  myRsvpStatus?: RsvpStatus | null;
+  organizerInfo?: {
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+    photoKey?: string | null;
+  } | null;
+  createdAt: string;
+}
+
+export interface EventDetail extends EventCard {
+  onlineUrlMasked?: boolean;
+  completedAt?: string | null;
+  counts: {
+    going: number;
+    maybe: number;
+    notGoing: number;
+    waitlisted: number;
+    spotsRemaining: number | null;
+    isFull: boolean;
+  };
+  reminderEnabled?: boolean;
+  reminderSentAt?: string | null;
+  updatedAt: string;
+}
+
+export interface EventRsvpItem {
+  rsvpId: string;
+  rsvpStatus: RsvpStatus;
+  waitlistedAt?: string | null;
+  createdAt: string;
+  event: EventCard;
+}
+
+export interface EventAttendee {
+  id: string;
+  eventId: string;
+  userId: string;
+  status: RsvpStatus;
+  waitlistedAt?: string | null;
+  attendedAt?: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl?: string | null;
+    department?: string | null;
+    batch?: string | null;
+    graduationYear?: string | null;
+    role?: {
+      name: string;
+    };
+  };
+}
+
+// ================= FEATURE 9: INSTITUTIONAL ANNOUNCEMENTS =================
+export type AnnouncementStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type AnnouncementCategory = 'GENERAL' | 'ACADEMIC' | 'CAREER' | 'EVENT' | 'SECURITY_SYSTEM';
+export type AnnouncementAudience = 'ALL' | 'STUDENTS' | 'ALUMNI';
+
+export interface AnnouncementCard {
+  id: string;
+  title: string;
+  summary: string;
+  category: AnnouncementCategory;
+  audience: AnnouncementAudience;
+  pinned: boolean;
+  status: AnnouncementStatus;
+  isNew: boolean;
+  isArchived: boolean;
+  publishAt?: string | null;
+  publishedAt?: string | null;
+  author?: {
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+    photoKey?: string | null;
+  } | null;
+  createdAt: string;
+}
+
+export interface AnnouncementDetail extends AnnouncementCard {
+  body: string;
+  archiveAt?: string | null;
+  archivedAt?: string | null;
+  editedAt?: string | null;
+  version: number;
+  updatedAt: string;
+}

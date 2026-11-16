@@ -1,41 +1,147 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, CheckCircle2, Send } from 'lucide-react';
-import Link from 'next/link';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Calendar, Save, Send, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/dashboard/page-header';
-import type { UserRole } from '@/types/domain';
+import { MediaUploader } from '@/components/media/media-uploader';
+import {
+  createEvent,
+  updateEvent,
+  getAdminEventById,
+  type CreateEventInput,
+} from '@/lib/api/events.api';
+import { useAuthStore } from '@/store/auth-store';
+import type { UserRole, EventMode, EventStatus } from '@/types/domain';
 
 interface EventCreateFormProps {
   currentRole: UserRole;
   basePath: string;
+  editId?: string;
 }
 
-export function EventCreateForm({ currentRole, basePath }: EventCreateFormProps) {
+export function EventCreateForm({ currentRole, basePath, editId }: EventCreateFormProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<'In person' | 'Online Webinar' | 'Campus Workshop'>('In person');
-  const [location, setLocation] = useState('University Auditorium · Khulna Campus');
-  const [date, setDate] = useState('2026-12-20');
-  const [time, setTime] = useState('3:00 PM – 5:30 PM');
-  const [speaker, setSpeaker] = useState('');
-  const [speakerRole, setSpeakerRole] = useState('');
   const [description, setDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [category, setCategory] = useState('CAREER');
+  const [organizer, setOrganizer] = useState('');
+  const [mode, setMode] = useState<EventMode>('IN_PERSON');
+  const [venue, setVenue] = useState('');
+  const [onlineUrl, setOnlineUrl] = useState('');
+  const [startsAt, setStartsAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
+  const [rsvpDeadline, setRsvpDeadline] = useState('');
+  const [capacity, setCapacity] = useState<string>('');
+  const [waitlistEnabled, setWaitlistEnabled] = useState(true);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [bannerPublicId, setBannerPublicId] = useState<string | null>(null);
+  const [publishImmediately, setPublishImmediately] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // If edit mode, load existing event details
+  const { data: existingData, isLoading: isLoadingExisting } = useQuery({
+    queryKey: ['admin-event-edit', editId, accessToken],
+    queryFn: async () => {
+      if (!editId || !accessToken) return null;
+      const res = await getAdminEventById(accessToken, editId);
+      return res.data;
+    },
+    enabled: Boolean(editId && accessToken),
+  });
+
+  useEffect(() => {
+    if (existingData) {
+      setTitle(existingData.title);
+      setDescription(existingData.description);
+      setCategory(existingData.category);
+      setOrganizer(existingData.organizer || '');
+      setMode(existingData.mode);
+      setVenue(existingData.venue || '');
+      setOnlineUrl(existingData.onlineUrl || '');
+      setStartsAt(
+        new Date(existingData.startsAt).toISOString().slice(0, 16)
+      );
+      setEndsAt(
+        new Date(existingData.endsAt).toISOString().slice(0, 16)
+      );
+      if (existingData.rsvpDeadline) {
+        setRsvpDeadline(
+          new Date(existingData.rsvpDeadline).toISOString().slice(0, 16)
+        );
+      }
+      setCapacity(existingData.capacity ? String(existingData.capacity) : '');
+      setWaitlistEnabled(existingData.waitlistEnabled);
+      setBannerUrl(existingData.bannerUrl || null);
+      setBannerPublicId(existingData.bannerPublicId || null);
+    }
+  }, [existingData]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!accessToken) throw new Error('Authentication required');
+
+      const payload: CreateEventInput = {
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        organizer: organizer.trim() || undefined,
+        mode,
+        venue: venue.trim() || undefined,
+        onlineUrl: onlineUrl.trim() || undefined,
+        startsAt: new Date(startsAt).toISOString(),
+        endsAt: new Date(endsAt).toISOString(),
+        rsvpDeadline: rsvpDeadline ? new Date(rsvpDeadline).toISOString() : undefined,
+        capacity: capacity ? parseInt(capacity, 10) : null,
+        waitlistEnabled,
+        bannerUrl,
+        bannerPublicId,
+        status: (publishImmediately ? 'PUBLISHED' : editId ? existingData?.status : 'DRAFT') as EventStatus,
+      };
+
+      if (editId) {
+        return updateEvent(accessToken, editId, payload);
+      }
+      return createEvent(accessToken, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-events'] });
+      if (editId) {
+        queryClient.invalidateQueries({ queryKey: ['event', editId] });
+      }
+      router.push(`${basePath}/events`);
+    },
+    onError: (err: unknown) => {
+      const error = err as Error;
+      setFormError(error?.message || 'Failed to save event. Please check required fields.');
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      router.push(`${basePath}/events`);
-    }, 600);
+    setFormError(null);
+
+    if (new Date(endsAt) <= new Date(startsAt)) {
+      setFormError('Event end time must be after start time.');
+      return;
+    }
+
+    if (rsvpDeadline && new Date(rsvpDeadline) > new Date(startsAt)) {
+      setFormError('RSVP deadline must be before the event starts.');
+      return;
+    }
+
+    saveMutation.mutate();
   };
 
   return (
@@ -44,99 +150,203 @@ export function EventCreateForm({ currentRole, basePath }: EventCreateFormProps)
         backHref={`${basePath}/events`}
         backLabel="Back to Events"
         eyebrow="EVENT HOSTING & OVERSIGHT"
-        title="Schedule Platform Event"
+        title={editId ? 'Edit Platform Event' : 'Schedule Platform Event'}
         description="Publish an official alumni conference, departmental webinar, or technical workshop to the university calendar."
       />
 
       <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && (
+          <div className="mb-4">
+            <FormAlert>{formError}</FormAlert>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Banner Upload */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Event Banner Image (16:9 Landscape)
+            </label>
+            <MediaUploader
+              purpose="EVENT_BANNER"
+              aspectRatio="16:9"
+              currentUrl={bannerUrl}
+              onUploadComplete={(asset) => {
+                setBannerUrl(asset.url);
+                setBannerPublicId(asset.publicId);
+              }}
+              onRemove={() => {
+                setBannerUrl(null);
+                setBannerPublicId(null);
+              }}
+            />
+          </div>
+
           <Input
             label="Event Title *"
             placeholder="e.g. Annual Alumni Career Symposium 2026"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            minLength={5}
+            maxLength={120}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Gathering Type
+                Category *
               </label>
               <select
-                value={type}
-                onChange={(e) => setType(e.target.value as 'In person' | 'Online Webinar' | 'Campus Workshop')}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
               >
-                <option value="In person">In person</option>
-                <option value="Online Webinar">Online Webinar</option>
-                <option value="Campus Workshop">Campus Workshop</option>
+                <option value="CAREER">Career & Placement</option>
+                <option value="ACADEMIC">Academic & Tech Symposium</option>
+                <option value="ALUMNI_GALA">Alumni Gala & Reunion</option>
+                <option value="WORKSHOP">Hands-on Workshop</option>
+                <option value="GENERAL">General Campus Gathering</option>
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Format / Mode *
+              </label>
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as EventMode)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="IN_PERSON">In Person</option>
+                <option value="ONLINE">Online Virtual Session</option>
+                <option value="HYBRID">Hybrid (In Person & Online)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Venue or Virtual Stream URL *"
-              placeholder="e.g. University Hall / Zoom Link"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              label="Campus Venue"
+              placeholder="e.g. University Grand Auditorium, Room 402"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+            />
+
+            <Input
+              label="Virtual Meeting / Stream URL"
+              placeholder="e.g. https://meet.google.com/xyz"
+              value={onlineUrl}
+              onChange={(e) => setOnlineUrl(e.target.value)}
+            />
+          </div>
+
+          <Input
+            label="Organizer / Host"
+            placeholder="e.g. Department of CSE Alumni Advisory Board"
+            value={organizer}
+            onChange={(e) => setOrganizer(e.target.value)}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Start Date & Time *"
+              type="datetime-local"
+              value={startsAt}
+              onChange={(e) => setStartsAt(e.target.value)}
+              required
+            />
+
+            <Input
+              label="End Date & Time *"
+              type="datetime-local"
+              value={endsAt}
+              onChange={(e) => setEndsAt(e.target.value)}
               required
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Date (YYYY-MM-DD) *"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+              label="RSVP Deadline (Optional)"
+              type="datetime-local"
+              value={rsvpDeadline}
+              onChange={(e) => setRsvpDeadline(e.target.value)}
             />
 
             <Input
-              label="Time Range *"
-              placeholder="e.g. 10:00 AM – 3:30 PM"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              required
+              label="Confirmed Attendee Capacity (Optional)"
+              type="number"
+              placeholder="Leave blank for unlimited"
+              min={1}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Keynote Speaker / Facilitator"
-              placeholder="e.g. Dr. Kazi Alam"
-              value={speaker}
-              onChange={(e) => setSpeaker(e.target.value)}
-            />
+          <div className="flex items-center gap-6 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={waitlistEnabled}
+                onChange={(e) => setWaitlistEnabled(e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              Enable Automatic FIFO Waitlist
+            </label>
 
-            <Input
-              label="Speaker Role or Title"
-              placeholder="e.g. VP of Engineering at Google"
-              value={speakerRole}
-              onChange={(e) => setSpeakerRole(e.target.value)}
-            />
+            {!editId && (
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={publishImmediately}
+                  onChange={(e) => setPublishImmediately(e.target.checked)}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                Publish Immediately
+              </label>
+            )}
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Event Abstract & Agenda Description *
+              Event Description & Schedule *
             </label>
-            <textarea
-              rows={5}
-              required
+            <Textarea
+              rows={6}
+              placeholder="Detailed description, keynote agenda, prerequisites, and registration instructions…"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detail session key takeaways, attendee target audience, and prerequisite instructions…"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 leading-relaxed"
+              required
+              minLength={20}
+              className="text-xs"
             />
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-            <Button type="button" variant="ghost" size="sm" asChild>
-              <Link href={`${basePath}/events`}>Cancel</Link>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.push(`${basePath}/events`)}
+              disabled={saveMutation.isPending}
+            >
+              Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={isSubmitting}>
-              <Send size={14} /> {isSubmitting ? 'Publishing Event…' : 'Publish to Calendar'}
+
+            <Button
+              type="submit"
+              disabled={saveMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold gap-1.5"
+            >
+              <Save className="w-4 h-4" />
+              {saveMutation.isPending
+                ? 'Saving Event...'
+                : editId
+                ? 'Update Event'
+                : publishImmediately
+                ? 'Publish Event'
+                : 'Save as Draft'}
             </Button>
           </div>
         </form>
