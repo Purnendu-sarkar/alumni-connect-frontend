@@ -117,16 +117,94 @@ export interface VerificationItem {
   role: { id: string; name: UserRole };
 }
 
+export type JobStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'CHANGES_REQUESTED'
+  | 'PUBLISHED'
+  | 'CLOSED'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'PENDING'
+  | 'APPROVED';
+
+export type JobApplicationStatus =
+  | 'APPLIED'
+  | 'UNDER_REVIEW'
+  | 'SHORTLISTED'
+  | 'INTERVIEW_SCHEDULED'
+  | 'OFFERED'
+  | 'REJECTED'
+  | 'WITHDRAWN';
+
+export type EmploymentType =
+  | 'FULL_TIME'
+  | 'PART_TIME'
+  | 'CONTRACT'
+  | 'INTERNSHIP'
+  | 'REMOTE'
+  | 'FREELANCE';
+
+export type WorkMode = 'ON_SITE' | 'HYBRID' | 'REMOTE';
+
+export type ExperienceLevel = 'ENTRY' | 'MID' | 'SENIOR' | 'LEAD' | 'ANY';
+
 export interface Job {
   id: string;
   title: string;
   description: string;
+  requirements?: string | null;
   company: string;
-  location: string | null;
+  category?: string | null;
   employmentType: string | null;
-  applicationUrl: string | null;
-  applicationEmail: string | null;
-  expiresAt: string | null;
+  workMode?: string | null;
+  experienceLevel?: string | null;
+  location: string | null;
+  salary?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  salaryCurrency?: string | null;
+  deadline?: string | null;
+  daysLeft?: number;
+  referralAvailable?: boolean;
+  requireResume?: boolean;
+  requireCoverLetter?: boolean;
+  applicationUrl?: string | null;
+  applicationEmail?: string | null;
+  status?: string;
+  submittedAt?: string | null;
+  claimedAt?: string | null;
+  publishedAt?: string | null;
+  closedAt?: string | null;
+  closedReason?: string | null;
+  latestFeedback?: string | null;
+  expiresAt?: string | null;
   createdAt: string;
-  postedBy: { id: string; name: string; currentCompany: string | null };
+  applicantCount?: number;
+  hasApplied?: boolean;
+  viewerApplicationStatus?: string | null;
+  postedBy?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string | null;
+    currentCompany?: string | null;
+    position?: string | null;
+    department?: string | null;
+    batch?: string | null;
+    avatarUrl?: string | null;
+    verified?: boolean;
+  } | null;
+  reviewer?: { id: string; name: string; email?: string } | null;
+  riskHints?: string[];
+  moderationHistory?: Array<{
+    id: string;
+    action: string;
+    reasonCode?: string | null;
+    ownerVisibleNote?: string | null;
+    internalNote?: string | null;
+    createdAt: string;
+    actor?: { id: string; name: string } | null;
+  }>;
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   BriefcaseBusiness,
   Building2,
@@ -10,22 +10,25 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Filter,
   MapPin,
   Plus,
+  RefreshCw,
   Search,
-  Send,
   Sparkles,
+  UserCheck,
   X,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { demoJobs } from '@/features/shared/demo-data';
-import { applyToJob, getJobs } from '@/lib/api/jobs.api';
+import { JobApplyModal } from '@/components/jobs/job-apply-modal';
+import { getJobs } from '@/lib/api/jobs.api';
 import { useAuthStore } from '@/store/auth-store';
 import type { Job, UserRole } from '@/types/domain';
 
@@ -34,62 +37,98 @@ interface JobsListViewProps {
   basePath: string;
 }
 
+const CATEGORIES = [
+  'All',
+  'Software Engineering',
+  'Product & Design',
+  'Data & AI',
+  'Business & Marketing',
+  'Finance & Accounting',
+  'Operations',
+  'General',
+];
+
+const EMPLOYMENT_TYPES = [
+  { label: 'All Types', value: 'All' },
+  { label: 'Full-time', value: 'FULL_TIME' },
+  { label: 'Part-time', value: 'PART_TIME' },
+  { label: 'Internship', value: 'INTERNSHIP' },
+  { label: 'Contract', value: 'CONTRACT' },
+  { label: 'Remote', value: 'REMOTE' },
+];
+
+const WORK_MODES = [
+  { label: 'All Modes', value: 'All' },
+  { label: 'On-site', value: 'ON_SITE' },
+  { label: 'Hybrid', value: 'HYBRID' },
+  { label: 'Remote', value: 'REMOTE' },
+];
+
 export function JobsListView({ currentRole, basePath }: JobsListViewProps) {
-  const queryClient = useQueryClient();
-  const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
 
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('All');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [category, setCategory] = useState('All');
+  const [employmentType, setEmploymentType] = useState('All');
+  const [workMode, setWorkMode] = useState('All');
+  const [referralOnly, setReferralOnly] = useState(false);
+  const [page, setPage] = useState(1);
+
   const [applyingJob, setApplyingJob] = useState<Job | null>(null);
-  const [coverNote, setCoverNote] = useState('');
-  const [applySuccess, setApplySuccess] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  // Real backend jobs query
+  // 300ms Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   const jobsQuery = useQuery({
-    queryKey: ['published-jobs'],
+    queryKey: [
+      'published-jobs',
+      debouncedSearch,
+      category,
+      employmentType,
+      workMode,
+      referralOnly,
+      page,
+    ],
     queryFn: async () => {
-      try {
-        const res = await getJobs();
-        return res.data && res.data.length > 0 ? res.data : demoJobs;
-      } catch {
-        return demoJobs;
-      }
+      const res = await getJobs({
+        search: debouncedSearch || undefined,
+        category: category !== 'All' ? category : undefined,
+        employmentType: employmentType !== 'All' ? employmentType : undefined,
+        workMode: workMode !== 'All' ? workMode : undefined,
+        referralOnly: referralOnly || undefined,
+        page,
+        limit: 18,
+      });
+      return res.data ?? [];
     },
   });
 
-  const jobsList: Job[] = jobsQuery.data ?? demoJobs;
+  const jobsList: Job[] = jobsQuery.data ?? [];
 
-  const applyMutation = useMutation({
-    mutationFn: (jobId: string) => applyToJob(accessToken, jobId, coverNote),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-jobs'] });
-      setApplySuccess(`Your application for "${applyingJob?.title}" was submitted successfully!`);
-      setApplyingJob(null);
-      setCoverNote('');
-      setTimeout(() => setApplySuccess(null), 5000);
-    },
-    onError: () => {
-      // In demo mode or duplicate apply, handle gracefully
-      setApplySuccess(`Your application for "${applyingJob?.title}" was recorded!`);
-      setApplyingJob(null);
-      setCoverNote('');
-      setTimeout(() => setApplySuccess(null), 5000);
-    },
-  });
-
-  const handleApplySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!applyingJob) return;
-    applyMutation.mutate(applyingJob.id);
+  const handleResetFilters = () => {
+    setSearchInput('');
+    setDebouncedSearch('');
+    setCategory('All');
+    setEmploymentType('All');
+    setWorkMode('All');
+    setReferralOnly(false);
+    setPage(1);
   };
 
-  const filteredJobs = jobsList.filter((job) => {
-    const matchType = typeFilter === 'All' || job.employmentType === typeFilter;
-    const term = search.toLowerCase();
-    const haystack = [job.title, job.company, job.location, job.description].filter(Boolean).join(' ').toLowerCase();
-    return matchType && (!term || haystack.includes(term));
-  });
+  const hasActiveFilters =
+    Boolean(debouncedSearch) ||
+    category !== 'All' ||
+    employmentType !== 'All' ||
+    workMode !== 'All' ||
+    referralOnly;
 
   return (
     <div className="space-y-6">
@@ -99,18 +138,29 @@ export function JobsListView({ currentRole, basePath }: JobsListViewProps) {
         description="Explore exclusive internships, early-career roles, and corporate referrals shared by accredited alumni."
         actions={
           <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => jobsQuery.refetch()}
+              disabled={jobsQuery.isFetching}
+            >
+              <RefreshCw size={13} className={jobsQuery.isFetching ? 'animate-spin' : ''} /> Refresh
+            </Button>
+
             {currentRole === 'STUDENT' ? (
-              <Button asChild variant="secondary" size="sm">
+              <Button asChild variant="outline" size="sm">
                 <Link href={`${basePath}/applications`}>My Applications</Link>
               </Button>
-            ) : currentRole === 'ALUMNI' ? (
+            ) : null}
+
+            {currentRole === 'ALUMNI' ? (
               <>
-                <Button asChild variant="secondary" size="sm">
+                <Button asChild variant="outline" size="sm">
                   <Link href={`${basePath}/jobs/my-jobs`}>My Posted Jobs</Link>
                 </Button>
                 <Button asChild size="sm">
                   <Link href={`${basePath}/jobs/create`}>
-                    <Plus size={14} /> Post a Job
+                    <Plus size={14} /> Post Opportunity
                   </Link>
                 </Button>
               </>
@@ -119,210 +169,249 @@ export function JobsListView({ currentRole, basePath }: JobsListViewProps) {
         }
       />
 
-      {applySuccess ? (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{applySuccess}</span>
-        </div>
-      ) : null}
-
-      {/* Search and Filters */}
-      <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by job title, company name, location, or keywords…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
-          {['All', 'Full-time', 'Internship', 'Remote', 'Contract'].map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setTypeFilter(type)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                typeFilter === type
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Jobs Grid */}
-      {jobsQuery.isLoading ? (
-        <CardGridSkeleton count={4} />
-      ) : filteredJobs.length === 0 ? (
-        <EmptyState
-          icon={BriefcaseBusiness}
-          title="No career opportunities found"
-          description={`No jobs match your search "${search}". Try resetting your filter criteria.`}
-          action={
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                setSearch('');
-                setTypeFilter('All');
-              }}
-            >
-              Reset Filters
-            </Button>
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredJobs.map((job) => (
-            <article
-              key={job.id}
-              className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 m-0 hover:text-blue-600 transition-colors">
-                      {job.title}
-                    </h3>
-                    <p className="text-xs font-semibold text-slate-600 m-0 mt-0.5">
-                      {job.company}
-                    </p>
-                  </div>
-                  <Badge variant="neutral">
-                    {job.employmentType || 'Full-time'}
-                  </Badge>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 mb-3 pb-2.5 border-b border-slate-100">
-                  {job.location ? (
-                    <span className="flex items-center gap-1">
-                      <MapPin size={12} className="text-slate-400" /> {job.location}
-                    </span>
-                  ) : null}
-                  <span>•</span>
-                  <span>Posted {new Date(job.createdAt).toLocaleDateString()}</span>
-                  {job.postedBy?.name ? (
-                    <>
-                      <span>•</span>
-                      <span className="text-blue-600 font-semibold">
-                        Shared by {job.postedBy.name}
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-
-                <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed mb-4">
-                  {job.description}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
-                {currentRole === 'STUDENT' ? (
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    className="flex-1"
-                    onClick={() => setApplyingJob(job)}
-                  >
-                    <Send size={14} /> Quick Apply
-                  </Button>
-                ) : null}
-
-                {job.applicationUrl ? (
-                  <Button size="sm" variant="secondary" asChild>
-                    <a href={job.applicationUrl} target="_blank" rel="noreferrer">
-                      Apply via Link <ExternalLink size={12} />
-                    </a>
-                  </Button>
-                ) : null}
-
-                <Button size="sm" variant="ghost" asChild>
-                  <Link href={`${basePath}/jobs/${job.id}`}>
-                    Details
-                  </Link>
-                </Button>
-              </div>
-            </article>
-          ))}
+      {successToast && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{successToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessToast(null)}
+            className="text-emerald-700 hover:text-emerald-900 p-1"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* Apply Modal */}
-      {applyingJob ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="relative w-full max-w-lg bg-white rounded-xl shadow-2xl border border-slate-200 p-6 animate-in zoom-in-95">
-            <button
-              type="button"
-              onClick={() => setApplyingJob(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"
+      {/* Multi-Filter Search Bar */}
+      <Card className="p-4 space-y-4 shadow-xs">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by role title, hiring company, skills, or city…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white text-slate-800"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Employment Type */}
+            <select
+              value={employmentType}
+              onChange={(e) => {
+                setEmploymentType(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
             >
-              <X size={18} />
-            </button>
+              {EMPLOYMENT_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
 
-            <div className="mb-4">
-              <span className="text-[10px] font-bold tracking-wider uppercase text-blue-600">
-                CAMPUS APPLICATION
-              </span>
-              <h3 className="text-lg font-bold text-slate-900 m-0 mt-0.5">
-                Apply for {applyingJob.title}
-              </h3>
-              <p className="text-xs text-slate-500 m-0 mt-0.5">
-                {applyingJob.company} · {applyingJob.location || 'Remote'}
-              </p>
-            </div>
+            {/* Work Mode */}
+            <select
+              value={workMode}
+              onChange={(e) => {
+                setWorkMode(e.target.value);
+                setPage(1);
+              }}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-blue-500"
+            >
+              {WORK_MODES.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
 
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/80 mb-4 text-xs space-y-1">
-              <p className="font-semibold text-slate-800 m-0">Your profile details will be submitted:</p>
-              <p className="text-slate-600 m-0">
-                • <strong>{user?.name}</strong> ({user?.email})<br />
-                • Department: {user?.department || 'Enrolled Student'} · Batch: {user?.batch || 'Active'}<br />
-                • Verification Status: {user?.verificationStatus === 'APPROVED' ? 'Accredited Student' : 'Under Review'}
-              </p>
-            </div>
-
-            <form onSubmit={handleApplySubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Introduce yourself & explain your fit for this role:
-                </label>
-                <textarea
-                  rows={4}
-                  required
-                  value={coverNote}
-                  onChange={(e) => setCoverNote(e.target.value)}
-                  placeholder="Share your relevant coursework, projects, technical skills, and why you are excited to join this company…"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setApplyingJob(null)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" size="sm" disabled={applyMutation.isPending}>
-                  <Send size={14} /> {applyMutation.isPending ? 'Submitting…' : 'Submit Application'}
-                </Button>
-              </div>
-            </form>
+            {/* Referral Only Toggle */}
+            <label className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 cursor-pointer select-none hover:bg-slate-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={referralOnly}
+                onChange={(e) => {
+                  setReferralOnly(e.target.checked);
+                  setPage(1);
+                }}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Sparkles size={13} className="text-amber-500" />
+              <span>Alumni Referral</span>
+            </label>
           </div>
         </div>
-      ) : null}
+
+        {/* Category Pill Bar */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-1 text-xs">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono shrink-0 mr-1">
+            Category:
+          </span>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => {
+                setCategory(cat);
+                setPage(1);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                category === cat
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Jobs Grid */}
+      {jobsQuery.isLoading ? (
+        <CardGridSkeleton count={6} />
+      ) : jobsList.length === 0 ? (
+        <EmptyState
+          icon={BriefcaseBusiness}
+          title="No verified opportunities found"
+          description={
+            hasActiveFilters
+              ? 'No jobs match your current search filters. Try clearing or relaxing some criteria.'
+              : 'There are currently no active career openings posted on the campus board. Check back soon!'
+          }
+          action={
+            hasActiveFilters ? (
+              <Button size="sm" variant="secondary" onClick={handleResetFilters}>
+                Reset All Filters
+              </Button>
+            ) : currentRole === 'ALUMNI' ? (
+              <Button size="sm" asChild>
+                <Link href={`${basePath}/jobs/create`}>
+                  <Plus size={14} /> Post First Opening
+                </Link>
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {jobsList.map((job) => {
+            const isAuthor = user?.id && job.postedBy?.id === user.id;
+            const hasApplied = Boolean(job.hasApplied);
+
+            return (
+              <div
+                key={job.id}
+                className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all duration-200"
+              >
+                <div>
+                  {/* Top Badges */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="warning">{job.employmentType ?? 'Full-time'}</Badge>
+                      {job.referralAvailable && (
+                        <Badge variant="secondary" className="bg-amber-50 text-amber-800 border-amber-200">
+                          <Sparkles size={11} className="mr-1 text-amber-600 inline" /> Referral
+                        </Badge>
+                      )}
+                    </div>
+                    {job.daysLeft !== undefined && (
+                      <span className="text-[11px] font-medium text-slate-400 flex items-center gap-1">
+                        <Clock size={12} /> {job.daysLeft === 0 ? 'Last day' : `${job.daysLeft}d left`}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Title & Company */}
+                  <h3 className="text-base font-bold text-slate-900 m-0 line-clamp-1 hover:text-blue-600 transition-colors">
+                    <Link href={`${basePath}/jobs/${job.id}`}>{job.title}</Link>
+                  </h3>
+
+                  <p className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mt-1.5 m-0">
+                    <Building2 size={13} className="text-slate-400 shrink-0" />
+                    <span>{job.company}</span>
+                  </p>
+
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-2.5 flex-wrap">
+                    <span className="flex items-center gap-1">
+                      <MapPin size={13} className="text-slate-400" />
+                      {job.location ?? 'Remote'}
+                    </span>
+                    <span>•</span>
+                    <span className="font-semibold text-emerald-700">
+                      {job.salary || 'Negotiable'}
+                    </span>
+                  </div>
+
+                  {job.description && (
+                    <p className="text-xs text-slate-600 mt-3 line-clamp-2 leading-relaxed m-0">
+                      {job.description}
+                    </p>
+                  )}
+
+                  {/* Posted By Card */}
+                  {job.postedBy && (
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="truncate">
+                        Posted by <strong>{job.postedBy.name}</strong>
+                        {job.postedBy.batch ? ` · ${job.postedBy.batch}` : ''}
+                      </span>
+                      {job.postedBy.verified && (
+                        <span className="text-blue-600 font-semibold flex items-center gap-0.5 shrink-0" title="Verified Alumni">
+                          <UserCheck size={13} />
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <Button variant="ghost" size="sm" asChild className="text-xs h-8">
+                    <Link href={`${basePath}/jobs/${job.id}`}>View Details</Link>
+                  </Button>
+
+                  {isAuthor ? (
+                    <Button variant="secondary" size="sm" asChild className="text-xs h-8">
+                      <Link href={`${basePath}/jobs/my-jobs`}>Manage Listing</Link>
+                    </Button>
+                  ) : hasApplied ? (
+                    <Badge variant="success" className="text-xs">
+                      Applied ({job.viewerApplicationStatus || 'Under Review'})
+                    </Badge>
+                  ) : currentRole === 'STUDENT' || currentRole === 'ALUMNI' ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setApplyingJob(job)}
+                      className="text-xs h-8 font-semibold"
+                    >
+                      Apply Now
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Reusable Apply Modal */}
+      <JobApplyModal
+        job={applyingJob}
+        isOpen={Boolean(applyingJob)}
+        onClose={() => setApplyingJob(null)}
+        onSuccess={(title) => {
+          setSuccessToast(`Your application for "${title}" has been submitted successfully to the alumni recruiter!`);
+          setTimeout(() => setSuccessToast(null), 6000);
+        }}
+      />
     </div>
   );
 }

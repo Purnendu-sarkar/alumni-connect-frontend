@@ -1,31 +1,41 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import Link from 'next/link';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  ArrowLeft,
   ArrowUpRight,
   BriefcaseBusiness,
   Building2,
   Calendar,
   CheckCircle2,
   Clock,
+  Download,
   ExternalLink,
+  FileText,
   MapPin,
   RefreshCw,
   Search,
-  Sparkles,
+  Undo2,
+  X,
 } from 'lucide-react';
-import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { TableSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { getMyJobs } from '@/lib/api/jobs.api';
+import {
+  getApplicationResumeSignedUrl,
+  getMyApplications,
+  withdrawApplication,
+  type ApplicationCandidateRecord,
+} from '@/lib/api/jobs.api';
+import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -34,224 +44,271 @@ interface JobApplicationsViewProps {
   basePath: string;
 }
 
-interface ApplicationJobInfo {
-  id?: string;
-  title: string;
-  company: string;
-  location?: string;
-  employmentType?: string;
-}
-
-interface ApplicationRecord {
-  id: string;
-  status: string;
-  createdAt?: string;
-  job: ApplicationJobInfo;
-  stage?: string;
-  notes?: string;
-}
-
-const DEFAULT_APPLICATIONS: ApplicationRecord[] = [
-  {
-    id: 'app-demo-1',
-    status: 'IN_REVIEW',
-    createdAt: '2026-11-04T10:00:00.000Z',
-    job: {
-      id: 'software-engineer-platform',
-      title: 'Software Engineer, Platform Core',
-      company: 'bKash Limited',
-      location: 'Dhaka · Hybrid',
-      employmentType: 'Full-time',
-    },
-    stage: 'Technical Portfolio Review',
-    notes: 'Resume forwarded to engineering hiring manager by Sadia Rahman (Alumni Referral).',
-  },
-  {
-    id: 'app-demo-2',
-    status: 'INTERVIEW_SCHEDULED',
-    createdAt: '2026-10-25T14:30:00.000Z',
-    job: {
-      id: 'junior-cloud-ops',
-      title: 'Junior Cloud Operations Associate',
-      company: 'Brain Station 23',
-      location: 'Dhaka · On-site',
-      employmentType: 'Full-time',
-    },
-    stage: 'Round 1: Technical & System Fundamentals',
-    notes: 'Virtual interview scheduled on Nov 15, 2026 at 03:00 PM via Google Meet.',
-  },
-  {
-    id: 'app-demo-3',
-    status: 'APPLIED',
-    createdAt: '2026-11-08T09:15:00.000Z',
-    job: {
-      id: 'product-design-intern',
-      title: 'Product Design Intern (Summer 2027)',
-      company: '10 Minute School',
-      location: 'Dhaka · Remote',
-      employmentType: 'Internship',
-    },
-    stage: 'Application Awaiting Screening',
-    notes: 'Submitted candidate design portfolio and academic transcript.',
-  },
-];
+const ACTIVE_STATUSES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'OFFERED'];
+const CONCLUDED_STATUSES = ['REJECTED', 'WITHDRAWN'];
 
 export function JobApplicationsView({ currentRole, basePath }: JobApplicationsViewProps) {
+  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
-  const jobsQuery = useQuery({
-    queryKey: ['my-jobs', accessToken],
-    queryFn: () => getMyJobs(accessToken),
+  const [activeTab, setActiveTab] = useState<'ALL' | 'ACTIVE' | 'CONCLUDED'>('ALL');
+  const [withdrawingApp, setWithdrawingApp] = useState<ApplicationCandidateRecord | null>(null);
+  const [withdrawNote, setWithdrawNote] = useState('');
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [downloadingResumeId, setDownloadingResumeId] = useState<string | null>(null);
+
+  const applicationsQuery = useQuery({
+    queryKey: ['my-applications', accessToken],
+    queryFn: async () => {
+      const res = await getMyApplications(accessToken, 1, 50);
+      return res.data ?? [];
+    },
     enabled: Boolean(accessToken),
   });
 
-  const apiApplications = jobsQuery.data?.data?.applications ?? [];
-  const rawApplications: ApplicationRecord[] =
-    apiApplications.length > 0 ? (apiApplications as ApplicationRecord[]) : DEFAULT_APPLICATIONS;
+  const applications: ApplicationCandidateRecord[] = applicationsQuery.data ?? [];
 
-  const applications = rawApplications.filter((app: ApplicationRecord) => {
-    if (filterStatus === 'ALL') return true;
-    return app.status === filterStatus;
+  const withdrawMutation = useMutation({
+    mutationFn: (applicationId: string) =>
+      withdrawApplication(accessToken, applicationId, withdrawNote),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-applications'] });
+      queryClient.invalidateQueries({ queryKey: ['published-jobs'] });
+      setActionNotice('Application was successfully withdrawn.');
+      setWithdrawingApp(null);
+      setWithdrawNote('');
+      setTimeout(() => setActionNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setActionNotice(err instanceof Error ? err.message : 'Failed to withdraw application.');
+    },
   });
 
-  const countTotal = rawApplications.length;
-  const countReview = rawApplications.filter(
-    (a: ApplicationRecord) => a.status === 'IN_REVIEW' || a.status === 'APPLIED'
-  ).length;
-  const countInterview = rawApplications.filter(
-    (a: ApplicationRecord) => a.status === 'INTERVIEW_SCHEDULED'
-  ).length;
+  const handleDownloadResume = async (appId: string) => {
+    try {
+      setDownloadingResumeId(appId);
+      const res = await getApplicationResumeSignedUrl(accessToken, appId);
+      if (res.data?.url) {
+        window.open(res.data.url, '_blank', 'noopener,noreferrer');
+      }
+    } catch {
+      setActionNotice('Failed to generate secure resume download link.');
+    } finally {
+      setDownloadingResumeId(null);
+    }
+  };
+
+  const filteredApplications = applications.filter((app) => {
+    if (activeTab === 'ACTIVE') return ACTIVE_STATUSES.includes(app.status);
+    if (activeTab === 'CONCLUDED') return CONCLUDED_STATUSES.includes(app.status);
+    return true;
+  });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="STUDENT CAREER TRACKER"
+        eyebrow="CAMPUS CAREER TRACKER"
         title="My Job Applications"
-        description="Monitor status, review submitted candidacy profiles, and track hiring stages for campus openings."
+        description="Monitor recruitment progress, stage updates, and verified interview communications."
         actions={
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
-              onClick={() => jobsQuery.refetch()}
-              disabled={jobsQuery.isFetching}
+              onClick={() => applicationsQuery.refetch()}
+              disabled={applicationsQuery.isFetching}
             >
-              <RefreshCw size={13} className={jobsQuery.isFetching ? 'animate-spin' : ''} /> Refresh
+              <RefreshCw size={13} className={applicationsQuery.isFetching ? 'animate-spin' : ''} /> Refresh
             </Button>
             <Button asChild size="sm">
-              <Link href={`${basePath}/jobs`}>Explore Jobs Board</Link>
+              <Link href={`${basePath}/jobs`}>
+                <BriefcaseBusiness size={14} /> Browse Jobs
+              </Link>
             </Button>
           </div>
         }
       />
 
-      {/* Summary KPI Cards using shadcn Card */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
-            Total Applications
-          </span>
-          <p className="text-2xl font-extrabold text-slate-900 font-mono mt-1 m-0">
-            {countTotal}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 m-0">Active student candidacies</p>
-        </Card>
+      {actionNotice && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionNotice(null)}
+            className="text-emerald-700 hover:text-emerald-900 p-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-        <Card className="p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-600 font-mono">
-            Under Review
-          </span>
-          <p className="text-2xl font-extrabold text-amber-600 font-mono mt-1 m-0">
-            {countReview}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 m-0">Screening & resume evaluation</p>
-        </Card>
-
-        <Card className="p-5">
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-600 font-mono">
-            Interviews
-          </span>
-          <p className="text-2xl font-extrabold text-blue-600 font-mono mt-1 m-0">
-            {countInterview}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5 m-0">Technical & cultural rounds</p>
-        </Card>
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        {[
+          { key: 'ALL', label: `All Applications (${applications.length})` },
+          {
+            key: 'ACTIVE',
+            label: `In Progress (${applications.filter((a) => ACTIVE_STATUSES.includes(a.status)).length})`,
+          },
+          {
+            key: 'CONCLUDED',
+            label: `Concluded (${applications.filter((a) => CONCLUDED_STATUSES.includes(a.status)).length})`,
+          },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveTab(tab.key as 'ALL' | 'ACTIVE' | 'CONCLUDED')}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              activeTab === tab.key
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Filter Tabs using shadcn Tabs */}
-      <Tabs value={filterStatus} onValueChange={setFilterStatus} className="w-full">
-        <TabsList className="bg-slate-100 p-1">
-          <TabsTrigger value="ALL">All ({countTotal})</TabsTrigger>
-          <TabsTrigger value="APPLIED">Applied</TabsTrigger>
-          <TabsTrigger value="IN_REVIEW">Under Review</TabsTrigger>
-          <TabsTrigger value="INTERVIEW_SCHEDULED">Interview Scheduled</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {jobsQuery.isLoading ? (
+      {/* Applications List */}
+      {applicationsQuery.isLoading ? (
         <TableSkeleton rows={4} cols={4} />
-      ) : applications.length === 0 ? (
+      ) : filteredApplications.length === 0 ? (
         <EmptyState
           icon={BriefcaseBusiness}
-          title="No applications in this category"
-          description="Browse verified alumni listings and apply directly with your academic credentials."
+          title={
+            activeTab === 'ACTIVE'
+              ? 'No active applications'
+              : activeTab === 'CONCLUDED'
+              ? 'No concluded applications'
+              : 'You have not submitted any applications yet'
+          }
+          description="Explore verified campus job opportunities and apply directly with your accredited university profile."
           action={
             <Button size="sm" asChild>
-              <Link href={`${basePath}/jobs`}>Browse Open Roles</Link>
+              <Link href={`${basePath}/jobs`}>
+                <BriefcaseBusiness size={14} /> Explore Openings
+              </Link>
             </Button>
           }
         />
       ) : (
         <div className="space-y-4">
-          {applications.map((app: ApplicationRecord) => (
-            <Card
-              key={app.id}
-              className="p-5 hover:border-blue-300 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
-            >
-              <div className="space-y-1.5 min-w-0 flex-1">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h3 className="text-base font-bold text-slate-900 m-0">
-                    {app.job.title}
-                  </h3>
-                  <StatusBadge status={app.status} />
-                  <Badge variant="secondary">
-                    {app.job.employmentType || 'Full-time'}
-                  </Badge>
+          {filteredApplications.map((app) => {
+            const canWithdraw = app.status === 'APPLIED' || app.status === 'UNDER_REVIEW';
+
+            return (
+              <Card key={app.id} className="p-5 space-y-4 shadow-xs hover:border-slate-300 transition-colors">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2.5 flex-wrap mb-1">
+                      <h3 className="text-base font-bold text-slate-900 m-0">
+                        {app.job?.title || 'Job Listing'}
+                      </h3>
+                      <StatusBadge status={app.status} />
+                    </div>
+
+                    <p className="text-xs text-slate-600 flex items-center gap-2 m-0">
+                      <strong>{app.job?.company}</strong>
+                      <span>•</span>
+                      <span>{app.job?.location || 'Remote'}</span>
+                      <span>•</span>
+                      <span>Applied on {formatDate(app.createdAt)}</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {app.resumeKey && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadResume(app.id)}
+                        disabled={downloadingResumeId === app.id}
+                        className="text-xs h-8"
+                      >
+                        <Download size={13} className={downloadingResumeId === app.id ? 'animate-bounce' : ''} />
+                        My Resume
+                      </Button>
+                    )}
+
+                    {canWithdraw && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setWithdrawingApp(app)}
+                        className="text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                      >
+                        <Undo2 size={13} /> Withdraw
+                      </Button>
+                    )}
+
+                    {app.job?.id && (
+                      <Button size="sm" variant="secondary" asChild className="text-xs h-8">
+                        <Link href={`${basePath}/jobs/${app.job.id}`}>
+                          View Job <ArrowUpRight size={13} />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
-                <p className="text-xs text-slate-600 m-0 flex items-center gap-2 flex-wrap">
-                  <strong className="text-slate-800">{app.job.company}</strong>
-                  <span>·</span>
-                  <span className="flex items-center gap-1">
-                    <MapPin size={12} className="text-slate-400" />
-                    {app.job.location || 'Remote'}
-                  </span>
-                  <span>·</span>
-                  <span className="flex items-center gap-1 text-slate-400">
-                    <Clock size={12} /> Applied {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recently'}
-                  </span>
-                </p>
-
-                {app.stage && (
-                  <div className="pt-2 text-xs text-blue-900 bg-blue-50/60 border border-blue-100/80 rounded-xl p-2.5 space-y-0.5">
-                    <p className="font-bold text-[11px] text-blue-700 m-0">Hiring Stage: {app.stage}</p>
-                    {app.notes && <p className="text-[11px] text-slate-600 m-0">{app.notes}</p>}
+                {/* Cover Note Snippet */}
+                {app.coverLetter && (
+                  <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs text-slate-600">
+                    <span className="font-bold text-slate-700 block text-[11px] mb-0.5">Cover Note Sent:</span>
+                    <p className="m-0 italic line-clamp-2">{app.coverLetter}</p>
                   </div>
                 )}
-              </div>
 
-              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                <Button size="sm" variant="outline" asChild>
-                  <Link href={`${basePath}/jobs/${app.job.id}`}>
-                    View Role <ArrowUpRight size={13} />
-                  </Link>
-                </Button>
-              </div>
-            </Card>
-          ))}
+                {/* Status Timeline History */}
+                {app.history && app.history.length > 0 && (
+                  <div className="pt-3 border-t border-slate-100">
+                    <span className="text-[11px] font-bold font-mono uppercase tracking-wider text-slate-400 block mb-2">
+                      APPLICATION STAGE TIMELINE
+                    </span>
+                    <div className="flex items-center gap-3 overflow-x-auto text-[11px]">
+                      {app.history.map((h, idx) => (
+                        <div key={h.id || idx} className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-600" />
+                            <span className="font-bold text-slate-800">{h.toStatus.replace('_', ' ')}</span>
+                            <span className="text-slate-400">({formatDate(h.createdAt)})</span>
+                          </div>
+                          {idx < (app.history?.length || 0) - 1 && (
+                            <span className="text-slate-300">→</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Accessible Withdraw Confirmation Modal */}
+      <ConfirmDialog
+        isOpen={Boolean(withdrawingApp)}
+        title="Withdraw Application?"
+        description={`Are you sure you want to withdraw your application for "${withdrawingApp?.job?.title}" at ${withdrawingApp?.job?.company}? This will notify the recruiter and cannot be undone.`}
+        confirmLabel="Withdraw Application"
+        variant="destructive"
+        isLoading={withdrawMutation.isPending}
+        onConfirm={() => {
+          if (withdrawingApp) {
+            withdrawMutation.mutate(withdrawingApp.id);
+          }
+        }}
+        onClose={() => {
+          setWithdrawingApp(null);
+          setWithdrawNote('');
+        }}
+      />
     </div>
   );
 }

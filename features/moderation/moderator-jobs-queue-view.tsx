@@ -11,238 +11,556 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Eye,
+  Lock,
   MapPin,
   RefreshCw,
+  ShieldAlert,
   ShieldCheck,
+  Unlock,
+  UserCheck,
   X,
+  XCircle,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
-import { getPendingJobs, reviewJob } from '@/lib/api/jobs.api';
+import {
+  approveJob,
+  claimJob,
+  getModeratorJobsQueue,
+  rejectJob,
+  requestJobChanges,
+  unclaimJob,
+} from '@/lib/api/jobs.api';
+import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
 import type { Job, UserRole } from '@/types/domain';
 
 interface ModeratorJobsQueueViewProps {
   currentRole: UserRole;
   basePath: string;
-  filterMode?: 'PENDING' | 'IN_REVIEW' | 'ALL';
+  filterMode?: string;
 }
 
-export function ModeratorJobsQueueView({ currentRole, basePath, filterMode = 'PENDING' }: ModeratorJobsQueueViewProps) {
+export function ModeratorJobsQueueView({
+  currentRole,
+  basePath,
+  filterMode = 'SUBMITTED',
+}: ModeratorJobsQueueViewProps) {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const currentUser = useAuthStore((state) => state.user);
 
-  const [rejectingJob, setRejectingJob] = useState<Job | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
+  const initialStatus =
+    filterMode === 'IN_REVIEW'
+      ? 'UNDER_REVIEW'
+      : filterMode === 'ALL'
+      ? 'SUBMITTED'
+      : filterMode;
+
+  const [activeStatus, setActiveStatus] = useState<string>(initialStatus);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Real backend pending jobs query
-  const pendingJobsQuery = useQuery({
-    queryKey: ['pending-jobs', accessToken],
-    queryFn: () => getPendingJobs(accessToken),
+  // Reject modal state
+  const [rejectingJob, setRejectingJob] = useState<Job | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectReasonCode, setRejectReasonCode] = useState('POLICY_VIOLATION');
+  const [rejectInternalNote, setRejectInternalNote] = useState('');
+
+  // Request Changes modal state
+  const [changesJob, setChangesJob] = useState<Job | null>(null);
+  const [changesNotes, setChangesNotes] = useState('');
+  const [changesInternalNote, setChangesInternalNote] = useState('');
+
+  const queueQuery = useQuery({
+    queryKey: ['moderator-jobs-queue', accessToken, activeStatus],
+    queryFn: async () => {
+      const res = await getModeratorJobsQueue(accessToken, { status: activeStatus });
+      return res.data ?? [];
+    },
     enabled: Boolean(accessToken),
   });
 
-  const reviewMutation = useMutation({
-    mutationFn: ({
-      jobId,
-      status,
-      reason,
-    }: {
-      jobId: string;
-      status: 'APPROVED' | 'REJECTED';
-      reason?: string;
-    }) => reviewJob(accessToken, jobId, status, reason),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['pending-jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['published-jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-      setRejectingJob(null);
-      setRejectionReason('');
-      setActionNotice(
-        vars.status === 'APPROVED'
-          ? 'Job approved and published to the campus board!'
-          : 'Job posting rejected with feedback sent to the author.'
-      );
+  const jobs: Job[] = queueQuery.data ?? [];
+
+  // Claim mutation
+  const claimMutation = useMutation({
+    mutationFn: (jobId: string) => claimJob(accessToken, jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-jobs-queue'] });
+      setActionNotice('Listing claimed successfully. You now hold the active review lock.');
       setTimeout(() => setActionNotice(null), 4000);
     },
     onError: (err: unknown) => {
-      setActionNotice(err instanceof Error ? err.message : 'Failed to update job status.');
+      setActionNotice(err instanceof Error ? err.message : 'Job was already claimed by another moderator.');
     },
   });
 
-  const pendingJobs = pendingJobsQuery.data?.data ?? [];
+  // Unclaim mutation
+  const unclaimMutation = useMutation({
+    mutationFn: (jobId: string) => unclaimJob(accessToken, jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-jobs-queue'] });
+      setActionNotice('Review claim released back to the general queue.');
+      setTimeout(() => setActionNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setActionNotice(err instanceof Error ? err.message : 'Failed to release claim.');
+    },
+  });
+
+  // Approve mutation
+  const approveMutation = useMutation({
+    mutationFn: (jobId: string) => approveJob(accessToken, jobId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-jobs-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['published-jobs'] });
+      setActionNotice('Job verified and published live to the campus opportunity board!');
+      setTimeout(() => setActionNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setActionNotice(err instanceof Error ? err.message : 'Failed to approve job.');
+    },
+  });
+
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: ({
+      jobId,
+      reason,
+      reasonCode,
+      internalNote,
+    }: {
+      jobId: string;
+      reason: string;
+      reasonCode: string;
+      internalNote?: string;
+    }) => rejectJob(accessToken, jobId, { reason, reasonCode, internalNote }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-jobs-queue'] });
+      setActionNotice('Job listing rejected and feedback dispatched to the alumni poster.');
+      setRejectingJob(null);
+      setRejectReason('');
+      setRejectInternalNote('');
+      setTimeout(() => setActionNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setActionNotice(err instanceof Error ? err.message : 'Failed to reject job.');
+    },
+  });
+
+  // Request changes mutation
+  const changesMutation = useMutation({
+    mutationFn: ({
+      jobId,
+      notes,
+      internalNote,
+    }: {
+      jobId: string;
+      notes: string;
+      internalNote?: string;
+    }) => requestJobChanges(accessToken, jobId, { notes, internalNote }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['moderator-jobs-queue'] });
+      setActionNotice('Requested revisions sent to the poster. Listing placed on hold.');
+      setChangesJob(null);
+      setChangesNotes('');
+      setChangesInternalNote('');
+      setTimeout(() => setActionNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setActionNotice(err instanceof Error ? err.message : 'Failed to request changes.');
+    },
+  });
 
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="INSTITUTIONAL QUALITY & TRUST"
+        eyebrow="INSTITUTIONAL TRUST & QUALITY"
         title="Job Moderation Queue"
-        description="Verify hiring legitimacy, company authenticity, and candidate protections before publishing to the student board."
+        description="Verify hiring legitimacy, employer authenticity, and student protections before publishing to the live board."
         actions={
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => pendingJobsQuery.refetch()}
-              disabled={pendingJobsQuery.isFetching}
+              onClick={() => queueQuery.refetch()}
+              disabled={queueQuery.isFetching}
             >
-              <RefreshCw size={13} className={pendingJobsQuery.isFetching ? 'animate-spin' : ''} /> Refresh Queue
-            </Button>
-            <Button asChild size="sm" variant="ghost">
-              <Link href={`${basePath}/dashboard`}>Moderator Overview</Link>
+              <RefreshCw size={13} className={queueQuery.isFetching ? 'animate-spin' : ''} /> Refresh Queue
             </Button>
           </div>
         }
       />
 
-      {actionNotice ? (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{actionNotice}</span>
+      {actionNotice && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center justify-between gap-2 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+            <span>{actionNotice}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionNotice(null)}
+            className="text-emerald-700 hover:text-emerald-900 p-1"
+          >
+            <X size={14} />
+          </button>
         </div>
-      ) : null}
+      )}
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2">
-        <Link
-          href={`${basePath}/jobs/pending`}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filterMode === 'PENDING' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          Pending Review ({pendingJobs.length})
-        </Link>
-        <Link
-          href={`${basePath}/jobs/in-review`}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filterMode === 'IN_REVIEW' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          In-Review Tasks (0)
-        </Link>
-        <Link
-          href={`${basePath}/jobs`}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-            filterMode === 'ALL' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
-          All Postings
-        </Link>
+      {/* Status Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
+        {[
+          { key: 'SUBMITTED', label: 'Unclaimed Submissions' },
+          { key: 'UNDER_REVIEW', label: 'In Review' },
+          { key: 'CHANGES_REQUESTED', label: 'Changes Requested' },
+          { key: 'PUBLISHED', label: 'Published' },
+          { key: 'REJECTED', label: 'Rejected' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setActiveStatus(tab.key)}
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
+              activeStatus === tab.key
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* Jobs Review Queue */}
-      {pendingJobsQuery.isLoading ? (
-        <CardGridSkeleton count={3} />
-      ) : pendingJobs.length === 0 ? (
+      {/* Queue Grid */}
+      {queueQuery.isLoading ? (
+        <CardGridSkeleton count={4} />
+      ) : jobs.length === 0 ? (
         <EmptyState
-          icon={CheckCircle2}
-          title="All submitted jobs are reviewed"
-          description="There are currently no pending career opportunities waiting in the institutional moderation queue."
+          icon={BriefcaseBusiness}
+          title={`No jobs in "${activeStatus.replace('_', ' ')}"`}
+          description="The institutional queue is currently clear for this status category."
         />
       ) : (
-        <div className="space-y-4">
-          {pendingJobs.map((job) => (
-            <article
-              key={job.id}
-              className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all space-y-4"
-            >
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {jobs.map((job) => {
+            const isClaimedByMe = job.reviewer?.id === currentUser?.id;
+            const isSuperAdmin = currentRole === 'SUPER_ADMIN';
+            const canModerate = isClaimedByMe || isSuperAdmin;
+
+            return (
+              <Card key={job.id} className="p-5 flex flex-col justify-between space-y-4 shadow-xs hover:border-slate-300 transition-colors">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-base font-bold text-slate-900 m-0">{job.title}</h3>
-                    <StatusBadge status="PENDING" label="Under Review" />
+                  {/* Top Badges */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={job.status || 'SUBMITTED'} />
+                      <Badge variant="neutral">{job.employmentType || 'Full-time'}</Badge>
+                    </div>
+
+                    {job.reviewer ? (
+                      <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Lock size={11} />
+                        {isClaimedByMe ? 'Claimed by You' : `Reviewer: ${job.reviewer.name}`}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <Unlock size={11} /> Unclaimed
+                      </span>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-600 m-0">
-                    <strong>{job.company}</strong> · {job.location || 'Remote'} · {job.employmentType || 'Full-time'}
+
+                  <h3 className="text-base font-bold text-slate-900 m-0">
+                    <Link href={`${basePath}/jobs/${job.id}`} className="hover:text-blue-600 transition-colors">
+                      {job.title}
+                    </Link>
+                  </h3>
+
+                  <p className="text-xs text-slate-600 m-0 mt-1 flex items-center gap-2">
+                    <Building2 size={13} className="text-slate-400 shrink-0" />
+                    <strong>{job.company}</strong>
+                    <span>•</span>
+                    <span>{job.location || 'Remote'}</span>
                   </p>
-                  <p className="text-[11px] text-slate-400 m-0 mt-1">
-                    Submitted by: <strong className="text-slate-700">{job.postedBy?.name || 'Alumnus'}</strong> ({job.postedBy?.currentCompany || 'Alumni Network'}) ·{' '}
-                    {new Date(job.createdAt).toLocaleDateString()}
-                  </p>
+
+                  {/* Poster verification snippet */}
+                  {job.postedBy && (
+                    <div className="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-500 block text-[11px]">Submitted by Alumni</span>
+                        <strong className="text-slate-900 flex items-center gap-1">
+                          {job.postedBy.name}
+                          {job.postedBy.verified && <UserCheck size={13} className="text-blue-600" />}
+                        </strong>
+                      </div>
+                      <span className="text-[11px] text-slate-400">
+                        {job.postedBy.department || 'Alumni Member'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Risk Hints */}
+                  {job.riskHints && job.riskHints.length > 0 && (
+                    <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2">
+                      <ShieldAlert size={15} className="text-rose-600 shrink-0 mt-0.5" />
+                      <div className="text-[11px] text-rose-800">
+                        <strong>Security Flags:</strong> {job.riskHints.join(' ')}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 self-end md:self-start">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    disabled={reviewMutation.isPending}
-                    onClick={() => reviewMutation.mutate({ jobId: job.id, status: 'APPROVED' })}
-                  >
-                    <Check size={14} /> Approve Posting
+                {/* Action Buttons */}
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+                  <Button variant="ghost" size="sm" asChild className="text-xs h-8">
+                    <Link href={`${basePath}/jobs/${job.id}`}>
+                      <Eye size={13} /> Deep Inspect
+                    </Link>
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={reviewMutation.isPending}
-                    onClick={() => {
-                      setRejectingJob(job);
-                      setRejectionReason('Does not meet campus verification criteria or missing job details.');
-                    }}
-                    className="text-rose-600 hover:bg-rose-50"
-                  >
-                    <X size={14} /> Reject
-                  </Button>
-                </div>
-              </div>
 
-              {/* Job Description Box */}
-              <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 text-xs leading-relaxed text-slate-700 space-y-2">
-                <strong className="block text-slate-900">Submitted Description:</strong>
-                <p className="m-0 whitespace-pre-wrap">{job.description}</p>
-                {job.applicationUrl ? (
-                  <div className="pt-2">
-                    <a
-                      href={job.applicationUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-600 font-semibold hover:underline"
-                    >
-                      Application Link: {job.applicationUrl} <ExternalLink size={12} />
-                    </a>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Claim Button */}
+                    {!job.reviewer && (
+                      <Button
+                        size="sm"
+                        onClick={() => claimMutation.mutate(job.id)}
+                        disabled={claimMutation.isPending}
+                        className="text-xs h-8"
+                      >
+                        <Lock size={12} /> Claim Review
+                      </Button>
+                    )}
+
+                    {/* Unclaim Button */}
+                    {isClaimedByMe && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => unclaimMutation.mutate(job.id)}
+                        disabled={unclaimMutation.isPending}
+                        className="text-xs h-8 text-slate-600"
+                      >
+                        Release Claim
+                      </Button>
+                    )}
+
+                    {/* Fast Moderation Actions if claimed or admin */}
+                    {canModerate && activeStatus !== 'PUBLISHED' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setChangesJob(job)}
+                          className="text-xs h-8 text-amber-700 border-amber-300 hover:bg-amber-50"
+                        >
+                          Changes
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setRejectingJob(job)}
+                          className="text-xs h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                        >
+                          Reject
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          onClick={() => approveMutation.mutate(job.id)}
+                          disabled={approveMutation.isPending}
+                          className="text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                        >
+                          <Check size={13} /> Approve
+                        </Button>
+                      </>
+                    )}
                   </div>
-                ) : null}
-              </div>
-            </article>
-          ))}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       {/* Reject Modal */}
-      {rejectingJob ? (
-        <ConfirmDialog
-          isOpen={Boolean(rejectingJob)}
-          onClose={() => setRejectingJob(null)}
-          onConfirm={() =>
-            reviewMutation.mutate({
-              jobId: rejectingJob.id,
-              status: 'REJECTED',
-              reason: rejectionReason,
-            })
-          }
-          title={`Reject Job: ${rejectingJob.title}`}
-          description={`Provide specific feedback for ${rejectingJob.postedBy?.name || 'the author'} explaining why this posting cannot be published to the campus board.`}
-          confirmLabel="Confirm Rejection"
-          variant="destructive"
-          isLoading={reviewMutation.isPending}
+      {rejectingJob && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
         >
-          <div className="mt-3">
-            <textarea
-              rows={3}
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g. Broken application URL, duplicate listing, or unclear compensation criteria…"
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-rose-500"
-            />
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900 m-0 flex items-center gap-2">
+                <XCircle size={18} className="text-rose-600" /> Reject Job Posting
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRejectingJob(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 m-0">
+              Rejecting <strong>{rejectingJob.title}</strong> by {rejectingJob.company}. The feedback below will be displayed to the alumni author.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Rejection Classification *
+                </label>
+                <select
+                  value={rejectReasonCode}
+                  onChange={(e) => setRejectReasonCode(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800"
+                >
+                  <option value="POLICY_VIOLATION">Institutional Policy Violation</option>
+                  <option value="SCAM_OR_SUSPICIOUS">Suspicious or Unverified Company</option>
+                  <option value="UNREALISTIC_COMPENSATION">Unrealistic or Misleading Compensation</option>
+                  <option value="INAPPROPRIATE_CONTENT">Inappropriate or Commercial Spam</option>
+                  <option value="EXTERNAL_CONTACT_VIOLATION">Prohibited Direct Contact Info</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Owner-Visible Rejection Reason *
+                </label>
+                <textarea
+                  rows={3}
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Explain why this listing violates campus guidelines and cannot be published…"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-rose-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Internal Moderator Audit Note (Private to Staff)
+                </label>
+                <input
+                  type="text"
+                  value={rejectInternalNote}
+                  onChange={(e) => setRejectInternalNote(e.target.value)}
+                  placeholder="Optional internal log note…"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="outline" size="sm" onClick={() => setRejectingJob(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={!rejectReason.trim() || rejectMutation.isPending}
+                onClick={() =>
+                  rejectMutation.mutate({
+                    jobId: rejectingJob.id,
+                    reason: rejectReason.trim(),
+                    reasonCode: rejectReasonCode,
+                    internalNote: rejectInternalNote.trim() || undefined,
+                  })
+                }
+              >
+                Confirm Rejection
+              </Button>
+            </div>
           </div>
-        </ConfirmDialog>
-      ) : null}
+        </div>
+      )}
+
+      {/* Request Changes Modal */}
+      {changesJob && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in"
+        >
+          <div className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-extrabold text-slate-900 m-0 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-amber-600" /> Request Revisions from Author
+              </h3>
+              <button
+                type="button"
+                onClick={() => setChangesJob(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 m-0">
+              The listing will transition to <strong>Changes Requested</strong>. The author will be notified to update and resubmit.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Required Changes & Feedback *
+                </label>
+                <textarea
+                  rows={4}
+                  value={changesNotes}
+                  onChange={(e) => setChangesNotes(e.target.value)}
+                  placeholder="e.g. Please clarify minimum qualifications and provide a verified corporate email address…"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:ring-2 focus:ring-amber-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Internal Moderator Note (Private)
+                </label>
+                <input
+                  type="text"
+                  value={changesInternalNote}
+                  onChange={(e) => setChangesInternalNote(e.target.value)}
+                  placeholder="Optional internal note…"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button variant="outline" size="sm" onClick={() => setChangesJob(null)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={!changesNotes.trim() || changesMutation.isPending}
+                onClick={() =>
+                  changesMutation.mutate({
+                    jobId: changesJob.id,
+                    notes: changesNotes.trim(),
+                    internalNote: changesInternalNote.trim() || undefined,
+                  })
+                }
+              >
+                Send Revision Request
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

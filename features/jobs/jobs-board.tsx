@@ -1,29 +1,36 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { BriefcaseBusiness, Filter, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { BriefcaseBusiness, RefreshCw, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { JobCard } from '@/components/jobs/job-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SectionHeading } from '@/components/ui/section-heading';
+import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { getJobs } from '@/lib/api/jobs.api';
-import { demoJobs } from '@/features/shared/demo-data';
+import type { Job } from '@/types/domain';
 
 export function JobsBoard() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('ALL');
 
-  const query = useQuery({ queryKey: ['jobs'], queryFn: getJobs });
-  const jobs = query.data?.data?.length ? query.data.data : demoJobs;
+  const query = useQuery({
+    queryKey: ['public-jobs'],
+    queryFn: async () => {
+      const res = await getJobs();
+      return res.data ?? [];
+    },
+  });
 
+  const jobs: Job[] = query.data ?? [];
   const types = ['ALL', 'FULL_TIME', 'INTERNSHIP', 'CONTRACT'];
 
   const matchingJobs = useMemo(() => {
     return jobs.filter((job) => {
-      const matchSearch = `${job.title} ${job.company} ${job.location} ${job.description || ''}`
+      const matchSearch = `${job.title} ${job.company} ${job.location || ''} ${job.description || ''}`
         .toLowerCase()
         .includes(search.toLowerCase());
       const matchType = filterType === 'ALL' || (job.employmentType || '').toUpperCase() === filterType;
@@ -73,44 +80,45 @@ export function JobsBoard() {
               {type === 'ALL' ? 'All Roles' : type.replace('_', '-')}
             </Button>
           ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => query.refetch()}
+            disabled={query.isFetching}
+            title="Refresh jobs"
+          >
+            <RefreshCw size={14} className={query.isFetching ? 'animate-spin' : ''} />
+          </Button>
         </div>
       </Card>
 
-      {/* Listings Heading */}
-      <SectionHeading
-        eyebrow={query.isError ? 'CURATED DEMO POSITIONS' : 'LIVE OPPORTUNITIES'}
-        title={`${matchingJobs.length} Positions Available`}
-        description="Review requirements and apply directly with your academic credentials."
-        action={
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 flex items-center gap-1">
-              <Sparkles size={12} /> Moderator Approved
-            </span>
-          </div>
-        }
-      />
-
-      {/* Job Grid using shadcn JobCard */}
-      {matchingJobs.length === 0 ? (
-        <Card className="p-12 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-            <Search size={24} />
-          </div>
-          <h3 className="text-base font-bold text-slate-900 m-0">No matching career openings found</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto m-0">
-            Try adjusting your search terms or filter criteria to discover other opportunities.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSearch('');
-              setFilterType('ALL');
-            }}
-          >
-            Clear Filters
-          </Button>
-        </Card>
+      {/* Content Grid */}
+      {query.isLoading ? (
+        <CardGridSkeleton count={6} />
+      ) : matchingJobs.length === 0 ? (
+        <EmptyState
+          icon={BriefcaseBusiness}
+          title="No verified opportunities found"
+          description={
+            search || filterType !== 'ALL'
+              ? 'Try adjusting your search keywords or filter options to discover other campus postings.'
+              : 'There are currently no active job postings published for your institution. Check back soon!'
+          }
+          action={
+            search || filterType !== 'ALL' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearch('');
+                  setFilterType('ALL');
+                }}
+              >
+                Clear Filters
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {matchingJobs.map((job) => (

@@ -1,4 +1,4 @@
-import { JobDetailView } from '@/features/jobs/job-detail-view';
+import { ModeratorJobInspectView } from '@/features/moderation/moderator-job-inspect-view';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -6,5 +6,5 @@ interface Props {
 
 export default async function ModeratorJobDetailPage({ params }: Props) {
   const { id } = await params;
-  return <JobDetailView id={id} currentRole="MODERATOR" basePath="/moderator" />;
+  return <ModeratorJobInspectView id={id} currentRole="MODERATOR" basePath="/moderator" />;
 }

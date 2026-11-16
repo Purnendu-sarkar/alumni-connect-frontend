@@ -19,7 +19,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
-import { demoAlumni, demoJobs } from '@/features/shared/demo-data';
+import { demoAlumni } from '@/features/shared/demo-data';
+import { getJobs } from '@/lib/api/jobs.api';
 import { formatCompactNumber } from '@/lib/utils/format';
 
 const proofPoints = [
@@ -43,7 +44,9 @@ const proofPoints = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const jobsRes = await getJobs({ limit: 3 }).catch(() => ({ data: [] }));
+  const featuredJobs = jobsRes.data ?? [];
   return (
     <div className="space-y-16 lg:space-y-24 py-8 md:py-12">
       {/* Hero Section using shadcn Card */}
@@ -189,11 +192,19 @@ export default function HomePage() {
           }
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {demoJobs.slice(0, 3).map((job) => (
-            <JobCard key={job.id} job={job} />
-          ))}
-        </div>
+        {featuredJobs.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {featuredJobs.slice(0, 3).map((job) => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </div>
+        ) : (
+          <Card className="p-8 text-center bg-slate-50 border border-slate-200">
+            <p className="text-sm font-medium text-slate-600 m-0">
+              Verified campus career opportunities are published regularly by accredited alumni. Check back soon or browse the full opportunity board.
+            </p>
+          </Card>
+        )}
       </section>
 
       {/* Network Metrics Stats using shadcn Card */}

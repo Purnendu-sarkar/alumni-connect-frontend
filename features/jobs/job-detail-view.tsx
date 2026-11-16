@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -9,21 +10,28 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  DollarSign,
   ExternalLink,
+  FileCheck,
   Mail,
   MapPin,
   Send,
   Share2,
+  ShieldCheck,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
-import { demoJobs } from '@/features/shared/demo-data';
-import { applyToJob } from '@/lib/api/jobs.api';
+import { JobApplyModal } from '@/components/jobs/job-apply-modal';
+import { getJobById } from '@/lib/api/jobs.api';
+import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
-import type { Job, UserRole } from '@/types/domain';
+import type { UserRole } from '@/types/domain';
 
 interface JobDetailViewProps {
   id: string;
@@ -32,41 +40,56 @@ interface JobDetailViewProps {
 }
 
 export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps) {
-  const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
 
-  const job: Job =
-    demoJobs.find((j) => j.id === id) || {
-      id,
-      title: 'Software Engineer',
-      company: 'Tech Solutions Ltd.',
-      location: 'Dhaka · Hybrid',
-      employmentType: 'Full-time',
-      description:
-        'Exciting opening for engineering graduates. You will be building resilient cloud services and microservices.',
-      applicationUrl: 'https://example.com/apply',
-      applicationEmail: null,
-      expiresAt: '2026-12-31',
-      createdAt: '2026-10-15',
-      postedBy: { id: 'alumni-1', name: 'Alumni Senior', currentCompany: 'Tech Solutions' },
-    };
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
-  const [applied, setApplied] = useState(false);
-  const [applying, setApplying] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const jobQuery = useQuery({
+    queryKey: ['job', id],
+    queryFn: async () => {
+      const res = await getJobById(id);
+      return res.data;
+    },
+  });
 
-  const handleApply = async () => {
-    setApplying(true);
-    try {
-      await applyToJob(accessToken, job.id);
-    } catch {
-      // Graceful fallback
-    }
-    setApplying(false);
-    setApplied(true);
-    setNotice(`Your application for "${job.title}" has been registered.`);
-    setTimeout(() => setNotice(null), 5000);
-  };
+  const job = jobQuery.data;
+
+  if (jobQuery.isLoading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-20 bg-slate-100 rounded-2xl" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="h-64 bg-slate-100 rounded-2xl" />
+            <div className="h-48 bg-slate-100 rounded-2xl" />
+          </div>
+          <div className="h-80 bg-slate-100 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (jobQuery.isError || !job) {
+    return (
+      <EmptyState
+        icon={BriefcaseBusiness}
+        title="Career Opportunity Not Found"
+        description="This job listing may have expired, been removed, or is no longer available on the campus network."
+        action={
+          <Button asChild size="sm">
+            <Link href={`${basePath}/jobs`}>
+              <ArrowLeft size={14} /> Back to Jobs Board
+            </Link>
+          </Button>
+        }
+      />
+    );
+  }
+
+  const isAuthor = user?.id && job.postedBy?.id === user.id;
+  const hasApplied = Boolean(job.hasApplied);
+  const isClosed = job.status === 'CLOSED' || (job.daysLeft !== undefined && job.daysLeft === 0);
 
   return (
     <div className="space-y-6">
@@ -77,107 +100,202 @@ export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps)
         title={job.title}
         description={`${job.company} · ${job.location || 'Remote'} · ${job.employmentType || 'Full-time'}`}
         badge={
-          <Badge variant="neutral">
-            {job.employmentType || 'Full-time'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="warning">{job.employmentType || 'Full-time'}</Badge>
+            {job.referralAvailable && (
+              <Badge variant="secondary" className="bg-amber-50 text-amber-800 border-amber-200">
+                <Sparkles size={11} className="mr-1 text-amber-600 inline" /> Alumni Referral
+              </Badge>
+            )}
+            {isClosed && (
+              <Badge variant="destructive" className="bg-rose-50 text-rose-700 border-rose-200">
+                Listing Closed
+              </Badge>
+            )}
+          </div>
         }
         actions={
           <div className="flex items-center gap-2">
-            {currentRole === 'STUDENT' ? (
-              <Button size="sm" disabled={applied || applying} onClick={handleApply}>
-                <Send size={14} /> {applied ? 'Application Submitted' : applying ? 'Submitting…' : 'Apply Now'}
+            {isAuthor ? (
+              <Button asChild size="sm" variant="secondary">
+                <Link href={`${basePath}/jobs/my-jobs`}>Manage My Listing</Link>
+              </Button>
+            ) : hasApplied ? (
+              <Badge variant="success" className="px-3 py-1.5 text-xs font-semibold">
+                Applied ({job.viewerApplicationStatus || 'Under Review'})
+              </Badge>
+            ) : !isClosed && (currentRole === 'STUDENT' || currentRole === 'ALUMNI') ? (
+              <Button size="sm" onClick={() => setIsApplyModalOpen(true)}>
+                <Send size={14} /> Apply for Position
               </Button>
             ) : null}
 
-            {job.applicationUrl ? (
-              <Button size="sm" variant="secondary" asChild>
+            {job.applicationUrl && (
+              <Button size="sm" variant="outline" asChild>
                 <a href={job.applicationUrl} target="_blank" rel="noreferrer">
                   External Portal <ExternalLink size={13} />
                 </a>
               </Button>
-            ) : null}
+            )}
           </div>
         }
       />
 
-      {notice ? (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 animate-in fade-in">
+      {successToast && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2 shadow-xs animate-in fade-in">
           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{notice}</span>
+          <span>{successToast}</span>
         </div>
-      ) : null}
+      )}
 
+      {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Job Details */}
+        {/* Left Column: Description & Requirements */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 m-0">
-              Role Overview & Description
-            </h3>
-            <div className="text-sm text-slate-700 leading-relaxed space-y-3 whitespace-pre-wrap">
+          {/* Description */}
+          <Card className="p-6 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 m-0">About the Role</h2>
+            <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
               {job.description}
             </div>
-          </div>
+          </Card>
 
-          <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 m-0">
-              Candidate Requirements & Qualifications
-            </h3>
-            <ul className="text-sm text-slate-700 space-y-2 list-disc pl-5 leading-relaxed m-0">
-              <li>Enrolled student or graduate in Computer Science, EEE, BBA, or related field.</li>
-              <li>Strong problem-solving mindset and solid foundation in modern development stacks.</li>
-              <li>Effective teamwork, communication skills, and willingness to learn on live production systems.</li>
-              <li>Prior internship or capstone project experience is a plus.</li>
-            </ul>
-          </div>
-        </div>
+          {/* Requirements */}
+          {job.requirements && (
+            <Card className="p-6 space-y-4">
+              <h2 className="text-base font-bold text-slate-900 m-0">Key Qualifications & Skills</h2>
+              <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                {job.requirements}
+              </div>
+            </Card>
+          )}
 
-        {/* Sidebar Info */}
-        <div className="space-y-6">
-          <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-4 text-xs">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 m-0 pb-3 border-b border-slate-100">
-              Job Snapshot
-            </h3>
-
+          {/* Institutional Trust Assurance */}
+          <div className="p-5 bg-blue-50/50 border border-blue-200 rounded-2xl flex items-start gap-3.5">
+            <ShieldCheck size={24} className="text-blue-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0">Company</p>
-              <p className="text-sm font-bold text-slate-800 m-0 mt-0.5">{job.company}</p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0">Workplace Model</p>
-              <p className="font-semibold text-slate-800 m-0 mt-0.5">{job.location || 'Remote / Hybrid'}</p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0">Employment Type</p>
-              <p className="font-semibold text-slate-800 m-0 mt-0.5">{job.employmentType || 'Full-time'}</p>
-            </div>
-
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0">Date Posted</p>
-              <p className="font-semibold text-slate-800 m-0 mt-0.5">
-                {new Date(job.createdAt).toLocaleDateString()}
+              <h3 className="text-xs font-bold text-blue-900 m-0">Institutional Trust Guarantee</h3>
+              <p className="text-[11px] text-blue-800 mt-1 leading-relaxed m-0">
+                This opportunity has undergone verification by university moderators. Student applicants receive direct alumni consideration with verified identity guarantees.
               </p>
             </div>
-
-            {job.postedBy?.name ? (
-              <div className="pt-3 border-t border-slate-100">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 m-0">Shared By Alumnus</p>
-                <p className="font-bold text-blue-600 m-0 mt-0.5">{job.postedBy.name}</p>
-                {job.postedBy.currentCompany ? (
-                  <p className="text-[11px] text-slate-500 m-0">{job.postedBy.currentCompany}</p>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="p-5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
-            <strong className="text-slate-800 block mb-1">Campus Verification Notice</strong>
-            This job was submitted directly by an accredited member of the university alumni network. Always apply through official channels.
           </div>
         </div>
+
+        {/* Right Column: Key Details & Poster Info */}
+        <div className="space-y-6">
+          {/* Position Overview Card */}
+          <Card className="p-5 space-y-4">
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 m-0">
+              POSITION OVERVIEW
+            </h3>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="flex items-start gap-2.5">
+                <DollarSign size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Compensation</span>
+                  <span className="font-bold text-slate-900">{job.salary || 'Negotiable / Undisclosed'}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <MapPin size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Location & Workplace</span>
+                  <span className="font-bold text-slate-900">{job.location || 'Remote'} ({job.workMode || 'On-site'})</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <BriefcaseBusiness size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Experience Level</span>
+                  <span className="font-bold text-slate-900">{job.experienceLevel || 'Open / Any'}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <Calendar size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Application Deadline</span>
+                  <span className="font-bold text-slate-900">
+                    {job.deadline ? formatDate(job.deadline) : 'Rolling Admissions'}
+                    {job.daysLeft !== undefined && (
+                      <span className="text-amber-600 font-semibold ml-1.5">
+                        ({job.daysLeft === 0 ? 'Ends today' : `${job.daysLeft} days remaining`})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <FileCheck size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Application Requirements</span>
+                  <span className="font-medium text-slate-700">
+                    {job.requireResume ? 'PDF Resume Mandatory' : 'Resume Optional'} ·{' '}
+                    {job.requireCoverLetter ? 'Cover Letter Required' : 'Cover Letter Optional'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Verified Alumni Poster Card */}
+          {job.postedBy && (
+            <Card className="p-5 space-y-4">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-400 m-0">
+                POSTED BY ALUMNI
+              </h3>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
+                  {job.postedBy.name.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 m-0 flex items-center gap-1.5">
+                    {job.postedBy.name}
+                    {job.postedBy.verified && (
+                      <span title="Verified Alumni">
+                        <UserCheck size={14} className="text-blue-600" />
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 m-0 mt-0.5">
+                    {job.postedBy.position ? `${job.postedBy.position} at ` : ''}
+                    {job.postedBy.currentCompany || job.company}
+                  </p>
+                  <p className="text-[11px] text-slate-400 m-0 mt-0.5">
+                    {job.postedBy.department || 'Alumni Member'}
+                    {job.postedBy.batch ? ` · ${job.postedBy.batch}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100">
+                <Button variant="ghost" size="sm" asChild className="w-full text-xs">
+                  <Link href={`${basePath}/directory/${job.postedBy.id}`}>
+                    View Alumni Profile
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
+
+      {/* Apply Modal */}
+      <JobApplyModal
+        job={job}
+        isOpen={isApplyModalOpen}
+        onClose={() => setIsApplyModalOpen(false)}
+        onSuccess={(title) => {
+          setSuccessToast(`Congratulations! Your application for "${title}" was successfully submitted.`);
+          setTimeout(() => setSuccessToast(null), 6000);
+        }}
+      />
     </div>
   );
 }

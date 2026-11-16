@@ -1,4 +1,4 @@
-import type { Alumni, Job, UserRole } from '@/types/domain';
+import type { Alumni, UserRole } from '@/types/domain';
 
 export const demoAlumni: Alumni[] = [
   {
@@ -132,64 +132,6 @@ export const demoAlumni: Alumni[] = [
   },
 ];
 
-export const demoJobs: Job[] = [
-  {
-    id: 'job-1',
-    title: 'Software Engineer, Platform Core',
-    company: 'bKash',
-    location: 'Dhaka · Hybrid',
-    employmentType: 'Full-time',
-    description:
-      'Build reliable financial infrastructure powering 70M+ users. Work with high-concurrency Java/Go microservices, Kafka pipelines, and PostgreSQL sharding. Alumni from NWU will receive prioritized internal interview referrals.',
-    applicationUrl: 'https://bkash.com/careers/platform-eng',
-    applicationEmail: 'alumni-referrals@bkash.com',
-    expiresAt: '2026-12-31T00:00:00.000Z',
-    createdAt: '2026-10-15T00:00:00.000Z',
-    postedBy: { id: 'sadia-rahman', name: 'Sadia Rahman', currentCompany: 'Pathao' },
-  },
-  {
-    id: 'job-2',
-    title: 'Product Design Intern (Summer 2027)',
-    company: '10 Minute School',
-    location: 'Dhaka · On-site',
-    employmentType: 'Internship',
-    description:
-      'Research, prototype, and ship accessible learning interfaces for K-12 students. Open to 3rd and 4th-year students with a solid Figma portfolio. Includes monthly stipend, mentorship from senior product designers, and full-time conversion opportunities.',
-    applicationUrl: 'https://10minuteschool.com/careers/design-intern',
-    applicationEmail: null,
-    expiresAt: '2026-11-30T00:00:00.000Z',
-    createdAt: '2026-10-20T00:00:00.000Z',
-    postedBy: { id: 'maria-islam', name: 'Maria Islam', currentCompany: 'Unilever' },
-  },
-  {
-    id: 'job-3',
-    title: 'Junior Cloud Operations Associate',
-    company: 'Brain Station 23',
-    location: 'Dhaka · Hybrid',
-    employmentType: 'Full-time',
-    description:
-      'Monitor containerized clusters, automate deployment runbooks with Terraform, and assist client delivery teams. Perfect entry role for recent graduates with Docker and Linux foundations.',
-    applicationUrl: 'https://brainstation-23.com/careers/cloud-ops',
-    applicationEmail: 'tanvir.alumni@brainstation-23.com',
-    expiresAt: '2026-12-15T00:00:00.000Z',
-    createdAt: '2026-10-28T00:00:00.000Z',
-    postedBy: { id: 'tanvir-hossain', name: 'Tanvir Hossain', currentCompany: 'Brain Station 23' },
-  },
-  {
-    id: 'job-4',
-    title: 'Associate Business Analyst',
-    company: 'ShopUp',
-    location: 'Dhaka · On-site',
-    employmentType: 'Full-time',
-    description:
-      'Bridge product requirements between merchant logistics and engineering teams. Analyze warehouse transit metrics, formulate SQL data queries, and present weekly executive dashboards.',
-    applicationUrl: 'https://shopup.com/careers/ba-logistics',
-    applicationEmail: null,
-    expiresAt: '2026-12-01T00:00:00.000Z',
-    createdAt: '2026-11-01T00:00:00.000Z',
-    postedBy: { id: 'nafisa-chowdhury', name: 'Nafisa Chowdhury', currentCompany: 'ShopUp' },
-  },
-];
 
 export interface MentorshipRecord {
   id: string;
