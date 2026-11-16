@@ -543,18 +543,20 @@ export default function GivingPage() {
               <div className="space-y-1.5">
                 <Label>Payment Gateway</Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {[
-                    { key: 'BKASH', label: 'bKash' },
-                    { key: 'NAGAD', label: 'Nagad' },
-                    { key: 'CARD', label: 'Card' },
-                    { key: 'BANK', label: 'Bank' },
-                  ].map((method) => (
+                  {(
+                    [
+                      { key: 'BKASH', label: 'bKash' },
+                      { key: 'NAGAD', label: 'Nagad' },
+                      { key: 'CARD', label: 'Card' },
+                      { key: 'BANK', label: 'Bank' },
+                    ] as const
+                  ).map((method) => (
                     <Button
                       key={method.key}
                       type="button"
                       variant={paymentMethod === method.key ? 'default' : 'outline'}
                       size="sm"
-                      onClick={() => setPaymentMethod(method.key as any)}
+                      onClick={() => setPaymentMethod(method.key)}
                     >
                       {method.label}
                     </Button>

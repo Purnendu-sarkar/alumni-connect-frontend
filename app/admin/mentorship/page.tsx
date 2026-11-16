@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { getAdminMentorshipStats } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function AdminMentorshipPage() {
@@ -70,7 +71,7 @@ export default function AdminMentorshipPage() {
       ) : isError ? (
         <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
           <p className="font-bold m-0 mb-1">Failed to load mentorship statistics</p>
-          <p className="m-0 text-rose-600">{(error as any)?.message || 'An unexpected error occurred.'}</p>
+          <p className="m-0 text-rose-600">{getApiErrorMessage(error)}</p>
         </div>
       ) : stats ? (
         <>

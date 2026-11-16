@@ -34,6 +34,7 @@ import {
   updateMentorshipAvailability,
   type MentorshipItem,
 } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -117,10 +118,10 @@ export function MentorshipHubView({ currentRole, basePath }: MentorshipHubViewPr
       });
       setTimeout(() => setNotice(null), 5000);
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       setNotice({
         type: 'error',
-        message: err.message || 'Failed to update mentorship status.',
+        message: getApiErrorMessage(err, 'Failed to update mentorship status.'),
       });
       setTimeout(() => setNotice(null), 5000);
     },

@@ -131,17 +131,19 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
-          {[
-            { id: 'ALL', label: 'All Roles' },
-            { id: 'STUDENT', label: 'Students' },
-            { id: 'ALUMNI', label: 'Alumni' },
-            { id: 'MODERATOR', label: 'Moderators' },
-            { id: 'SUPER_ADMIN', label: 'Admins' },
-          ].map((item) => (
+          {(
+            [
+              { id: 'ALL', label: 'All Roles' },
+              { id: 'STUDENT', label: 'Students' },
+              { id: 'ALUMNI', label: 'Alumni' },
+              { id: 'MODERATOR', label: 'Moderators' },
+              { id: 'SUPER_ADMIN', label: 'Admins' },
+            ] as const
+          ).map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => setRoleFilter(item.id as any)}
+              onClick={() => setRoleFilter(item.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 roleFilter === item.id
                   ? 'bg-slate-900 text-white'
@@ -154,15 +156,17 @@ export function AdminUsersView({ currentRole, basePath, roleFilterPreset }: Admi
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs border-l pl-3 border-slate-200">
-          {[
-            { id: 'ALL', label: 'All Status' },
-            { id: 'ACTIVE', label: 'Active' },
-            { id: 'SUSPENDED', label: 'Suspended' },
-          ].map((item) => (
+          {(
+            [
+              { id: 'ALL', label: 'All Status' },
+              { id: 'ACTIVE', label: 'Active' },
+              { id: 'SUSPENDED', label: 'Suspended' },
+            ] as const
+          ).map((item) => (
             <button
               key={item.id}
               type="button"
-              onClick={() => setStatusFilter(item.id as any)}
+              onClick={() => setStatusFilter(item.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 statusFilter === item.id
                   ? 'bg-blue-600 text-white'

@@ -36,6 +36,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { getDirectoryMemberById } from '@/lib/api/directory.api';
 import { blockUser, sendConnectionRequest } from '@/lib/api/connection.api';
 import { sendMentorshipRequest } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -455,7 +456,7 @@ export function MemberDetailView({ id, currentRole, basePath }: MemberDetailView
             {connectMutation.isError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2">
                 <AlertCircle size={15} className="shrink-0" />
-                <span>{(connectMutation.error as any)?.message || 'Failed to dispatch request.'}</span>
+                <span>{getApiErrorMessage(connectMutation.error, 'Failed to dispatch request.')}</span>
               </div>
             )}
 
@@ -521,7 +522,7 @@ export function MemberDetailView({ id, currentRole, basePath }: MemberDetailView
             {mentorshipMutation.isError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs font-semibold text-rose-700 flex items-center gap-2">
                 <AlertCircle size={15} className="shrink-0" />
-                <span>{(mentorshipMutation.error as any)?.message || 'Failed to submit proposal.'}</span>
+                <span>{getApiErrorMessage(mentorshipMutation.error, 'Failed to submit proposal.')}</span>
               </div>
             )}
 

@@ -21,6 +21,7 @@ import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { getMyMentorships } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -68,7 +69,7 @@ export function MenteesView({ currentRole, basePath }: MenteesViewProps) {
         <CardGridSkeleton count={2} />
       ) : isError ? (
         <div className="p-5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
-          {(error as any)?.message || 'Failed to load active mentees.'}
+          {getApiErrorMessage(error, 'Failed to load active mentees.')}
         </div>
       ) : mentees.length === 0 ? (
         <EmptyState

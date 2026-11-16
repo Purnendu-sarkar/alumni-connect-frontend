@@ -25,10 +25,10 @@ export function AnnouncementCreateForm({ currentRole, basePath, editId }: Announ
 
   const [title, setTitle] = useState(existing?.title || '');
   const [priority, setPriority] = useState<'HIGH' | 'NORMAL' | 'URGENT'>(
-    (existing?.priority as any) || 'NORMAL'
+    (existing?.priority as 'HIGH' | 'NORMAL' | 'URGENT') || 'NORMAL'
   );
   const [category, setCategory] = useState<'IMPORTANT' | 'CAMPUS_UPDATE' | 'CAREER'>(
-    (existing?.category as any) || 'CAMPUS_UPDATE'
+    (existing?.category as 'IMPORTANT' | 'CAMPUS_UPDATE' | 'CAREER') || 'CAMPUS_UPDATE'
   );
   const [content, setContent] = useState(existing?.content || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,7 +73,7 @@ export function AnnouncementCreateForm({ currentRole, basePath, editId }: Announ
               </label>
               <select
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
+                onChange={(e) => setPriority(e.target.value as 'HIGH' | 'NORMAL' | 'URGENT')}
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
               >
                 <option value="NORMAL">NORMAL — Regular Bulletin</option>
@@ -88,7 +88,7 @@ export function AnnouncementCreateForm({ currentRole, basePath, editId }: Announ
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as any)}
+                onChange={(e) => setCategory(e.target.value as 'IMPORTANT' | 'CAMPUS_UPDATE' | 'CAREER')}
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
               >
                 <option value="CAMPUS_UPDATE">Campus Update</option>

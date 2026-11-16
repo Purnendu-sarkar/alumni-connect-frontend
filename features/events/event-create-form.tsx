@@ -65,7 +65,7 @@ export function EventCreateForm({ currentRole, basePath }: EventCreateFormProps)
               </label>
               <select
                 value={type}
-                onChange={(e) => setType(e.target.value as any)}
+                onChange={(e) => setType(e.target.value as 'In person' | 'Online Webinar' | 'Campus Workshop')}
                 className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500"
               >
                 <option value="In person">In person</option>

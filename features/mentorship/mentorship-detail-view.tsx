@@ -35,6 +35,7 @@ import {
   updateMentorshipNote,
   type MentorshipItem,
 } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -100,8 +101,8 @@ export function MentorshipDetailView({ id, currentRole, basePath }: MentorshipDe
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to save notes.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to save notes.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -121,8 +122,8 @@ export function MentorshipDetailView({ id, currentRole, basePath }: MentorshipDe
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to conclude session.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to conclude session.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -142,8 +143,8 @@ export function MentorshipDetailView({ id, currentRole, basePath }: MentorshipDe
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to submit response.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to submit response.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -172,7 +173,7 @@ export function MentorshipDetailView({ id, currentRole, basePath }: MentorshipDe
           title="Mentorship Session Not Found"
         />
         <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
-          {(error as any)?.message || 'The requested mentorship session could not be retrieved.'}
+          {getApiErrorMessage(error, 'The requested mentorship session could not be retrieved.')}
         </div>
       </div>
     );

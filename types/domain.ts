@@ -91,6 +91,8 @@ export interface Alumni {
   phonePublic?: boolean;
   createdAt?: string;
   university?: { id: string; name: string; slug: string };
+  departmentRef?: { id: string; name: string; code: string } | null;
+  role?: string | { id?: string; name: string };
 }
 
 export interface VerificationItem {

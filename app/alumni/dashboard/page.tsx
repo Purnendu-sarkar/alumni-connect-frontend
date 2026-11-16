@@ -83,13 +83,13 @@ export default function AlumniDashboardPage() {
   // Database-backed Mentorship Availability Mutation
   const toggleMutation = useMutation({
     mutationFn: (newStatus: boolean) =>
-      updateMe(accessToken, { isMentorshipAvailable: newStatus } as any),
+      updateMe(accessToken, { isMentorshipAvailable: newStatus }),
     onMutate: async (newStatus: boolean) => {
       setMentorshipOpen(newStatus);
     },
     onSuccess: (res, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['my-profile'] });
-      updateUser({ isMentorshipAvailable: newStatus } as any);
+      updateUser({ isMentorshipAvailable: newStatus });
       setToggleNotice(
         newStatus
           ? 'Your mentorship availability is saved as OPEN. Undergrad students can request guidance.'
@@ -112,7 +112,7 @@ export default function AlumniDashboardPage() {
   };
 
   const completionPercentage = profile?.completionPercentage ?? (user?.onboardingCompleted ? 100 : 70);
-  const missingFields = (profile as any)?.missingRequiredFields ?? [];
+  const missingFields = profile?.missingRequiredFields ?? [];
   const isOnboardingIncomplete = !user?.onboardingCompleted && completionPercentage < 100;
 
   return (

@@ -28,6 +28,7 @@ import {
   type PrivacyScope,
   type PrivacySettingPayload,
 } from '@/lib/api/privacy.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -122,8 +123,8 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
       setNotice({ type: 'success', message: 'Privacy preferences saved successfully.' });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to save privacy preferences.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to save privacy preferences.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -169,7 +170,7 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
       ) : isError ? (
         <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs">
           <p className="font-bold m-0 mb-1">Failed to load privacy preferences</p>
-          <p className="m-0 text-rose-600">{(error as any)?.message || 'An unexpected error occurred.'}</p>
+          <p className="m-0 text-rose-600">{getApiErrorMessage(error, 'An unexpected error occurred.')}</p>
         </div>
       ) : (
         <form onSubmit={handleSave} className="space-y-6">

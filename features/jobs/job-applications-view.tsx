@@ -34,7 +34,24 @@ interface JobApplicationsViewProps {
   basePath: string;
 }
 
-const DEFAULT_APPLICATIONS = [
+interface ApplicationJobInfo {
+  id?: string;
+  title: string;
+  company: string;
+  location?: string;
+  employmentType?: string;
+}
+
+interface ApplicationRecord {
+  id: string;
+  status: string;
+  createdAt?: string;
+  job: ApplicationJobInfo;
+  stage?: string;
+  notes?: string;
+}
+
+const DEFAULT_APPLICATIONS: ApplicationRecord[] = [
   {
     id: 'app-demo-1',
     status: 'IN_REVIEW',
@@ -90,16 +107,21 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
   });
 
   const apiApplications = jobsQuery.data?.data?.applications ?? [];
-  const rawApplications = apiApplications.length > 0 ? apiApplications : DEFAULT_APPLICATIONS;
+  const rawApplications: ApplicationRecord[] =
+    apiApplications.length > 0 ? (apiApplications as ApplicationRecord[]) : DEFAULT_APPLICATIONS;
 
-  const applications = rawApplications.filter((app: any) => {
+  const applications = rawApplications.filter((app: ApplicationRecord) => {
     if (filterStatus === 'ALL') return true;
     return app.status === filterStatus;
   });
 
   const countTotal = rawApplications.length;
-  const countReview = rawApplications.filter((a: any) => a.status === 'IN_REVIEW' || a.status === 'APPLIED').length;
-  const countInterview = rawApplications.filter((a: any) => a.status === 'INTERVIEW_SCHEDULED').length;
+  const countReview = rawApplications.filter(
+    (a: ApplicationRecord) => a.status === 'IN_REVIEW' || a.status === 'APPLIED'
+  ).length;
+  const countInterview = rawApplications.filter(
+    (a: ApplicationRecord) => a.status === 'INTERVIEW_SCHEDULED'
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -182,7 +204,7 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
         />
       ) : (
         <div className="space-y-4">
-          {applications.map((app: any) => (
+          {applications.map((app: ApplicationRecord) => (
             <Card
               key={app.id}
               className="p-5 hover:border-blue-300 transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -207,7 +229,7 @@ export function JobApplicationsView({ currentRole, basePath }: JobApplicationsVi
                   </span>
                   <span>·</span>
                   <span className="flex items-center gap-1 text-slate-400">
-                    <Clock size={12} /> Applied {new Date(app.createdAt).toLocaleDateString()}
+                    <Clock size={12} /> Applied {app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recently'}
                   </span>
                 </p>
 

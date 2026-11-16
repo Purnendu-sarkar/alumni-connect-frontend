@@ -128,7 +128,7 @@ export interface AdminUserDetail {
     targetType: string;
     targetId: string;
     createdAt: string;
-    metadata: any;
+    metadata?: Record<string, unknown> | null;
     actor?: { id: string; name: string; email: string };
   }>;
 }

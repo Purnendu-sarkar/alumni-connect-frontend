@@ -31,6 +31,7 @@ import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useDepartments } from '@/hooks/use-departments';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import {
   searchDirectory,
   type DirectoryFilters,
@@ -131,8 +132,8 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
       setConnectError(null);
       setTimeout(() => setConnectSuccess(null), 4000);
     },
-    onError: (err: any) => {
-      setConnectError(err?.message || 'Failed to dispatch connection request. Please try again.');
+    onError: (err: unknown) => {
+      setConnectError(getApiErrorMessage(err, 'Failed to dispatch connection request. Please try again.'));
     },
   });
 
@@ -161,8 +162,8 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
       setMentorError(null);
       setTimeout(() => setMentorSuccess(null), 5000);
     },
-    onError: (err: any) => {
-      setMentorError(err?.message || 'Unable to submit mentorship inquiry. Please check availability.');
+    onError: (err: unknown) => {
+      setMentorError(getApiErrorMessage(err, 'Unable to submit mentorship inquiry. Please check availability.'));
     },
   });
 
@@ -300,7 +301,7 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
             <select
               value={sortBy}
               onChange={(e) => {
-                setSortBy(e.target.value as any);
+                setSortBy(e.target.value as 'recentlyJoined' | 'name' | 'graduationYear');
                 setPage(1);
               }}
               className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -360,7 +361,7 @@ export function MemberDirectoryView({ currentRole, basePath }: MemberDirectoryVi
           <AlertCircle size={32} className="mx-auto text-rose-500" />
           <h3 className="text-sm font-bold text-slate-900">Failed to load directory members</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            {(directoryQuery.error as any)?.message || 'An error occurred while querying the campus directory.'}
+            {getApiErrorMessage(directoryQuery.error, 'An error occurred while querying the campus directory.')}
           </p>
           <Button size="sm" variant="secondary" onClick={() => directoryQuery.refetch()}>
             <RefreshCw size={14} /> Try Again

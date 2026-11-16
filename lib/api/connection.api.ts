@@ -55,7 +55,7 @@ export function getConnections(
   if (params.page) searchParams.set('page', String(params.page));
   if (params.limit) searchParams.set('limit', String(params.limit));
 
-  return apiClient<any[]>(`/connections?${searchParams.toString()}`, { accessToken });
+  return apiClient<ConnectionRecord[]>(`/connections?${searchParams.toString()}`, { accessToken });
 }
 
 export function sendConnectionRequest(

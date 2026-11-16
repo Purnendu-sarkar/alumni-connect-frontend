@@ -74,7 +74,7 @@ export default function StudentDashboardPage() {
 
   // Dynamic server-calculated profile completion & onboarding metrics
   const completionPercentage = profile?.completionPercentage ?? (user?.onboardingCompleted ? 100 : 70);
-  const missingFields = (profile as any)?.missingRequiredFields ?? [];
+  const missingFields = profile?.missingRequiredFields ?? [];
   const isOnboardingIncomplete = !user?.onboardingCompleted && completionPercentage < 100;
 
   return (

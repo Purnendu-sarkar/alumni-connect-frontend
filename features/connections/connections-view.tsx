@@ -28,6 +28,7 @@ import { EmptyState } from '@/components/dashboard/empty-state';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { useDebounce } from '@/hooks/use-debounce';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import {
   blockUser,
   cancelConnection,
@@ -35,6 +36,7 @@ import {
   removeConnection,
   respondConnection,
   unblockUser,
+  type BlockedUserRecord,
   type ConnectionRecord,
 } from '@/lib/api/connection.api';
 import { useAuthStore } from '@/store/auth-store';
@@ -102,8 +104,8 @@ export function ConnectionsView({
       queryClient.invalidateQueries({ queryKey: ['directory'] });
       showNotification('Connection invitation accepted!');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to accept connection request.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to accept connection request.'));
     },
   });
 
@@ -114,8 +116,8 @@ export function ConnectionsView({
       queryClient.invalidateQueries({ queryKey: ['directory'] });
       showNotification('Connection invitation declined.');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to decline connection request.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to decline connection request.'));
     },
   });
 
@@ -127,8 +129,8 @@ export function ConnectionsView({
       setCancelTarget(null);
       showNotification('Sent connection request cancelled.');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to cancel request.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to cancel request.'));
     },
   });
 
@@ -140,8 +142,8 @@ export function ConnectionsView({
       setRemoveTarget(null);
       showNotification('Connection removed from your network.');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to remove connection.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to remove connection.'));
     },
   });
 
@@ -158,8 +160,8 @@ export function ConnectionsView({
       setBlockReason('');
       showNotification('Member blocked. Connections and interaction severed.');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to block member.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to block member.'));
     },
   });
 
@@ -171,8 +173,8 @@ export function ConnectionsView({
       setUnblockTarget(null);
       showNotification('Member unblocked successfully.');
     },
-    onError: (err: any) => {
-      setActionError(err?.message || 'Failed to unblock member.');
+    onError: (err: unknown) => {
+      setActionError(getApiErrorMessage(err, 'Failed to unblock member.'));
     },
   });
 
@@ -292,7 +294,7 @@ export function ConnectionsView({
           <AlertCircle size={32} className="mx-auto text-rose-500" />
           <h3 className="text-sm font-bold text-slate-900">Failed to load connection data</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">
-            {(connectionsQuery.error as any)?.message || 'An error occurred while fetching connections.'}
+            {getApiErrorMessage(connectionsQuery.error, 'An error occurred while fetching connections.')}
           </p>
           <Button size="sm" variant="secondary" onClick={() => connectionsQuery.refetch()}>
             <RefreshCw size={14} /> Retry
@@ -494,7 +496,7 @@ export function ConnectionsView({
           {/* Blocked Members */}
           {activeTab === 'blocked' && (
             <div className="space-y-3">
-              {items.map((b: any) => (
+              {(items as unknown as BlockedUserRecord[]).map((b) => (
                 <div
                   key={b.id}
                   className="p-5 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"

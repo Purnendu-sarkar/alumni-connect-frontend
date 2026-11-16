@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { searchDirectory, type DirectoryMemberCard } from '@/lib/api/directory.api';
 import { sendMentorshipRequest } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 
 export default function MentorshipHubPage() {
@@ -98,8 +99,8 @@ export default function MentorshipHubPage() {
       setMessage('');
       setTimeout(() => setSubmittedMessage(null), 6000);
     },
-    onError: (err: any) => {
-      setErrorMessage(err.message || 'Failed to submit mentorship inquiry.');
+    onError: (err: unknown) => {
+      setErrorMessage(getApiErrorMessage(err, 'Failed to submit mentorship inquiry.'));
       setTimeout(() => setErrorMessage(null), 6000);
     },
   });

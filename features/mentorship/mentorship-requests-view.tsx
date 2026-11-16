@@ -34,6 +34,7 @@ import {
   replyMentorshipClarification,
   type MentorshipItem,
 } from '@/lib/api/mentorship.api';
+import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 
@@ -93,8 +94,8 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to accept request.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to accept request.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -113,8 +114,8 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to send clarification.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to send clarification.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -133,8 +134,8 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to send clarification reply.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to send clarification reply.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -153,8 +154,8 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to decline request.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to decline request.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -173,8 +174,8 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
       });
       setTimeout(() => setNotice(null), 4000);
     },
-    onError: (err: any) => {
-      setNotice({ type: 'error', message: err.message || 'Failed to cancel request.' });
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to cancel request.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -210,7 +211,7 @@ export function MentorshipRequestsView({ currentRole, basePath }: MentorshipRequ
         <CardGridSkeleton count={2} />
       ) : isError ? (
         <div className="p-5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
-          {(error as any)?.message || 'Failed to load mentorship requests.'}
+          {getApiErrorMessage(error, 'Failed to load mentorship requests.')}
         </div>
       ) : requests.length === 0 ? (
         <EmptyState

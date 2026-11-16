@@ -48,8 +48,10 @@ export function AlumniDirectory() {
       const matchDept =
         department === 'All' ||
         person.department?.toLowerCase().includes(department.toLowerCase()) ||
-        (person as any).departmentRef?.code?.toLowerCase() === department.toLowerCase() ||
-        (person as any).role?.toLowerCase().includes(department.toLowerCase());
+        person.departmentRef?.code?.toLowerCase() === department.toLowerCase() ||
+        (typeof person.role === 'string'
+          ? person.role.toLowerCase().includes(department.toLowerCase())
+          : person.role?.name?.toLowerCase().includes(department.toLowerCase()));
       const term = debouncedSearch.toLowerCase().trim();
       const haystack = [person.name, person.currentCompany, person.position, ...(person.skills ?? [])]
         .filter(Boolean)
