@@ -1,5 +1,5 @@
-import { StoriesListView } from '@/features/stories/stories-list-view';
+import { AdminStoriesView } from '@/features/stories/admin-stories-view';
 
 export default function AdminStoriesPage() {
-  return <StoriesListView currentRole="SUPER_ADMIN" basePath="/admin" />;
+  return <AdminStoriesView />;
 }

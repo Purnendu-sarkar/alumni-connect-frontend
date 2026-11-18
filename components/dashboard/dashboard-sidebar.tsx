@@ -162,7 +162,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
           items: [
             { href: '/moderator/reports/open', label: 'Open Reports', icon: ShieldAlert },
             { href: '/moderator/reports', label: 'All Reports', icon: Shield },
-            { href: '/moderator/content', label: 'Flagged Content', icon: HelpCircle },
+            { href: '/moderator/content', label: 'Stories & Content', icon: Sparkles },
           ],
         },
         {

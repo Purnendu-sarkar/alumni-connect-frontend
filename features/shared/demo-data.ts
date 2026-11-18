@@ -254,59 +254,7 @@ export interface StoryRecord {
   status: 'PUBLISHED' | 'PENDING_REVIEW' | 'DRAFT';
 }
 
-export const demoStories: StoryRecord[] = [
-  {
-    id: 'story-1',
-    title: 'From Khulna Classrooms to Scaling Platforms for 70 Million Users',
-    author: 'Tanvir Hossain',
-    authorRole: 'Engineering Manager',
-    authorDepartment: 'Computer Science & Engineering',
-    authorBatch: 'Batch 2014',
-    authorCompany: 'Brain Station 23',
-    date: 'October 12, 2026',
-    readingTime: '6 min read',
-    category: 'CAREER MILESTONE',
-    summary:
-      'How the foundational algorithms taught in University Hall helped me diagnose distributed latency spikes during nationwide payment surges.',
-    content:
-      'When I graduated in 2018, the tech landscape in Bangladesh was on the precipice of rapid digitization. Looking back at my four years at North Western University, what stood out was not just the syntax of C or Java, but the rigor of algorithmic problem solving.\n\nMy journey began in an 8-person engineering team. We struggled through database deadlocks and unindexed SQL queries. But the lessons from my operating systems coursework came alive: thread pools, semaphore locking, and disk cache locality.\n\nTo current students: do not chase frameworks alone. Build strong foundations in networking, OS concepts, and data structures. Frameworks come and go, but the laws of computer science remain constant.',
-    status: 'PUBLISHED',
-  },
-  {
-    id: 'story-2',
-    title: 'Designing with Purpose: Why Empathy Trumps Aesthetic in Enterprise UX',
-    author: 'Nafisa Chowdhury',
-    authorRole: 'Senior UX Researcher',
-    authorDepartment: 'Computer Science & Engineering',
-    authorBatch: 'Batch 2019',
-    authorCompany: 'ShopUp',
-    date: 'October 24, 2026',
-    readingTime: '5 min read',
-    category: 'DESIGN & PRODUCT',
-    summary:
-      'Field lessons from interviewing small grocery shop owners in rural districts, and how human-centered design reshaped our merchant payment workflow.',
-    content:
-      'In university, we designed screens on pristine MacBook displays with broadband fiber. But when you travel to rural districts and sit with a 50-year-old shopkeeper under direct sunlight with a cracked 3G Android screen, every assumption falls apart.\n\nDesign is not about fancy gradients or bouncy micro-interactions. It is about cognitive clarity, high contrast, and building confidence so a merchant feels safe transacting their lifes earnings.',
-    status: 'PUBLISHED',
-  },
-  {
-    id: 'story-3',
-    title: 'Building a High-Tech Agritech Venture from Khulna',
-    author: 'Kazi Farhan',
-    authorRole: 'Co-founder & CTO',
-    authorDepartment: 'Electrical & Electronic Engineering',
-    authorBatch: 'Batch 2016',
-    authorCompany: 'AquaSense IoT',
-    date: 'November 1, 2026',
-    readingTime: '7 min read',
-    category: 'ENTREPRENEURSHIP',
-    summary:
-      'Deploying solar-powered water quality probes for coastal shrimp aquaculture, raising pre-seed funding, and hiring from our campus talent pool.',
-    content:
-      'The southern coastal belt of Bangladesh produces some of the world finest shrimp. Yet water contamination destroys hundreds of tons of yield annually. We built AquaSense to solve this with IoT sensors developed right in our university engineering labs.\n\nToday, 40% of our engineering staff are alumni from North Western University. Our university gave us the technical courage to build hardware when everyone else was doing software.',
-    status: 'PUBLISHED',
-  },
-];
+export const demoStories: StoryRecord[] = [];
 
 export interface ReportItem {
   id: string;

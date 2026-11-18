@@ -329,3 +329,102 @@ export interface AnnouncementDetail extends AnnouncementCard {
   version: number;
   updatedAt: string;
 }
+
+// ================= FEATURE 10: SUCCESS STORIES =================
+export type StoryStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PUBLISHED'
+  | 'UNPUBLISHED';
+
+export type StoryCategory =
+  | 'CAREER_MILESTONE'
+  | 'STARTUP_JOURNEY'
+  | 'RESEARCH_BREAKTHROUGH'
+  | 'COMMUNITY_IMPACT'
+  | 'GLOBAL_EXPERIENCE'
+  | 'CREATIVE_PURSUIT'
+  | 'GENERAL_INSIGHT';
+
+export type StoryModerationAction =
+  | 'CLAIM'
+  | 'UNCLAIM'
+  | 'APPROVE'
+  | 'REJECT'
+  | 'REQUEST_CHANGES'
+  | 'UNPUBLISH'
+  | 'RESTORE'
+  | 'OVERRIDE'
+  | 'DELETE';
+
+export interface StoryAuthor {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  photoKey?: string | null;
+  department?: string | null;
+  batch?: string | null;
+  graduationYear?: string | null;
+  currentRole?: string | null;
+  currentCompany?: string | null;
+  headline?: string | null;
+}
+
+export interface StoryCard {
+  id: string;
+  universityId: string;
+  title: string;
+  slug: string;
+  summary: string;
+  category: StoryCategory;
+  tags: string[];
+  coverImageUrl?: string | null;
+  coverImageKey?: string | null;
+  readingTimeMinutes: number;
+  status: StoryStatus;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  author: StoryAuthor;
+}
+
+export interface StoryDetail extends StoryCard {
+  body: string;
+}
+
+export interface AuthorStoryDetail extends StoryDetail {
+  ownerVisibleNote?: string | null;
+  moderationHistory?: Array<{
+    id: string;
+    action: StoryModerationAction;
+    createdAt: string;
+    feedbackToAuthor?: string | null;
+  }>;
+}
+
+export interface AdminStoryDetail extends StoryDetail {
+  ownerVisibleNote?: string | null;
+  internalAdminNote?: string | null;
+  reviewerId?: string | null;
+  reviewer?: {
+    id: string;
+    name: string;
+    role?: { name: string } | string;
+  } | null;
+  moderationHistory: Array<{
+    id: string;
+    action: StoryModerationAction;
+    createdAt: string;
+    feedbackToAuthor?: string | null;
+    internalNote?: string | null;
+    moderator: {
+      id: string;
+      name: string;
+      role?: { name: string } | string;
+    };
+  }>;
+}
+
