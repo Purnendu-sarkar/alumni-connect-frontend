@@ -11,9 +11,14 @@ import {
   User as UserIcon,
   ExternalLink,
   ShieldCheck,
-  BookOpen,
+  Flag,
+  X,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import type { StoryDetail, StoryAuthor } from '@/types/domain';
+import { useAuthStore } from '@/store/auth-store';
+import { reportStory } from '@/lib/api/stories.api';
 import { cn } from '@/lib/utils/cn';
 import {
   STORY_CATEGORY_COLORS,
@@ -24,16 +29,39 @@ interface StoryReaderProps {
   story: StoryDetail;
   backHref?: string;
   backLabel?: string;
+  onBackClick?: () => void;
+  authorProfileHref?: string | null;
+  canReport?: boolean;
   showEditorialInfo?: boolean;
 }
+
+const REPORT_REASONS = [
+  'Inappropriate or offensive content',
+  'Misleading or inaccurate information',
+  'Spam or commercial self-promotion',
+  'Privacy violation or unauthorized media',
+  'Other community guideline concern',
+];
 
 export function StoryReader({
   story,
   backHref = '/stories',
   backLabel = 'Back to Stories',
+  onBackClick,
+  authorProfileHref = null,
+  canReport = false,
   showEditorialInfo = false,
 }: StoryReaderProps) {
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [copied, setCopied] = useState(false);
+
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState(REPORT_REASONS[0]);
+  const [reportDetails, setReportDetails] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState<string | null>(null);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   const categoryConfig =
     STORY_CATEGORY_COLORS[story.category] || STORY_CATEGORY_COLORS.GENERAL_INSIGHT;
@@ -47,7 +75,37 @@ export function StoryReader({
         setTimeout(() => setCopied(false), 2500);
       }
     } catch {
-      // Fallback
+      // Clipboard fallback ignored
+    }
+  };
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsReporting(true);
+    setReportError(null);
+    try {
+      await reportStory(
+        story.id,
+        {
+          reason: reportReason,
+          details: reportDetails.trim() || undefined,
+        },
+        accessToken
+      );
+      setReportSuccess('Thank you. Your report has been submitted to campus moderators for review.');
+      setReportDetails('');
+      setTimeout(() => {
+        setShowReportModal(false);
+        setReportSuccess(null);
+      }, 2200);
+    } catch (err: unknown) {
+      setReportError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to submit report right now. Please try again later.'
+      );
+    } finally {
+      setIsReporting(false);
     }
   };
 
@@ -68,32 +126,61 @@ export function StoryReader({
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
       {/* Top Navigation */}
-      <div className="mb-8 flex items-center justify-between">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-blue-600"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>{backLabel}</span>
-        </Link>
+      <div className="mb-8 flex items-center justify-between gap-3">
+        {onBackClick ? (
+          <button
+            type="button"
+            onClick={onBackClick}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-blue-600"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{backLabel}</span>
+          </button>
+        ) : (
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-blue-600"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{backLabel}</span>
+          </Link>
+        )}
 
-        <button
-          type="button"
-          onClick={handleShare}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs transition-colors hover:bg-slate-50"
-        >
-          {copied ? (
-            <>
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-emerald-600 font-medium">Link Copied!</span>
-            </>
-          ) : (
-            <>
-              <Share2 className="h-3.5 w-3.5 text-slate-500" />
-              <span>Share Story</span>
-            </>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-2xs transition-colors hover:bg-slate-50"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-emerald-600 font-medium">Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Share2 className="h-3.5 w-3.5 text-slate-500" />
+                <span>Share Story</span>
+              </>
+            )}
+          </button>
+
+          {canReport && (
+            <button
+              type="button"
+              onClick={() => {
+                setReportError(null);
+                setReportSuccess(null);
+                setShowReportModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-2xs transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+              title="Report inappropriate content"
+            >
+              <Flag className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Report</span>
+            </button>
           )}
-        </button>
+        </div>
       </div>
 
       {/* Category & Reading Time */}
@@ -158,9 +245,15 @@ export function StoryReader({
             </div>
             <p className="text-xs text-slate-500">
               {[
-                author.currentRole ? `${author.currentRole}${author.currentCompany ? ` at ${author.currentCompany}` : ''}` : null,
+                author.currentRole
+                  ? `${author.currentRole}${author.currentCompany ? ` at ${author.currentCompany}` : ''}`
+                  : null,
                 author.department,
-                author.graduationYear ? `Class of ${author.graduationYear}` : (author.batch ? `Batch ${author.batch}` : null),
+                author.graduationYear
+                  ? `Class of ${author.graduationYear}`
+                  : author.batch
+                    ? `Batch ${author.batch}`
+                    : null,
               ]
                 .filter(Boolean)
                 .join(' • ')}
@@ -169,9 +262,9 @@ export function StoryReader({
           </div>
         </div>
 
-        {author.id && (
+        {authorProfileHref && (
           <Link
-            href={`/directory/${author.id}`}
+            href={authorProfileHref}
             className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
           >
             <span>View Profile</span>
@@ -221,7 +314,9 @@ export function StoryReader({
       {/* Story Tags */}
       {story.tags && story.tags.length > 0 && (
         <div className="mt-12 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-6">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags:</span>
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Tags:
+          </span>
           {story.tags.map((tag) => (
             <span
               key={tag}
@@ -247,7 +342,11 @@ export function StoryReader({
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-blue-100 text-blue-700 text-lg font-bold">
-                  {author.name ? author.name.charAt(0).toUpperCase() : <UserIcon className="h-6 w-6" />}
+                  {author.name ? (
+                    author.name.charAt(0).toUpperCase()
+                  ) : (
+                    <UserIcon className="h-6 w-6" />
+                  )}
                 </div>
               )}
             </div>
@@ -256,7 +355,9 @@ export function StoryReader({
               <h4 className="text-base font-bold text-slate-900">{author.name || 'Alumnus'}</h4>
               <p className="text-xs text-slate-600 mt-0.5">
                 {[
-                  author.currentRole ? `${author.currentRole}${author.currentCompany ? ` at ${author.currentCompany}` : ''}` : null,
+                  author.currentRole
+                    ? `${author.currentRole}${author.currentCompany ? ` at ${author.currentCompany}` : ''}`
+                    : null,
                   author.department,
                 ]
                   .filter(Boolean)
@@ -270,9 +371,9 @@ export function StoryReader({
             </div>
           </div>
 
-          {author.id && (
+          {authorProfileHref && (
             <Link
-              href={`/directory/${author.id}`}
+              href={authorProfileHref}
               className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-blue-700 transition-colors"
             >
               <span>View Full Profile</span>
@@ -281,6 +382,94 @@ export function StoryReader({
           )}
         </div>
       </div>
+
+      {/* Report Story Modal */}
+      {showReportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="report-story-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 id="report-story-title" className="text-sm font-bold text-slate-900">
+                Report Story Content
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {reportSuccess ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                <span>{reportSuccess}</span>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReport} className="space-y-4">
+                {reportError && (
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{reportError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Reason for Report
+                  </label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-hidden"
+                  >
+                    {REPORT_REASONS.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    Additional Details (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    placeholder="Provide context to help university moderators review this report..."
+                    className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-blue-500 focus:outline-hidden"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isReporting}
+                    className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+                  >
+                    {isReporting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

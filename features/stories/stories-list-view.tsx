@@ -6,9 +6,10 @@ import {
   BookOpen,
   PenSquare,
   Search,
-  Sparkles,
   RefreshCw,
   FolderOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
@@ -18,7 +19,7 @@ import { PageHeader } from '@/components/dashboard/page-header';
 import { useAuthStore } from '@/store/auth-store';
 import { getStories } from '@/lib/api/stories.api';
 import type { UserRole, StoryCategory } from '@/types/domain';
-import { StoryCard, STORY_CATEGORY_LABELS } from '@/components/stories/story-card';
+import { StoryCard } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
 
 interface StoriesListViewProps {
@@ -29,12 +30,12 @@ interface StoriesListViewProps {
 const CATEGORY_TABS: Array<{ value: StoryCategory | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'All Stories' },
   { value: 'CAREER_MILESTONE', label: 'Career Milestone' },
-  { value: 'STARTUP_JOURNEY', label: 'Startup Journey' },
-  { value: 'RESEARCH_BREAKTHROUGH', label: 'Research' },
-  { value: 'COMMUNITY_IMPACT', label: 'Community' },
-  { value: 'GLOBAL_EXPERIENCE', label: 'Global' },
-  { value: 'CREATIVE_PURSUIT', label: 'Creative' },
-  { value: 'GENERAL_INSIGHT', label: 'Insights' },
+  { value: 'ENTREPRENEURSHIP', label: 'Entrepreneurship' },
+  { value: 'TECH_INNOVATION', label: 'Tech & Innovation' },
+  { value: 'RESEARCH_ACADEMIA', label: 'Research & Academia' },
+  { value: 'DESIGN_PRODUCT', label: 'Design & Product' },
+  { value: 'CAMPUS_NOSTALGIA', label: 'Campus Nostalgia' },
+  { value: 'GENERAL_INSIGHT', label: 'General Insight' },
 ];
 
 export function StoriesListView({ currentRole, basePath }: StoriesListViewProps) {
@@ -42,34 +43,50 @@ export function StoriesListView({ currentRole, basePath }: StoriesListViewProps)
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<StoryCategory | 'ALL'>('ALL');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [page, setPage] = useState(1);
 
   // 300ms search debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search.trim());
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
   const {
-    data: stories = [],
+    data: responseData,
     isLoading,
     isError,
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: [currentRole.toLowerCase(), 'stories', 'list', debouncedSearch, selectedCategory],
-    queryFn: async () => {
-      const res = await getStories(
+    queryKey: [
+      currentRole.toLowerCase(),
+      'stories',
+      'list',
+      debouncedSearch,
+      selectedCategory,
+      sort,
+      page,
+    ],
+    queryFn: () =>
+      getStories(
         {
           q: debouncedSearch || undefined,
           category: selectedCategory === 'ALL' ? undefined : selectedCategory,
+          sort,
+          page,
+          limit: 12,
         },
         accessToken
-      );
-      return res.data || [];
-    },
+      ),
   });
+
+  const stories = responseData?.data || [];
+  const meta = responseData?.meta;
+  const totalPages = meta?.totalPages || 1;
 
   return (
     <div className="space-y-6">
@@ -99,7 +116,7 @@ export function StoriesListView({ currentRole, basePath }: StoriesListViewProps)
         }
       />
 
-      {/* Search & Category Filter Controls */}
+      {/* Search, Sort & Category Filter Controls */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
@@ -117,6 +134,19 @@ export function StoriesListView({ currentRole, basePath }: StoriesListViewProps)
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            <select
+              aria-label="Sort stories"
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value as 'newest' | 'oldest');
+                setPage(1);
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:border-blue-500 focus:outline-hidden"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+
             {isFetching && !isLoading && (
               <span className="text-xs text-slate-400 animate-pulse">Updating...</span>
             )}
@@ -140,7 +170,10 @@ export function StoriesListView({ currentRole, basePath }: StoriesListViewProps)
               <button
                 key={tab.value}
                 type="button"
-                onClick={() => setSelectedCategory(tab.value)}
+                onClick={() => {
+                  setSelectedCategory(tab.value);
+                  setPage(1);
+                }}
                 className={cn(
                   'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
                   isSelected
@@ -218,15 +251,43 @@ export function StoriesListView({ currentRole, basePath }: StoriesListViewProps)
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stories.map((story) => (
-            <StoryCard
-              key={story.id}
-              story={story}
-              href={`${basePath}/stories/${story.slug || story.id}`}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {stories.map((story) => (
+              <StoryCard
+                key={story.id}
+                story={story}
+                href={`${basePath}/stories/${story.slug || story.id}`}
+              />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-200 pt-4">
+              <p className="text-xs text-slate-500">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft size={14} className="mr-1" /> Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next <ChevronRight size={14} className="ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

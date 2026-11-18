@@ -238,24 +238,6 @@ export interface AnnouncementRecord {
 
 export const demoAnnouncements: AnnouncementRecord[] = [];
 
-export interface StoryRecord {
-  id: string;
-  title: string;
-  author: string;
-  authorRole: string;
-  authorDepartment: string;
-  authorBatch: string;
-  authorCompany: string;
-  date: string;
-  readingTime: string;
-  category: string;
-  summary: string;
-  content: string;
-  status: 'PUBLISHED' | 'PENDING_REVIEW' | 'DRAFT';
-}
-
-export const demoStories: StoryRecord[] = [];
-
 export interface ReportItem {
   id: string;
   type: 'USER' | 'JOB' | 'STORY' | 'MESSAGE';

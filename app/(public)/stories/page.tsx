@@ -7,14 +7,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowUpRight,
   BookOpen,
-  Clock,
   Search,
   Sparkles,
   User as UserIcon,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,28 +22,31 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { getStories } from '@/lib/api/stories.api';
 import type { StoryCard as StoryCardType, StoryCategory } from '@/types/domain';
-import { StoryCard, STORY_CATEGORY_LABELS, STORY_CATEGORY_COLORS } from '@/components/stories/story-card';
+import { StoryCard, STORY_CATEGORY_LABELS } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
 
 const CATEGORY_TABS: Array<{ value: StoryCategory | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'All Spotlights' },
   { value: 'CAREER_MILESTONE', label: 'Career Milestone' },
-  { value: 'STARTUP_JOURNEY', label: 'Startup Journey' },
-  { value: 'RESEARCH_BREAKTHROUGH', label: 'Research' },
-  { value: 'COMMUNITY_IMPACT', label: 'Community' },
-  { value: 'GLOBAL_EXPERIENCE', label: 'Global' },
-  { value: 'CREATIVE_PURSUIT', label: 'Creative' },
-  { value: 'GENERAL_INSIGHT', label: 'Insights' },
+  { value: 'ENTREPRENEURSHIP', label: 'Entrepreneurship' },
+  { value: 'TECH_INNOVATION', label: 'Tech & Innovation' },
+  { value: 'RESEARCH_ACADEMIA', label: 'Research & Academia' },
+  { value: 'DESIGN_PRODUCT', label: 'Design & Product' },
+  { value: 'CAMPUS_NOSTALGIA', label: 'Campus Nostalgia' },
+  { value: 'GENERAL_INSIGHT', label: 'General Insight' },
 ];
 
 export default function StoriesPage() {
   const [category, setCategory] = useState<StoryCategory | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [sort, setSort] = useState<'newest' | 'oldest'>('newest');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search.trim());
+      setPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
@@ -55,18 +58,23 @@ export default function StoriesPage() {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['public-stories', category, debouncedSearch],
+    queryKey: ['public-stories', category, debouncedSearch, sort, page],
     queryFn: () =>
       getStories({
         category: category !== 'ALL' ? category : undefined,
         q: debouncedSearch || undefined,
-        limit: 20,
+        sort,
+        page,
+        limit: 12,
       }),
   });
 
   const stories: StoryCardType[] = responseData?.data || [];
-  const featured = stories[0];
-  const restStories = stories.slice(1);
+  const meta = responseData?.meta;
+  const totalPages = meta?.totalPages || 1;
+  const showFeatured = page === 1 && !debouncedSearch && category === 'ALL' && sort === 'newest';
+  const featured = showFeatured ? stories[0] : undefined;
+  const gridStories = showFeatured ? stories.slice(1) : stories;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
@@ -101,6 +109,19 @@ export default function StoriesPage() {
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            <select
+              aria-label="Sort stories"
+              value={sort}
+              onChange={(e) => {
+                setSort(e.target.value as 'newest' | 'oldest');
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs focus:border-blue-500 focus:outline-hidden"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+
             {isFetching && !isLoading && (
               <span className="text-xs text-slate-400 animate-pulse">Updating...</span>
             )}
@@ -124,7 +145,10 @@ export default function StoriesPage() {
               <button
                 key={tab.value}
                 type="button"
-                onClick={() => setCategory(tab.value)}
+                onClick={() => {
+                  setCategory(tab.value);
+                  setPage(1);
+                }}
                 className={cn(
                   'whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all',
                   isSelected
@@ -172,7 +196,7 @@ export default function StoriesPage() {
       ) : (
         <>
           {/* Featured Spotlight Card */}
-          {featured && !debouncedSearch && category === 'ALL' && (
+          {featured && (
             <Card className="p-0 overflow-hidden shadow-md grid grid-cols-1 lg:grid-cols-12 border-slate-200 rounded-2xl bg-white">
               <div className="lg:col-span-7 p-8 sm:p-12 flex flex-col justify-between space-y-6">
                 <div className="space-y-4">
@@ -181,7 +205,7 @@ export default function StoriesPage() {
                       Featured Spotlight
                     </span>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      {STORY_CATEGORY_LABELS[featured.category]}
+                      {STORY_CATEGORY_LABELS[featured.category] || featured.category}
                     </span>
                   </div>
 
@@ -208,7 +232,11 @@ export default function StoriesPage() {
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-blue-100 text-blue-700 text-sm font-bold">
-                          {featured.author?.name ? featured.author.name.charAt(0).toUpperCase() : <UserIcon className="h-4 w-4" />}
+                          {featured.author?.name ? (
+                            featured.author.name.charAt(0).toUpperCase()
+                          ) : (
+                            <UserIcon className="h-4 w-4" />
+                          )}
                         </div>
                       )}
                     </div>
@@ -220,7 +248,9 @@ export default function StoriesPage() {
                         {[
                           featured.author?.currentRole,
                           featured.author?.department,
-                          featured.author?.graduationYear ? `Class of ${featured.author.graduationYear}` : null,
+                          featured.author?.graduationYear
+                            ? `Class of ${featured.author.graduationYear}`
+                            : null,
                         ]
                           .filter(Boolean)
                           .join(' · ')}
@@ -263,28 +293,55 @@ export default function StoriesPage() {
           )}
 
           {/* Grid of Stories */}
-          <div className="space-y-6">
-            <SectionHeading
-              title={
-                debouncedSearch || category !== 'ALL'
-                  ? 'Matching Stories'
-                  : 'More Alumni Journeys & Insights'
-              }
-              description="Explore inspiring stories curated from graduates across diverse engineering and business disciplines."
-            />
+          {gridStories.length > 0 && (
+            <div className="space-y-6">
+              <SectionHeading
+                title={
+                  showFeatured
+                    ? 'More Alumni Journeys & Insights'
+                    : 'Matching Stories'
+                }
+                description="Explore inspiring stories curated from graduates across diverse engineering and business disciplines."
+              />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(debouncedSearch || category !== 'ALL' ? stories : restStories).map(
-                (story) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {gridStories.map((story) => (
                   <StoryCard
                     key={story.id}
                     story={story}
                     href={`/stories/${story.slug || story.id}`}
                   />
-                )
-              )}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-slate-200 pt-6">
+              <p className="text-xs text-slate-500">
+                Page {page} of {totalPages}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  <ChevronLeft size={14} className="mr-1" /> Previous
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next <ChevronRight size={14} className="ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

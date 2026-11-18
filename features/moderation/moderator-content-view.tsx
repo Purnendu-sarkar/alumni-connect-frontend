@@ -1,23 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
-  BookOpen,
   Check,
   CheckCircle2,
   FileCheck2,
-  HelpCircle,
-  Megaphone,
-  Sparkles,
   X,
   Eye,
   RotateCcw,
   AlertCircle,
-  Clock,
-  User,
-  ShieldCheck,
-  ExternalLink,
   RefreshCw,
   Archive,
   MessageSquare,
@@ -40,7 +31,7 @@ import {
   unpublishStoryAdmin,
   restoreStoryAdmin,
 } from '@/lib/api/stories.api';
-import type { UserRole, AdminStoryDetail, StoryStatus } from '@/types/domain';
+import type { UserRole, StoryStatus } from '@/types/domain';
 import { StoryReader } from '@/components/stories/story-reader';
 import { STORY_CATEGORY_LABELS, STORY_CATEGORY_COLORS } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
@@ -55,7 +46,6 @@ type ModerationFilterTab = 'QUEUE' | 'ALL' | 'PUBLISHED' | 'REJECTED';
 
 export function ModeratorContentView({
   currentRole,
-  basePath,
   pendingOnly = false,
 }: ModeratorContentViewProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -65,17 +55,21 @@ export function ModeratorContentView({
   const [activeTab, setActiveTab] = useState<ModerationFilterTab>('QUEUE');
   const [inspectStoryId, setInspectStoryId] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Modal dialog states
   const [rejectDialogStoryId, setRejectDialogStoryId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectInternalNote, setRejectInternalNote] = useState('');
+  const [rejectValidationError, setRejectValidationError] = useState<string | null>(null);
 
   const [revisionDialogStoryId, setRevisionDialogStoryId] = useState<string | null>(null);
   const [revisionNotes, setRevisionNotes] = useState('');
   const [revisionInternalNote, setRevisionInternalNote] = useState('');
+  const [revisionValidationError, setRevisionValidationError] = useState<string | null>(null);
 
   const roleScope = currentRole === 'SUPER_ADMIN' ? 'admin' : 'moderator';
+  const effectiveTab: ModerationFilterTab = pendingOnly ? 'QUEUE' : activeTab;
 
   // Live Query for stories queue
   const {
@@ -85,12 +79,12 @@ export function ModeratorContentView({
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: [roleScope, 'stories', 'moderation-list', activeTab],
+    queryKey: [roleScope, 'stories', 'moderation-list', effectiveTab],
     queryFn: async () => {
-      let statusFilter: StoryStatus | 'ALL' | undefined;
-      if (activeTab === 'QUEUE') statusFilter = undefined; // backend defaults to review queue
-      else if (activeTab === 'PUBLISHED') statusFilter = 'PUBLISHED';
-      else if (activeTab === 'REJECTED') statusFilter = 'REJECTED';
+      let statusFilter: StoryStatus | 'ALL' | 'PENDING_QUEUE';
+      if (effectiveTab === 'QUEUE') statusFilter = 'PENDING_QUEUE';
+      else if (effectiveTab === 'PUBLISHED') statusFilter = 'PUBLISHED';
+      else if (effectiveTab === 'REJECTED') statusFilter = 'REJECTED';
       else statusFilter = 'ALL';
 
       const res = await getAdminStories(
@@ -115,8 +109,14 @@ export function ModeratorContentView({
   });
 
   const notify = (msg: string) => {
+    setActionError(null);
     setActionNotice(msg);
     setTimeout(() => setActionNotice(null), 4000);
+  };
+
+  const notifyError = (err: unknown, fallback: string) => {
+    setActionNotice(null);
+    setActionError(err instanceof Error ? err.message : fallback);
   };
 
   const invalidate = () => {
@@ -131,6 +131,7 @@ export function ModeratorContentView({
       invalidate();
       notify('Story successfully assigned to your editorial review queue.');
     },
+    onError: (err) => notifyError(err, 'Failed to claim story for review.'),
   });
 
   const unclaimMutation = useMutation({
@@ -139,6 +140,7 @@ export function ModeratorContentView({
       invalidate();
       notify('Story released back to unassigned queue.');
     },
+    onError: (err) => notifyError(err, 'Failed to release story claim.'),
   });
 
   const approveMutation = useMutation({
@@ -148,25 +150,30 @@ export function ModeratorContentView({
       if (inspectStoryId) setInspectStoryId(null);
       notify('Story approved and published to the campus stories feed.');
     },
+    onError: (err) => notifyError(err, 'Failed to approve story.'),
   });
 
   const rejectMutation = useMutation({
     mutationFn: ({
       id,
-      reasonCode,
+      reason,
       internalNote,
     }: {
       id: string;
-      reasonCode: string;
+      reason: string;
       internalNote?: string;
-    }) => rejectStory(id, { reasonCode, internalNote }, accessToken, roleScope),
+    }) => rejectStory(id, { reason, internalNote }, accessToken, roleScope),
     onSuccess: () => {
       invalidate();
       setRejectDialogStoryId(null);
       setRejectReason('');
       setRejectInternalNote('');
+      setRejectValidationError(null);
       if (inspectStoryId) setInspectStoryId(null);
       notify('Story rejected with editorial feedback delivered to author.');
+    },
+    onError: (err) => {
+      setRejectValidationError(err instanceof Error ? err.message : 'Failed to reject story.');
     },
   });
 
@@ -185,18 +192,25 @@ export function ModeratorContentView({
       setRevisionDialogStoryId(null);
       setRevisionNotes('');
       setRevisionInternalNote('');
+      setRevisionValidationError(null);
       if (inspectStoryId) setInspectStoryId(null);
       notify('Revision feedback sent to author. Story reverted to draft.');
+    },
+    onError: (err) => {
+      setRevisionValidationError(
+        err instanceof Error ? err.message : 'Failed to request story revisions.'
+      );
     },
   });
 
   const unpublishMutation = useMutation({
-    mutationFn: ({ id, reasonCode }: { id: string; reasonCode: string }) =>
-      unpublishStoryAdmin(id, { reasonCode }, accessToken, roleScope),
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      unpublishStoryAdmin(id, { reason }, accessToken, roleScope),
     onSuccess: () => {
       invalidate();
       notify('Story unpublished from public campus feed.');
     },
+    onError: (err) => notifyError(err, 'Failed to unpublish story.'),
   });
 
   const restoreMutation = useMutation({
@@ -205,13 +219,42 @@ export function ModeratorContentView({
       invalidate();
       notify('Story restored to published status.');
     },
+    onError: (err) => notifyError(err, 'Failed to restore story.'),
   });
+
+  const handleConfirmReject = () => {
+    if (!rejectDialogStoryId) return;
+    if (rejectReason.trim().length < 10) {
+      setRejectValidationError('Rejection reason must be at least 10 characters long.');
+      return;
+    }
+    setRejectValidationError(null);
+    rejectMutation.mutate({
+      id: rejectDialogStoryId,
+      reason: rejectReason.trim(),
+      internalNote: rejectInternalNote.trim() || undefined,
+    });
+  };
+
+  const handleConfirmRevision = () => {
+    if (!revisionDialogStoryId) return;
+    if (revisionNotes.trim().length < 10) {
+      setRevisionValidationError('Revision feedback must be at least 10 characters long.');
+      return;
+    }
+    setRevisionValidationError(null);
+    requestChangesMutation.mutate({
+      id: revisionDialogStoryId,
+      notes: revisionNotes.trim(),
+      internalNote: revisionInternalNote.trim() || undefined,
+    });
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="CAMPUS EDITORIAL DESK"
-        title="Content Moderation Desk"
+        title={pendingOnly ? 'Pending Story Review Queue' : 'Content Moderation Desk'}
         description="Review, verify, and moderate alumni success stories and personal narratives before campus publication."
       />
 
@@ -222,6 +265,13 @@ export function ModeratorContentView({
         </div>
       )}
 
+      {actionError && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800 flex items-center gap-2 animate-in fade-in">
+          <AlertCircle size={16} className="text-rose-600 shrink-0" />
+          <span>{actionError}</span>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
         <button
@@ -229,49 +279,54 @@ export function ModeratorContentView({
           onClick={() => setActiveTab('QUEUE')}
           className={cn(
             'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-            activeTab === 'QUEUE'
+            effectiveTab === 'QUEUE'
               ? 'bg-blue-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
           )}
         >
           Editorial Queue (Pending Review)
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('ALL')}
-          className={cn(
-            'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-            activeTab === 'ALL'
-              ? 'bg-blue-600 text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          )}
-        >
-          All Stories
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('PUBLISHED')}
-          className={cn(
-            'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-            activeTab === 'PUBLISHED'
-              ? 'bg-blue-600 text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          )}
-        >
-          Published
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('REJECTED')}
-          className={cn(
-            'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
-            activeTab === 'REJECTED'
-              ? 'bg-blue-600 text-white shadow-2xs'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          )}
-        >
-          Revisions & Rejections
-        </button>
+
+        {!pendingOnly && (
+          <>
+            <button
+              type="button"
+              onClick={() => setActiveTab('ALL')}
+              className={cn(
+                'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                effectiveTab === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              )}
+            >
+              All Stories
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('PUBLISHED')}
+              className={cn(
+                'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                effectiveTab === 'PUBLISHED'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              )}
+            >
+              Published
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('REJECTED')}
+              className={cn(
+                'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all',
+                effectiveTab === 'REJECTED'
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              )}
+            >
+              Revisions & Rejections
+            </button>
+          </>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           <Button
@@ -320,8 +375,13 @@ export function ModeratorContentView({
           {stories.map((story) => {
             const catColors =
               STORY_CATEGORY_COLORS[story.category] || STORY_CATEGORY_COLORS.GENERAL_INSIGHT;
-            const isAssignedToMe = story.reviewerId === currentUser?.id;
-            const isUnassigned = !story.reviewerId;
+            const assignedReviewerId = story.reviewerId || story.reviewer?.id || null;
+            const isAssignedToMe = Boolean(assignedReviewerId && assignedReviewerId === currentUser?.id);
+            const isAssignedToOther = Boolean(assignedReviewerId && assignedReviewerId !== currentUser?.id);
+            const isUnassigned = !assignedReviewerId;
+            const canDecide =
+              (story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') &&
+              (!isAssignedToOther || currentRole === 'SUPER_ADMIN');
 
             return (
               <div
@@ -338,7 +398,7 @@ export function ModeratorContentView({
                         )}
                       >
                         <span className={cn('h-1.5 w-1.5 rounded-full', catColors.dot)} />
-                        {STORY_CATEGORY_LABELS[story.category]}
+                        {STORY_CATEGORY_LABELS[story.category] || story.category}
                       </span>
                       <StatusBadge status={story.status} />
 
@@ -355,13 +415,17 @@ export function ModeratorContentView({
 
                     <h3 className="text-base font-bold text-slate-900 mt-1">{story.title}</h3>
                     <p className="text-xs text-slate-500">
-                      By {story.author?.name || 'Alumnus'} · {story.author?.department} · Class of{' '}
-                      {story.author?.graduationYear || story.author?.batch} · {story.readingTimeMinutes} min read
+                      By {story.author?.name || 'Alumnus'}
+                      {story.author?.department ? ` · ${story.author.department}` : ''}
+                      {story.author?.graduationYear || story.author?.batch
+                        ? ` · Class of ${story.author.graduationYear || story.author.batch}`
+                        : ''}
+                      {` · ${story.readingTimeMinutes} min read`}
                     </p>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0 self-start">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 self-start">
                     <Button
                       size="sm"
                       variant="secondary"
@@ -371,17 +435,16 @@ export function ModeratorContentView({
                     </Button>
 
                     {/* Claim / Unclaim */}
-                    {isUnassigned &&
-                      (story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => claimMutation.mutate(story.id)}
-                          disabled={claimMutation.isPending}
-                        >
-                          Claim Review
-                        </Button>
-                      )}
+                    {isUnassigned && story.status === 'SUBMITTED' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => claimMutation.mutate(story.id)}
+                        disabled={claimMutation.isPending}
+                      >
+                        Claim Review
+                      </Button>
+                    )}
 
                     {isAssignedToMe && story.status === 'UNDER_REVIEW' && (
                       <Button
@@ -396,7 +459,7 @@ export function ModeratorContentView({
                     )}
 
                     {/* Approve */}
-                    {(story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') && (
+                    {canDecide && (
                       <Button
                         size="sm"
                         className="bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -408,11 +471,14 @@ export function ModeratorContentView({
                     )}
 
                     {/* Request Changes */}
-                    {(story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') && (
+                    {canDecide && (
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => setRevisionDialogStoryId(story.id)}
+                        onClick={() => {
+                          setRevisionValidationError(null);
+                          setRevisionDialogStoryId(story.id);
+                        }}
                         className="text-amber-700 border-amber-200 hover:bg-amber-50"
                       >
                         <MessageSquare size={14} className="mr-1.5" /> Request Revisions
@@ -420,11 +486,14 @@ export function ModeratorContentView({
                     )}
 
                     {/* Reject */}
-                    {(story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') && (
+                    {canDecide && (
                       <Button
                         size="sm"
                         variant="secondary"
-                        onClick={() => setRejectDialogStoryId(story.id)}
+                        onClick={() => {
+                          setRejectValidationError(null);
+                          setRejectDialogStoryId(story.id);
+                        }}
                         className="text-rose-700 border-rose-200 hover:bg-rose-50"
                       >
                         <X size={14} className="mr-1.5" /> Reject
@@ -439,7 +508,7 @@ export function ModeratorContentView({
                         onClick={() =>
                           unpublishMutation.mutate({
                             id: story.id,
-                            reasonCode: 'Editorial standard review',
+                            reason: 'Unpublished following editorial standard review.',
                           })
                         }
                         className="text-slate-600"
@@ -467,17 +536,18 @@ export function ModeratorContentView({
                 </div>
 
                 {/* Internal / Owner Notes if present */}
-                {(story.ownerVisibleNote || story.internalAdminNote) && (
+                {(story.ownerVisibleNote || story.internalNote) && (
                   <div className="rounded-lg bg-amber-50/60 border border-amber-200 p-2.5 text-xs text-amber-900 space-y-1">
                     {story.ownerVisibleNote && (
                       <p>
-                        <span className="font-semibold">Author Feedback:</span> {story.ownerVisibleNote}
+                        <span className="font-semibold">Author Feedback:</span>{' '}
+                        {story.ownerVisibleNote}
                       </p>
                     )}
-                    {story.internalAdminNote && (
+                    {story.internalNote && (
                       <p className="text-slate-600">
                         <span className="font-semibold text-slate-700">Internal Staff Note:</span>{' '}
-                        {story.internalAdminNote}
+                        {story.internalNote}
                       </p>
                     )}
                   </div>
@@ -512,7 +582,12 @@ export function ModeratorContentView({
               <StoryReader
                 story={inspectedStory}
                 backLabel="Close Inspection"
-                backHref="#"
+                onBackClick={() => setInspectStoryId(null)}
+                authorProfileHref={
+                  currentRole === 'SUPER_ADMIN' && inspectedStory.author?.id
+                    ? `/admin/users/${inspectedStory.author.id}`
+                    : null
+                }
                 showEditorialInfo
               />
             </div>
@@ -535,6 +610,7 @@ export function ModeratorContentView({
                       size="sm"
                       variant="secondary"
                       onClick={() => {
+                        setRevisionValidationError(null);
                         setRevisionDialogStoryId(inspectedStory.id);
                       }}
                       className="text-amber-700 border-amber-200"
@@ -545,6 +621,7 @@ export function ModeratorContentView({
                       size="sm"
                       variant="secondary"
                       onClick={() => {
+                        setRejectValidationError(null);
                         setRejectDialogStoryId(inspectedStory.id);
                       }}
                       className="text-rose-700 border-rose-200"
@@ -572,22 +649,35 @@ export function ModeratorContentView({
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-slate-900">Reject Story Submission</h3>
             <p className="text-xs text-slate-600">
-              Provide a clear, professional reason for rejection. This feedback is delivered directly to the alumnus.
+              Provide a clear, professional reason (minimum 10 characters). This feedback is delivered directly to the alumnus.
             </p>
+
+            {rejectValidationError && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{rejectValidationError}</span>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Reason to Author *
+                  Reason to Author * (min 10 characters)
                 </label>
                 <textarea
                   rows={3}
                   required
                   value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
+                  onChange={(e) => {
+                    setRejectReason(e.target.value);
+                    if (rejectValidationError) setRejectValidationError(null);
+                  }}
                   placeholder="e.g. This story contains commercial promotional links not permitted under our institutional editorial policy."
                   className="w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-rose-500 focus:outline-hidden"
                 />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {rejectReason.trim().length} / 10 minimum characters
+                </p>
               </div>
 
               <div>
@@ -612,6 +702,7 @@ export function ModeratorContentView({
                   setRejectDialogStoryId(null);
                   setRejectReason('');
                   setRejectInternalNote('');
+                  setRejectValidationError(null);
                 }}
               >
                 Cancel
@@ -619,14 +710,8 @@ export function ModeratorContentView({
               <Button
                 size="sm"
                 className="bg-rose-600 hover:bg-rose-700 text-white"
-                disabled={!rejectReason.trim() || rejectMutation.isPending}
-                onClick={() =>
-                  rejectMutation.mutate({
-                    id: rejectDialogStoryId,
-                    reasonCode: rejectReason.trim(),
-                    internalNote: rejectInternalNote.trim() || undefined,
-                  })
-                }
+                disabled={rejectReason.trim().length < 10 || rejectMutation.isPending}
+                onClick={handleConfirmReject}
               >
                 {rejectMutation.isPending ? 'Rejecting...' : 'Confirm Rejection'}
               </Button>
@@ -641,22 +726,35 @@ export function ModeratorContentView({
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-slate-900">Request Revisions from Author</h3>
             <p className="text-xs text-slate-600">
-              The story will be returned to the alumnus as a draft with your revision guidance.
+              The story will be returned to the alumnus as a draft with your revision guidance (minimum 10 characters).
             </p>
+
+            {revisionValidationError && (
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{revisionValidationError}</span>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Requested Changes / Editorial Notes *
+                  Requested Changes / Editorial Notes * (min 10 characters)
                 </label>
                 <textarea
                   rows={4}
                   required
                   value={revisionNotes}
-                  onChange={(e) => setRevisionNotes(e.target.value)}
+                  onChange={(e) => {
+                    setRevisionNotes(e.target.value);
+                    if (revisionValidationError) setRevisionValidationError(null);
+                  }}
                   placeholder="e.g. Please expand on your engineering decisions during the payment latency issue in section 2, and verify that all team member names are credited."
                   className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-amber-500 focus:outline-hidden"
                 />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {revisionNotes.trim().length} / 10 minimum characters
+                </p>
               </div>
 
               <div>
@@ -681,6 +779,7 @@ export function ModeratorContentView({
                   setRevisionDialogStoryId(null);
                   setRevisionNotes('');
                   setRevisionInternalNote('');
+                  setRevisionValidationError(null);
                 }}
               >
                 Cancel
@@ -688,14 +787,8 @@ export function ModeratorContentView({
               <Button
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white"
-                disabled={!revisionNotes.trim() || requestChangesMutation.isPending}
-                onClick={() =>
-                  requestChangesMutation.mutate({
-                    id: revisionDialogStoryId,
-                    notes: revisionNotes.trim(),
-                    internalNote: revisionInternalNote.trim() || undefined,
-                  })
-                }
+                disabled={revisionNotes.trim().length < 10 || requestChangesMutation.isPending}
+                onClick={handleConfirmRevision}
               >
                 {requestChangesMutation.isPending ? 'Sending...' : 'Send Revision Feedback'}
               </Button>

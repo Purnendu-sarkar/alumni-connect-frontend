@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import {
   BookOpen,
   Check,
@@ -10,10 +9,7 @@ import {
   AlertCircle,
   RefreshCw,
   Search,
-  Filter,
-  ShieldAlert,
   X,
-  Sparkles,
   SlidersHorizontal,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,7 +25,7 @@ import {
   overrideStoryAdmin,
   deleteStoryAdmin,
 } from '@/lib/api/stories.api';
-import type { UserRole, AdminStoryDetail, StoryStatus, StoryCategory } from '@/types/domain';
+import type { StoryStatus } from '@/types/domain';
 import { StoryReader } from '@/components/stories/story-reader';
 import { STORY_CATEGORY_LABELS, STORY_CATEGORY_COLORS } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
@@ -53,6 +49,7 @@ export function AdminStoriesView() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [inspectStoryId, setInspectStoryId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Override dialog
   const [overrideStoryId, setOverrideStoryId] = useState<string | null>(null);
@@ -98,8 +95,14 @@ export function AdminStoriesView() {
   });
 
   const notify = (msg: string) => {
+    setErrorMessage(null);
     setNotice(msg);
     setTimeout(() => setNotice(null), 4000);
+  };
+
+  const notifyError = (err: unknown, fallback: string) => {
+    setNotice(null);
+    setErrorMessage(err instanceof Error ? err.message : fallback);
   };
 
   const invalidate = () => {
@@ -123,6 +126,7 @@ export function AdminStoriesView() {
       setOverrideReason('');
       notify('Story status successfully overridden by administrator.');
     },
+    onError: (err) => notifyError(err, 'Failed to apply administrative override.'),
   });
 
   const deleteMutation = useMutation({
@@ -132,6 +136,10 @@ export function AdminStoriesView() {
       setDeleteConfirmId(null);
       if (inspectStoryId) setInspectStoryId(null);
       notify('Story successfully removed by administrator.');
+    },
+    onError: (err) => {
+      setDeleteConfirmId(null);
+      notifyError(err, 'Failed to delete story.');
     },
   });
 
@@ -147,6 +155,13 @@ export function AdminStoriesView() {
         <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-semibold text-emerald-800 flex items-center gap-2">
           <Check className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>{notice}</span>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs font-semibold text-rose-800 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+          <span>{errorMessage}</span>
         </div>
       )}
 
@@ -246,7 +261,7 @@ export function AdminStoriesView() {
                       )}
                     >
                       <span className={cn('h-1.5 w-1.5 rounded-full', catColors.dot)} />
-                      {STORY_CATEGORY_LABELS[story.category]}
+                      {STORY_CATEGORY_LABELS[story.category] || story.category}
                     </span>
                     <StatusBadge status={story.status} />
 
@@ -259,8 +274,12 @@ export function AdminStoriesView() {
 
                   <h4 className="text-sm font-bold text-slate-900 truncate">{story.title}</h4>
                   <p className="text-xs text-slate-500">
-                    By {story.author?.name || 'Alumnus'} · {story.author?.department} · Class of{' '}
-                    {story.author?.graduationYear || story.author?.batch} · {story.readingTimeMinutes} min read
+                    By {story.author?.name || 'Alumnus'}
+                    {story.author?.department ? ` · ${story.author.department}` : ''}
+                    {story.author?.graduationYear || story.author?.batch
+                      ? ` · Class of ${story.author.graduationYear || story.author.batch}`
+                      : ''}
+                    {` · ${story.readingTimeMinutes} min read`}
                   </p>
                 </div>
 
@@ -323,7 +342,10 @@ export function AdminStoriesView() {
               <StoryReader
                 story={inspectedStory}
                 backLabel="Close Inspection"
-                backHref="#"
+                onBackClick={() => setInspectStoryId(null)}
+                authorProfileHref={
+                  inspectedStory.author?.id ? `/admin/users/${inspectedStory.author.id}` : null
+                }
                 showEditorialInfo
               />
             </div>
@@ -385,7 +407,7 @@ export function AdminStoriesView() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Reason for Override *
+                  Reason for Override * (min 5 characters)
                 </label>
                 <textarea
                   rows={3}
@@ -412,7 +434,7 @@ export function AdminStoriesView() {
               <Button
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                disabled={!overrideReason.trim() || overrideMutation.isPending}
+                disabled={overrideReason.trim().length < 5 || overrideMutation.isPending}
                 onClick={() =>
                   overrideMutation.mutate({
                     id: overrideStoryId,

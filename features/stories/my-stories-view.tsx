@@ -6,7 +6,6 @@ import {
   BookOpen,
   Clock,
   Edit,
-  PenSquare,
   Plus,
   Trash2,
   AlertCircle,
@@ -31,7 +30,7 @@ import {
   unpublishStory,
   deleteStory,
 } from '@/lib/api/stories.api';
-import type { UserRole, StoryStatus, AuthorStoryDetail } from '@/types/domain';
+import type { UserRole } from '@/types/domain';
 import { STORY_CATEGORY_LABELS, STORY_CATEGORY_COLORS } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
 
@@ -42,11 +41,12 @@ interface MyStoriesViewProps {
 
 type TabKey = 'ALL' | 'DRAFTS' | 'REVIEW' | 'PUBLISHED' | 'CHANGES';
 
-export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
+export function MyStoriesView({ basePath }: MyStoriesViewProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabKey>('ALL');
   const [actionSuccessMessage, setActionSuccessMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
 
   // Modal confirm states
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -68,8 +68,14 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
   });
 
   const notifySuccess = (msg: string) => {
+    setActionErrorMessage(null);
     setActionSuccessMessage(msg);
     setTimeout(() => setActionSuccessMessage(null), 4000);
+  };
+
+  const notifyError = (err: unknown, fallback: string) => {
+    setActionSuccessMessage(null);
+    setActionErrorMessage(err instanceof Error ? err.message : fallback);
   };
 
   // Mutations
@@ -79,6 +85,7 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
       queryClient.invalidateQueries({ queryKey: ['my-stories'] });
       notifySuccess('Story submitted successfully for editorial review.');
     },
+    onError: (err) => notifyError(err, 'Unable to submit story for review.'),
   });
 
   const withdrawMutation = useMutation({
@@ -88,6 +95,10 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
       setConfirmWithdrawId(null);
       notifySuccess('Story withdrawn back to drafts.');
     },
+    onError: (err) => {
+      setConfirmWithdrawId(null);
+      notifyError(err, 'Unable to withdraw story.');
+    },
   });
 
   const unpublishMutation = useMutation({
@@ -95,7 +106,11 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-stories'] });
       setConfirmUnpublishId(null);
-      notifySuccess('Story unpublished and returned to private drafts.');
+      notifySuccess('Story unpublished from the campus feed.');
+    },
+    onError: (err) => {
+      setConfirmUnpublishId(null);
+      notifyError(err, 'Unable to unpublish story.');
     },
   });
 
@@ -105,6 +120,10 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
       queryClient.invalidateQueries({ queryKey: ['my-stories'] });
       setConfirmDeleteId(null);
       notifySuccess('Draft deleted.');
+    },
+    onError: (err) => {
+      setConfirmDeleteId(null);
+      notifyError(err, 'Unable to delete draft.');
     },
   });
 
@@ -141,6 +160,13 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-800 flex items-center gap-2">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>{actionSuccessMessage}</span>
+        </div>
+      )}
+
+      {actionErrorMessage && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+          <span>{actionErrorMessage}</span>
         </div>
       )}
 
@@ -273,7 +299,7 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
                         )}
                       >
                         <span className={cn('h-1.5 w-1.5 rounded-full', catColors.dot)} />
-                        {STORY_CATEGORY_LABELS[story.category]}
+                        {STORY_CATEGORY_LABELS[story.category] || story.category}
                       </span>
                       <StatusBadge status={story.status} />
                       <span className="text-xs text-slate-400">
@@ -296,7 +322,7 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
                   </div>
 
                   {/* Quick Action Buttons */}
-                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
                     <Button asChild size="sm" variant="ghost">
                       <Link href={`${basePath}/stories/${story.slug || story.id}`}>
                         <Eye size={14} className="mr-1.5" /> View
@@ -327,16 +353,23 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
                       </Button>
                     )}
 
-                    {/* Withdraw if in review */}
-                    {(story.status === 'SUBMITTED' || story.status === 'UNDER_REVIEW') && (
+                    {/* Withdraw ONLY when SUBMITTED (not claimed by moderator yet) */}
+                    {story.status === 'SUBMITTED' && (
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => setConfirmWithdrawId(story.id)}
                         className="text-amber-700 border-amber-200 hover:bg-amber-50"
                       >
-                        <RotateCcw size={14} className="mr-1.5" /> Withdraw
+                        <RotateCcw size={14} className="mr-1.5" /> Withdraw Submission
                       </Button>
+                    )}
+
+                    {/* Active Moderator Review badge when UNDER_REVIEW */}
+                    {story.status === 'UNDER_REVIEW' && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 border border-purple-200 px-2.5 py-1 text-[11px] font-semibold text-purple-700">
+                        <Clock size={12} /> Under Moderator Review
+                      </span>
                     )}
 
                     {/* Unpublish if published */}
@@ -447,7 +480,7 @@ export function MyStoriesView({ currentRole, basePath }: MyStoriesViewProps) {
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-slate-900">Unpublish Story</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              This will remove the story from the campus feed and revert it to private drafts. You can edit and resubmit anytime.
+              This will remove the story from the campus feed. You can edit and resubmit it anytime.
             </p>
             <div className="flex justify-end gap-2 pt-2">
               <Button

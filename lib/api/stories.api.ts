@@ -9,16 +9,19 @@ import type {
 } from '@/types/domain';
 
 export interface StoryFilterParams {
-  category?: StoryCategory;
+  category?: StoryCategory | 'ALL';
   q?: string;
+  department?: string;
+  graduationYear?: number;
+  sort?: 'newest' | 'oldest';
   page?: number;
   limit?: number;
 }
 
 export interface AdminStoryFilterParams {
-  status?: StoryStatus | 'ALL';
-  category?: StoryCategory;
-  reviewerId?: string;
+  status?: StoryStatus | 'ALL' | 'PENDING_QUEUE';
+  category?: StoryCategory | 'ALL';
+  authorId?: string;
   q?: string;
   page?: number;
   limit?: number;
@@ -31,7 +34,9 @@ export interface CreateStoryInput {
   category: StoryCategory;
   tags?: string[];
   coverImageUrl?: string | null;
-  coverImageKey?: string | null;
+  coverImagePublicId?: string | null;
+  embeddedMediaPublicIds?: string[];
+  submitNow?: boolean;
 }
 
 export type UpdateStoryInput = Partial<CreateStoryInput>;
@@ -42,8 +47,11 @@ export function getStories(filters: StoryFilterParams = {}, accessToken?: string
   const query = new URLSearchParams();
   if (filters.page) query.set('page', String(filters.page));
   if (filters.limit) query.set('limit', String(filters.limit));
-  if (filters.category) query.set('category', filters.category);
+  if (filters.category && filters.category !== 'ALL') query.set('category', filters.category);
   if (filters.q) query.set('q', filters.q);
+  if (filters.department) query.set('department', filters.department);
+  if (filters.graduationYear) query.set('graduationYear', String(filters.graduationYear));
+  if (filters.sort) query.set('sort', filters.sort);
 
   const queryString = query.toString();
   return apiClient<StoryCard[]>(`/stories${queryString ? `?${queryString}` : ''}`, {
@@ -54,6 +62,24 @@ export function getStories(filters: StoryFilterParams = {}, accessToken?: string
 
 export function getStoryById(idOrSlug: string, accessToken?: string | null) {
   return apiClient<StoryDetail>(`/stories/${encodeURIComponent(idOrSlug)}`, {
+    accessToken,
+    tenant: true,
+  });
+}
+
+export function reportStory(
+  storyId: string,
+  data: { reason: string; details?: string },
+  accessToken?: string | null
+) {
+  return apiClient<{ id?: string; message?: string }>('/reports', {
+    method: 'POST',
+    body: JSON.stringify({
+      targetType: 'STORY',
+      targetId: storyId,
+      reason: data.reason,
+      details: data.details,
+    }),
     accessToken,
     tenant: true,
   });
@@ -147,8 +173,8 @@ export function getAdminStories(
   if (filters.page) query.set('page', String(filters.page));
   if (filters.limit) query.set('limit', String(filters.limit));
   if (filters.status && filters.status !== 'ALL') query.set('status', filters.status);
-  if (filters.category) query.set('category', filters.category);
-  if (filters.reviewerId) query.set('reviewerId', filters.reviewerId);
+  if (filters.category && filters.category !== 'ALL') query.set('category', filters.category);
+  if (filters.authorId) query.set('authorId', filters.authorId);
   if (filters.q) query.set('q', filters.q);
 
   const queryString = query.toString();
@@ -212,7 +238,7 @@ export function approveStory(
 
 export function rejectStory(
   id: string,
-  data: { reasonCode: string; internalNote?: string },
+  data: { reason: string; internalNote?: string },
   accessToken?: string | null,
   roleScope: 'admin' | 'moderator' = 'admin'
 ) {
@@ -242,7 +268,7 @@ export function requestStoryChanges(
 
 export function unpublishStoryAdmin(
   id: string,
-  data: { reasonCode: string; internalNote?: string },
+  data: { reason?: string },
   accessToken?: string | null,
   roleScope: 'admin' | 'moderator' = 'admin'
 ) {

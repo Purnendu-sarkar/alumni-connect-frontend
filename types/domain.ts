@@ -342,14 +342,16 @@ export type StoryStatus =
 
 export type StoryCategory =
   | 'CAREER_MILESTONE'
-  | 'STARTUP_JOURNEY'
-  | 'RESEARCH_BREAKTHROUGH'
-  | 'COMMUNITY_IMPACT'
-  | 'GLOBAL_EXPERIENCE'
-  | 'CREATIVE_PURSUIT'
+  | 'ENTREPRENEURSHIP'
+  | 'TECH_INNOVATION'
+  | 'RESEARCH_ACADEMIA'
+  | 'DESIGN_PRODUCT'
+  | 'CAMPUS_NOSTALGIA'
   | 'GENERAL_INSIGHT';
 
 export type StoryModerationAction =
+  | 'SUBMIT'
+  | 'WITHDRAW'
   | 'CLAIM'
   | 'UNCLAIM'
   | 'APPROVE'
@@ -357,8 +359,7 @@ export type StoryModerationAction =
   | 'REQUEST_CHANGES'
   | 'UNPUBLISH'
   | 'RESTORE'
-  | 'OVERRIDE'
-  | 'DELETE';
+  | 'ADMIN_OVERRIDE';
 
 export interface StoryAuthor {
   id: string;
@@ -367,7 +368,7 @@ export interface StoryAuthor {
   photoKey?: string | null;
   department?: string | null;
   batch?: string | null;
-  graduationYear?: string | null;
+  graduationYear?: string | number | null;
   currentRole?: string | null;
   currentCompany?: string | null;
   headline?: string | null;
@@ -375,56 +376,65 @@ export interface StoryAuthor {
 
 export interface StoryCard {
   id: string;
-  universityId: string;
+  universityId?: string;
   title: string;
   slug: string;
   summary: string;
   category: StoryCategory;
   tags: string[];
   coverImageUrl?: string | null;
-  coverImageKey?: string | null;
+  coverImagePublicId?: string | null;
   readingTimeMinutes: number;
-  status: StoryStatus;
+  status?: StoryStatus;
   publishedAt?: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   author: StoryAuthor;
 }
 
 export interface StoryDetail extends StoryCard {
   body: string;
+  version?: number;
+  status: StoryStatus;
 }
 
 export interface AuthorStoryDetail extends StoryDetail {
+  coverImagePublicId?: string | null;
+  embeddedMediaPublicIds?: string[];
   ownerVisibleNote?: string | null;
+  claimedAt?: string | null;
+  updatedAt: string;
   moderationHistory?: Array<{
-    id: string;
     action: StoryModerationAction;
+    note?: string | null;
     createdAt: string;
-    feedbackToAuthor?: string | null;
   }>;
 }
 
 export interface AdminStoryDetail extends StoryDetail {
+  coverImagePublicId?: string | null;
+  embeddedMediaPublicIds?: string[];
   ownerVisibleNote?: string | null;
-  internalAdminNote?: string | null;
+  internalNote?: string | null;
   reviewerId?: string | null;
+  claimedAt?: string | null;
   reviewer?: {
     id: string;
     name: string;
-    role?: { name: string } | string;
+    avatarUrl?: string | null;
   } | null;
+  updatedAt: string;
   moderationHistory: Array<{
     id: string;
     action: StoryModerationAction;
+    reasonCode?: string | null;
+    note?: string | null;
     createdAt: string;
-    feedbackToAuthor?: string | null;
-    internalNote?: string | null;
     moderator: {
       id: string;
       name: string;
-      role?: { name: string } | string;
-    };
+      avatarUrl?: string | null;
+    } | null;
   }>;
 }
 

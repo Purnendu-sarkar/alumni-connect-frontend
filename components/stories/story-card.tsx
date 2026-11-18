@@ -9,11 +9,11 @@ import { cn } from '@/lib/utils/cn';
 
 export const STORY_CATEGORY_LABELS: Record<StoryCategory, string> = {
   CAREER_MILESTONE: 'Career Milestone',
-  STARTUP_JOURNEY: 'Startup Journey',
-  RESEARCH_BREAKTHROUGH: 'Research Breakthrough',
-  COMMUNITY_IMPACT: 'Community Impact',
-  GLOBAL_EXPERIENCE: 'Global Experience',
-  CREATIVE_PURSUIT: 'Creative Pursuit',
+  ENTREPRENEURSHIP: 'Entrepreneurship',
+  TECH_INNOVATION: 'Tech & Innovation',
+  RESEARCH_ACADEMIA: 'Research & Academia',
+  DESIGN_PRODUCT: 'Design & Product',
+  CAMPUS_NOSTALGIA: 'Campus Nostalgia',
   GENERAL_INSIGHT: 'General Insight',
 };
 
@@ -22,25 +22,25 @@ export const STORY_CATEGORY_COLORS: Record<StoryCategory, { badge: string; dot: 
     badge: 'bg-blue-50 text-blue-700 border-blue-200',
     dot: 'bg-blue-500',
   },
-  STARTUP_JOURNEY: {
+  ENTREPRENEURSHIP: {
     badge: 'bg-purple-50 text-purple-700 border-purple-200',
     dot: 'bg-purple-500',
   },
-  RESEARCH_BREAKTHROUGH: {
-    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    dot: 'bg-emerald-500',
-  },
-  COMMUNITY_IMPACT: {
-    badge: 'bg-amber-50 text-amber-700 border-amber-200',
-    dot: 'bg-amber-500',
-  },
-  GLOBAL_EXPERIENCE: {
+  TECH_INNOVATION: {
     badge: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     dot: 'bg-cyan-500',
   },
-  CREATIVE_PURSUIT: {
+  RESEARCH_ACADEMIA: {
+    badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    dot: 'bg-emerald-500',
+  },
+  DESIGN_PRODUCT: {
     badge: 'bg-rose-50 text-rose-700 border-rose-200',
     dot: 'bg-rose-500',
+  },
+  CAMPUS_NOSTALGIA: {
+    badge: 'bg-amber-50 text-amber-700 border-amber-200',
+    dot: 'bg-amber-500',
   },
   GENERAL_INSIGHT: {
     badge: 'bg-slate-50 text-slate-700 border-slate-200',

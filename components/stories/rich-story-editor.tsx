@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import {
   Heading2,
   Heading3,
@@ -21,12 +20,10 @@ import {
   Clock,
   Sparkles,
   X,
-  UploadCloud,
-  Check,
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import type { StoryCategory, StoryDetail, StoryAuthor } from '@/types/domain';
+import type { StoryCategory, StoryDetail } from '@/types/domain';
 import type { CreateStoryInput } from '@/lib/api/stories.api';
 import { cn } from '@/lib/utils/cn';
 import { MediaUploader } from '@/components/media/media-uploader';
@@ -35,11 +32,11 @@ import { STORY_CATEGORY_LABELS, STORY_CATEGORY_COLORS } from './story-card';
 
 const CATEGORY_OPTIONS: StoryCategory[] = [
   'CAREER_MILESTONE',
-  'STARTUP_JOURNEY',
-  'RESEARCH_BREAKTHROUGH',
-  'COMMUNITY_IMPACT',
-  'GLOBAL_EXPERIENCE',
-  'CREATIVE_PURSUIT',
+  'ENTREPRENEURSHIP',
+  'TECH_INNOVATION',
+  'RESEARCH_ACADEMIA',
+  'DESIGN_PRODUCT',
+  'CAMPUS_NOSTALGIA',
   'GENERAL_INSIGHT',
 ];
 
@@ -63,6 +60,16 @@ interface RichStoryEditorProps {
   onSaveDraft: (data: CreateStoryInput) => Promise<void>;
   onSubmitReview: (data: CreateStoryInput) => Promise<void>;
   isSaving?: boolean;
+  externalError?: string | null;
+}
+
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 export function RichStoryEditor({
@@ -71,6 +78,7 @@ export function RichStoryEditor({
   onSaveDraft,
   onSubmitReview,
   isSaving = false,
+  externalError = null,
 }: RichStoryEditorProps) {
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
 
@@ -85,13 +93,16 @@ export function RichStoryEditor({
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(
     initialData?.coverImageUrl || null
   );
-  const [coverImageKey, setCoverImageKey] = useState<string | null>(
-    initialData?.coverImageKey || null
+  const [coverImagePublicId, setCoverImagePublicId] = useState<string | null>(
+    initialData?.coverImagePublicId || null
+  );
+  const [embeddedMediaPublicIds, setEmbeddedMediaPublicIds] = useState<string[]>(
+    initialData?.embeddedMediaPublicIds || []
   );
 
   // Narrative Body & Word Count
   const [bodyHtml, setBodyHtml] = useState<string>(
-    initialData?.body || '<p>Start typing your inspiring journey here...</p>'
+    initialData?.body || '<p>Start writing your inspiring journey here...</p>'
   );
   const [wordCount, setWordCount] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -103,14 +114,19 @@ export function RichStoryEditor({
 
   // Inline Media Modal states
   const [inlineImageUrl, setInlineImageUrl] = useState<string | null>(null);
+  const [inlineImagePublicId, setInlineImagePublicId] = useState<string | null>(null);
   const [inlineImageCaption, setInlineImageCaption] = useState('');
+
   const [inlineVideoUrl, setInlineVideoUrl] = useState<string | null>(null);
+  const [inlineVideoPublicId, setInlineVideoPublicId] = useState<string | null>(null);
   const [inlineVideoCaption, setInlineVideoCaption] = useState('');
+
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
 
   const editorRef = useRef<HTMLDivElement>(null);
   const savedSelectionRange = useRef<Range | null>(null);
+  const initializedRef = useRef<boolean>(false);
 
   // Calculate word count from HTML
   const updateMetrics = useCallback((html: string) => {
@@ -128,12 +144,16 @@ export function RichStoryEditor({
 
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
-  // Initialize editor content once
+  // Initialize editor DOM once and sync if returning to edit tab
   useEffect(() => {
-    if (editorRef.current && !editorRef.current.innerHTML) {
+    if (!editorRef.current) return;
+    if (!initializedRef.current) {
+      editorRef.current.innerHTML = bodyHtml;
+      initializedRef.current = true;
+    } else if (activeTab === 'edit' && editorRef.current.innerHTML !== bodyHtml) {
       editorRef.current.innerHTML = bodyHtml;
     }
-  }, [bodyHtml]);
+  }, [activeTab, bodyHtml]);
 
   // Handle Tag Addition
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -151,49 +171,89 @@ export function RichStoryEditor({
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
-  // Save selection before opening modals
-  const saveSelection = () => {
-    if (typeof window === 'undefined') return;
+  // Save selection only when caret/range is inside editorRef
+  const saveSelection = useCallback(() => {
+    if (typeof window === 'undefined' || !editorRef.current) return;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
-      savedSelectionRange.current = sel.getRangeAt(0);
+      const range = sel.getRangeAt(0);
+      if (editorRef.current.contains(range.commonAncestorContainer)) {
+        savedSelectionRange.current = range.cloneRange();
+      }
     }
-  };
+  }, []);
 
-  const restoreSelection = () => {
-    if (typeof window === 'undefined') return;
-    if (savedSelectionRange.current) {
+  // Safely restore selection inside editorRef; returns true if restored
+  const restoreSelection = useCallback((): boolean => {
+    if (typeof window === 'undefined' || !editorRef.current) return false;
+    const range = savedSelectionRange.current;
+    if (range && editorRef.current.contains(range.commonAncestorContainer)) {
+      editorRef.current.focus();
       const sel = window.getSelection();
       if (sel) {
         sel.removeAllRanges();
-        sel.addRange(savedSelectionRange.current);
+        sel.addRange(range);
+        return true;
       }
     }
-  };
+    return false;
+  }, []);
 
-  // Editor formatting commands
-  const executeCommand = (command: string, value: string | undefined = undefined) => {
-    if (typeof document === 'undefined') return;
-    editorRef.current?.focus();
-    document.execCommand(command, false, value);
+  const syncEditorHtml = useCallback(() => {
     if (editorRef.current) {
       const html = editorRef.current.innerHTML;
       setBodyHtml(html);
       updateMetrics(html);
     }
+  }, [updateMetrics]);
+
+  // Editor formatting commands (never lose selection on toolbar click)
+  const executeCommand = (command: string, value: string | undefined = undefined) => {
+    if (typeof document === 'undefined' || !editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand(command, false, value);
+    syncEditorHtml();
+    saveSelection();
+  };
+
+  // Insert rich HTML block at saved cursor position, or append cleanly at end
+  const insertHtmlAtCursor = (html: string) => {
+    if (typeof document === 'undefined' || !editorRef.current) return;
+
+    const restored = restoreSelection();
+    if (restored) {
+      const inserted = document.execCommand('insertHTML', false, html);
+      if (!inserted) {
+        editorRef.current.insertAdjacentHTML('beforeend', html);
+      }
+    } else {
+      editorRef.current.focus();
+      editorRef.current.insertAdjacentHTML('beforeend', html);
+    }
+
+    syncEditorHtml();
+    saveSelection();
   };
 
   // Insert Inline Image Figure
   const handleInsertImage = () => {
     if (!inlineImageUrl) return;
-    restoreSelection();
-    const captionHtml = inlineImageCaption
-      ? `<figcaption>${inlineImageCaption}</figcaption>`
+    const safeAlt = escapeHtmlText(inlineImageCaption.trim() || 'Story illustration');
+    const captionHtml = inlineImageCaption.trim()
+      ? `<figcaption>${escapeHtmlText(inlineImageCaption.trim())}</figcaption>`
       : '';
-    const figureHtml = `<figure class="my-6 rounded-xl overflow-hidden border border-slate-200"><img src="${inlineImageUrl}" alt="${inlineImageCaption || 'Story Image'}" class="w-full object-cover" />${captionHtml}</figure><p><br/></p>`;
+    const figureHtml = `<figure class="my-6 rounded-xl overflow-hidden border border-slate-200"><img src="${inlineImageUrl}" alt="${safeAlt}" class="w-full object-cover" />${captionHtml}</figure><p><br/></p>`;
 
-    executeCommand('insertHTML', figureHtml);
+    insertHtmlAtCursor(figureHtml);
+
+    if (inlineImagePublicId) {
+      setEmbeddedMediaPublicIds((prev) =>
+        prev.includes(inlineImagePublicId) ? prev : [...prev, inlineImagePublicId]
+      );
+    }
+
     setInlineImageUrl(null);
+    setInlineImagePublicId(null);
     setInlineImageCaption('');
     setShowImageModal(false);
   };
@@ -201,45 +261,45 @@ export function RichStoryEditor({
   // Insert Inline Video Figure
   const handleInsertVideo = () => {
     if (!inlineVideoUrl) return;
-    restoreSelection();
-    const captionHtml = inlineVideoCaption
-      ? `<figcaption>${inlineVideoCaption}</figcaption>`
+    const videoMime = inlineVideoUrl.toLowerCase().endsWith('.webm')
+      ? 'video/webm'
+      : 'video/mp4';
+    const captionHtml = inlineVideoCaption.trim()
+      ? `<figcaption>${escapeHtmlText(inlineVideoCaption.trim())}</figcaption>`
       : '';
-    const figureHtml = `<figure class="my-6 rounded-xl overflow-hidden border border-slate-200"><video controls preload="metadata" playsinline class="w-full rounded-xl"><source src="${inlineVideoUrl}" type="video/mp4" /></video>${captionHtml}</figure><p><br/></p>`;
+    const figureHtml = `<figure class="my-6 rounded-xl overflow-hidden border border-slate-200"><video controls preload="metadata" playsinline class="w-full rounded-xl"><source src="${inlineVideoUrl}" type="${videoMime}" /></video>${captionHtml}</figure><p><br/></p>`;
 
-    executeCommand('insertHTML', figureHtml);
+    insertHtmlAtCursor(figureHtml);
+
+    if (inlineVideoPublicId) {
+      setEmbeddedMediaPublicIds((prev) =>
+        prev.includes(inlineVideoPublicId) ? prev : [...prev, inlineVideoPublicId]
+      );
+    }
+
     setInlineVideoUrl(null);
+    setInlineVideoPublicId(null);
     setInlineVideoCaption('');
     setShowVideoModal(false);
   };
 
   // Insert Link
   const handleInsertLink = () => {
-    if (!linkUrl) return;
-    restoreSelection();
+    if (!linkUrl.trim()) return;
     let safeUrl = linkUrl.trim();
     if (!/^https?:\/\//i.test(safeUrl)) {
       safeUrl = `https://${safeUrl}`;
     }
-    const displayText = linkText.trim() || safeUrl;
-    const linkHtml = `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${displayText}</a>`;
-    executeCommand('insertHTML', linkHtml);
+    const displayText = escapeHtmlText(linkText.trim() || safeUrl);
+    const linkHtml = `<a href="${escapeHtmlText(safeUrl)}" target="_blank" rel="noopener noreferrer">${displayText}</a>`;
+    insertHtmlAtCursor(linkHtml);
     setLinkUrl('');
     setLinkText('');
     setShowLinkModal(false);
   };
 
-  // Handle Input Changes in contentEditable
-  const handleEditorInput = () => {
-    if (editorRef.current) {
-      const html = editorRef.current.innerHTML;
-      setBodyHtml(html);
-      updateMetrics(html);
-    }
-  };
-
-  // Validation
-  const validateStory = (): boolean => {
+  // Validation aligned with backend Zod schema
+  const validateStory = (isSubmitting: boolean): boolean => {
     if (!title.trim() || title.trim().length < 5) {
       setValidationError('Title must be at least 5 characters long.');
       return false;
@@ -248,8 +308,13 @@ export function RichStoryEditor({
       setValidationError('Summary must be at least 10 characters long.');
       return false;
     }
-    if (wordCount < 10) {
-      setValidationError('Story narrative is too brief. Please write at least a few paragraphs.');
+    const plainBody = bodyHtml.replace(/<[^>]*>/g, '').trim();
+    if (bodyHtml.trim().length < 20 || plainBody.length < 10) {
+      setValidationError('Story body must be at least 20 characters long.');
+      return false;
+    }
+    if (isSubmitting && wordCount < 10) {
+      setValidationError('Story narrative is too brief. Please write at least a few sentences before submitting.');
       return false;
     }
     setValidationError(null);
@@ -263,24 +328,21 @@ export function RichStoryEditor({
     category,
     tags,
     coverImageUrl,
-    coverImageKey,
+    coverImagePublicId,
+    embeddedMediaPublicIds,
   });
 
   const handleDraftSubmit = async () => {
-    if (!title.trim()) {
-      setValidationError('Please provide at least a title for your draft.');
-      return;
-    }
-    setValidationError(null);
+    if (!validateStory(false)) return;
     await onSaveDraft(getPayload());
   };
 
   const handlePublishSubmit = async () => {
-    if (!validateStory()) return;
+    if (!validateStory(true)) return;
     await onSubmitReview(getPayload());
   };
 
-  // Mock object for live preview
+  // Live preview object
   const previewStory: StoryDetail = {
     id: initialData?.id || 'preview-id',
     universityId: 'uni-1',
@@ -291,6 +353,7 @@ export function RichStoryEditor({
     category,
     tags,
     coverImageUrl,
+    coverImagePublicId,
     readingTimeMinutes: readingTime,
     status: (initialData?.status as StoryDetail['status']) || 'DRAFT',
     createdAt: new Date().toISOString(),
@@ -307,6 +370,12 @@ export function RichStoryEditor({
     },
   };
 
+  const displayedError = validationError || externalError;
+
+  const preventFocusLoss = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       {/* Editorial Note Alert if changes were requested */}
@@ -315,7 +384,9 @@ export function RichStoryEditor({
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
             <div>
-              <p className="font-semibold text-amber-950">Editorial Feedback from University Moderators</p>
+              <p className="font-semibold text-amber-950">
+                Editorial Feedback from University Moderators
+              </p>
               <p className="mt-1 text-amber-800 leading-relaxed">{initialData.ownerVisibleNote}</p>
             </div>
           </div>
@@ -364,323 +435,356 @@ export function RichStoryEditor({
         </div>
       </div>
 
-      {validationError && (
+      {displayedError && (
         <div className="mb-6 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <AlertCircle className="h-4 w-4 shrink-0" />
-          <span>{validationError}</span>
+          <span>{displayedError}</span>
         </div>
       )}
 
-      {activeTab === 'preview' ? (
+      {/* Live Preview Panel */}
+      {activeTab === 'preview' && (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-4 inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 border border-blue-200">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Live Medium-Style Reader Preview</span>
           </div>
-          <StoryReader story={previewStory} backLabel="Return to Editor" backHref="#" />
-        </div>
-      ) : (
-        <div className="space-y-8 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm">
-          {/* Cover Hero Image Uploader */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-              Hero Cover Image (16:9 Recommended)
-            </label>
-            <div className="relative">
-              <MediaUploader
-                purpose="STORY_MEDIA"
-                accept="image"
-                aspectRatio="16:9"
-                maxSizeMB={5}
-                currentUrl={coverImageUrl}
-                currentPublicId={coverImageKey}
-                onUploadComplete={(asset) => {
-                  setCoverImageUrl(asset.url);
-                  setCoverImageKey(asset.publicId);
-                }}
-                onRemove={() => {
-                  setCoverImageUrl(null);
-                  setCoverImageKey(null);
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Category Selector */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-              Story Category
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {CATEGORY_OPTIONS.map((cat) => {
-                const isSelected = category === cat;
-                const colors = STORY_CATEGORY_COLORS[cat];
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategory(cat)}
-                    className={cn(
-                      'flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-semibold transition-all text-center',
-                      isSelected
-                        ? `${colors.badge} ring-2 ring-blue-500 shadow-2xs`
-                        : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                    )}
-                  >
-                    <span className={cn('h-2 w-2 rounded-full', colors.dot)} />
-                    <span className="truncate">{STORY_CATEGORY_LABELS[cat]}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Large Title Input */}
-          <div>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title of your story..."
-              className="w-full border-none p-0 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 placeholder:text-slate-300 focus:outline-hidden focus:ring-0"
-            />
-          </div>
-
-          {/* Summary / Subtitle Input */}
-          <div>
-            <textarea
-              rows={2}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Write a clear, compelling summary or key takeaway for the story card..."
-              className="w-full resize-none border-b border-slate-200 p-0 pb-3 text-base text-slate-600 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500 focus:ring-0"
-            />
-          </div>
-
-          {/* Sticky Formatting Toolbar */}
-          <div className="sticky top-4 z-20 flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-md backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => executeCommand('formatBlock', '<h2>')}
-              title="Heading 2"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Heading2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('formatBlock', '<h3>')}
-              title="Heading 3"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Heading3 className="h-4 w-4" />
-            </button>
-
-            <div className="h-5 w-[1px] bg-slate-200 mx-1" />
-
-            <button
-              type="button"
-              onClick={() => executeCommand('bold')}
-              title="Bold (Ctrl+B)"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Bold className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('italic')}
-              title="Italic (Ctrl+I)"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Italic className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('underline')}
-              title="Underline (Ctrl+U)"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Underline className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('strikeThrough')}
-              title="Strikethrough"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Strikethrough className="h-4 w-4" />
-            </button>
-
-            <div className="h-5 w-[1px] bg-slate-200 mx-1" />
-
-            <button
-              type="button"
-              onClick={() => executeCommand('formatBlock', '<blockquote>')}
-              title="Quote block"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Quote className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('insertUnorderedList')}
-              title="Bullet List"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <List className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('insertOrderedList')}
-              title="Numbered List"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <ListOrdered className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => executeCommand('insertHorizontalRule')}
-              title="Horizontal Divider"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-
-            <div className="h-5 w-[1px] bg-slate-200 mx-1" />
-
-            {/* Link & Media Inserts */}
-            <button
-              type="button"
-              onClick={() => {
-                saveSelection();
-                setShowLinkModal(true);
-              }}
-              title="Insert Link"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <LinkIcon className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                saveSelection();
-                setShowImageModal(true);
-              }}
-              title="Insert Inline Image (Cloudinary)"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <ImageIcon className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                saveSelection();
-                setShowVideoModal(true);
-              }}
-              title="Insert Inline Video (Cloudinary MP4)"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
-            >
-              <VideoIcon className="h-4 w-4" />
-            </button>
-
-            {/* Metrics */}
-            <div className="ml-auto flex items-center gap-3 pr-2 text-xs text-slate-500">
-              <span>{wordCount} words</span>
-              <span className="flex items-center gap-1 font-medium text-slate-700">
-                <Clock className="h-3 w-3 text-slate-400" />
-                ~{readingTime} min read
-              </span>
-            </div>
-          </div>
-
-          {/* Narrative contentEditable Surface */}
-          <div
-            ref={editorRef}
-            contentEditable
-            onInput={handleEditorInput}
-            onBlur={handleEditorInput}
-            className={cn(
-              'min-h-[400px] w-full rounded-xl border border-slate-200 p-6 font-serif text-lg leading-relaxed text-slate-800 focus:border-blue-400 focus:outline-hidden focus:ring-2 focus:ring-blue-100',
-              'prose prose-slate max-w-none',
-              'prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900',
-              'prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-3',
-              'prose-h3:text-xl sm:prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-2',
-              'prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-700',
-              'prose-a:text-blue-600 prose-a:underline',
-              '[&_figure]:my-6 [&_figure]:rounded-xl [&_figure]:overflow-hidden [&_figure]:border [&_figure]:border-slate-200',
-              '[&_figcaption]:bg-slate-50 [&_figcaption]:py-2 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:italic [&_figcaption]:text-slate-500'
-            )}
-            style={{ minHeight: '380px' }}
+          <StoryReader
+            story={previewStory}
+            backLabel="Return to Editor"
+            onBackClick={() => setActiveTab('edit')}
+            authorProfileHref={null}
           />
-
-          {/* Tags Section */}
-          <div className="border-t border-slate-200 pt-6">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-              Tags (Up to 5)
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
-                >
-                  #{tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-slate-900"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-
-              {tags.length < 5 && (
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={(e) => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  placeholder="Add tag and press Enter..."
-                  className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-6">
-            <div className="text-xs text-slate-500">
-              {initialData?.status === 'PUBLISHED' && (
-                <span className="text-amber-600 font-medium">
-                  Note: Editing will automatically return this story to Under Review.
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <button
-                type="button"
-                onClick={handleDraftSubmit}
-                disabled={isSaving}
-                className="w-full sm:w-auto rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                {isSaving ? 'Saving...' : 'Save as Draft'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePublishSubmit}
-                disabled={isSaving}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>Submit for Editorial Review</span>
-              </button>
-            </div>
-          </div>
         </div>
       )}
+
+      {/* Editor Panel — Kept mounted via CSS hidden so Preview -> Edit never wipes content */}
+      <div
+        className={cn(
+          'space-y-8 bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm',
+          activeTab === 'preview' && 'hidden'
+        )}
+      >
+        {/* Cover Hero Image Uploader */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+            Hero Cover Image (16:9 Recommended)
+          </label>
+          <div className="relative">
+            <MediaUploader
+              purpose="STORY_MEDIA"
+              accept="image"
+              aspectRatio="16:9"
+              maxSizeMB={5}
+              currentUrl={coverImageUrl}
+              currentPublicId={coverImagePublicId}
+              onUploadComplete={(asset) => {
+                setCoverImageUrl(asset.url);
+                setCoverImagePublicId(asset.publicId);
+              }}
+              onRemove={() => {
+                setCoverImageUrl(null);
+                setCoverImagePublicId(null);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Category Selector */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+            Story Category
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {CATEGORY_OPTIONS.map((cat) => {
+              const isSelected = category === cat;
+              const colors = STORY_CATEGORY_COLORS[cat];
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategory(cat)}
+                  className={cn(
+                    'flex items-center justify-center gap-2 rounded-lg border p-2.5 text-xs font-semibold transition-all text-center',
+                    isSelected
+                      ? `${colors.badge} ring-2 ring-blue-500 shadow-2xs`
+                      : 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                  )}
+                >
+                  <span className={cn('h-2 w-2 rounded-full', colors.dot)} />
+                  <span className="truncate">{STORY_CATEGORY_LABELS[cat]}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Large Title Input */}
+        <div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title of your story..."
+            maxLength={120}
+            className="w-full border-none p-0 text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 placeholder:text-slate-300 focus:outline-hidden focus:ring-0"
+          />
+        </div>
+
+        {/* Summary / Subtitle Input */}
+        <div>
+          <textarea
+            rows={2}
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            maxLength={300}
+            placeholder="Write a clear, compelling summary or key takeaway for the story card..."
+            className="w-full resize-none border-b border-slate-200 p-0 pb-3 text-base text-slate-600 placeholder:text-slate-400 focus:outline-hidden focus:border-blue-500 focus:ring-0"
+          />
+        </div>
+
+        {/* Sticky Formatting Toolbar */}
+        <div className="sticky top-4 z-20 flex flex-wrap items-center gap-1 rounded-xl border border-slate-200 bg-white/95 p-1.5 shadow-md backdrop-blur-md">
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('formatBlock', '<h2>')}
+            title="Heading 2"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Heading2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('formatBlock', '<h3>')}
+            title="Heading 3"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Heading3 className="h-4 w-4" />
+          </button>
+
+          <div className="h-5 w-[1px] bg-slate-200 mx-1" />
+
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('bold')}
+            title="Bold (Ctrl+B)"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Bold className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('italic')}
+            title="Italic (Ctrl+I)"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Italic className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('underline')}
+            title="Underline (Ctrl+U)"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Underline className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('strikeThrough')}
+            title="Strikethrough"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </button>
+
+          <div className="h-5 w-[1px] bg-slate-200 mx-1" />
+
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('formatBlock', '<blockquote>')}
+            title="Quote block"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Quote className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('insertUnorderedList')}
+            title="Bullet List"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <List className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('insertOrderedList')}
+            title="Numbered List"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => executeCommand('insertHorizontalRule')}
+            title="Horizontal Divider"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+
+          <div className="h-5 w-[1px] bg-slate-200 mx-1" />
+
+          {/* Link & Media Inserts */}
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => {
+              saveSelection();
+              setShowLinkModal(true);
+            }}
+            title="Insert Link"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <LinkIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => {
+              saveSelection();
+              setShowImageModal(true);
+            }}
+            title="Insert Inline Image (Cloudinary)"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <ImageIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onMouseDown={preventFocusLoss}
+            onClick={() => {
+              saveSelection();
+              setShowVideoModal(true);
+            }}
+            title="Insert Inline Video (Cloudinary MP4/WebM)"
+            className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+          >
+            <VideoIcon className="h-4 w-4" />
+          </button>
+
+          {/* Metrics */}
+          <div className="ml-auto flex items-center gap-3 pr-2 text-xs text-slate-500">
+            <span>{wordCount} words</span>
+            <span className="flex items-center gap-1 font-medium text-slate-700">
+              <Clock className="h-3 w-3 text-slate-400" />
+              ~{readingTime} min read
+            </span>
+          </div>
+        </div>
+
+        {/* Narrative contentEditable Surface */}
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={syncEditorHtml}
+          onKeyUp={saveSelection}
+          onMouseUp={saveSelection}
+          onBlur={() => {
+            saveSelection();
+            syncEditorHtml();
+          }}
+          className={cn(
+            'min-h-[400px] w-full rounded-xl border border-slate-200 p-6 font-serif text-lg leading-relaxed text-slate-800 focus:border-blue-400 focus:outline-hidden focus:ring-2 focus:ring-blue-100',
+            'prose prose-slate max-w-none',
+            'prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900',
+            'prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-8 prose-h2:mb-3',
+            'prose-h3:text-xl sm:prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-2',
+            'prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-slate-700',
+            'prose-a:text-blue-600 prose-a:underline',
+            '[&_figure]:my-6 [&_figure]:rounded-xl [&_figure]:overflow-hidden [&_figure]:border [&_figure]:border-slate-200',
+            '[&_figcaption]:bg-slate-50 [&_figcaption]:py-2 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:italic [&_figcaption]:text-slate-500'
+          )}
+          style={{ minHeight: '380px' }}
+        />
+
+        {/* Tags Section */}
+        <div className="border-t border-slate-200 pt-6">
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+            Tags (Up to 5)
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTag(tag)}
+                  className="hover:text-slate-900"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+
+            {tags.length < 5 && (
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleAddTag}
+                placeholder="Add tag and press Enter..."
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-hidden"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200 pt-6">
+          <div className="text-xs text-slate-500">
+            {initialData?.status === 'PUBLISHED' && (
+              <span className="text-amber-600 font-medium">
+                Note: Editing a published story will automatically return it to Under Review.
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <button
+              type="button"
+              onClick={handleDraftSubmit}
+              disabled={isSaving}
+              className="w-full sm:w-auto rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save as Draft'}
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePublishSubmit}
+              disabled={isSaving}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-semibold text-white shadow-2xs hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              <span>Submit for Editorial Review</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Insert Image Modal */}
       {showImageModal && (
@@ -703,7 +807,10 @@ export function RichStoryEditor({
                 accept="image"
                 aspectRatio="free"
                 maxSizeMB={5}
-                onUploadComplete={(asset) => setInlineImageUrl(asset.url)}
+                onUploadComplete={(asset) => {
+                  setInlineImageUrl(asset.url);
+                  setInlineImagePublicId(asset.publicId);
+                }}
               />
 
               {inlineImageUrl && (
@@ -764,7 +871,10 @@ export function RichStoryEditor({
                 accept="video"
                 aspectRatio="16:9"
                 maxSizeMB={50}
-                onUploadComplete={(asset) => setInlineVideoUrl(asset.url)}
+                onUploadComplete={(asset) => {
+                  setInlineVideoUrl(asset.url);
+                  setInlineVideoPublicId(asset.publicId);
+                }}
               />
 
               {inlineVideoUrl && (
@@ -857,7 +967,7 @@ export function RichStoryEditor({
               </button>
               <button
                 type="button"
-                disabled={!linkUrl}
+                disabled={!linkUrl.trim()}
                 onClick={handleInsertLink}
                 className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
               >

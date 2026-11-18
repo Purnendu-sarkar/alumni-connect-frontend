@@ -19,6 +19,13 @@ interface StoryDetailViewProps {
 
 export function StoryDetailView({ id, currentRole, basePath }: StoryDetailViewProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const currentUser = useAuthStore((state) => state.user);
+
+  const isPublicView = basePath === '';
+  const backHref =
+    currentRole === 'MODERATOR' ? '/moderator/content' : `${basePath}/stories`;
+  const backLabel =
+    currentRole === 'MODERATOR' ? 'Back to Editorial Desk' : 'Back to Stories';
 
   const {
     data: story,
@@ -66,13 +73,13 @@ export function StoryDetailView({ id, currentRole, basePath }: StoryDetailViewPr
         </div>
         <h3 className="text-lg font-bold text-slate-900">Story Not Found</h3>
         <p className="mt-1 text-sm text-slate-500">
-          The requested success story may have been unpublish, removed, or is currently under editorial review.
+          The requested success story may have been unpublished, removed, or is currently under editorial review.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Button asChild variant="secondary" size="sm">
-            <Link href={`${basePath}/stories`}>
+            <Link href={backHref}>
               <ArrowLeft className="mr-1.5 h-4 w-4" />
-              Back to Stories
+              {backLabel}
             </Link>
           </Button>
           <Button size="sm" onClick={() => refetch()}>
@@ -84,11 +91,32 @@ export function StoryDetailView({ id, currentRole, basePath }: StoryDetailViewPr
     );
   }
 
+  const authorId = story.author?.id;
+  let authorProfileHref: string | null = null;
+  if (!isPublicView && authorId) {
+    if (currentRole === 'STUDENT') {
+      authorProfileHref = `/student/directory/${authorId}`;
+    } else if (currentRole === 'ALUMNI') {
+      authorProfileHref = `/alumni/directory/${authorId}`;
+    } else if (currentRole === 'SUPER_ADMIN') {
+      authorProfileHref = `/admin/users/${authorId}`;
+    }
+  }
+
+  const canReport = Boolean(
+    currentUser &&
+      (currentUser.role === 'STUDENT' || currentUser.role === 'ALUMNI') &&
+      authorId &&
+      currentUser.id !== authorId
+  );
+
   return (
     <StoryReader
       story={story}
-      backHref={`${basePath}/stories`}
-      backLabel="Back to Stories"
+      backHref={backHref}
+      backLabel={backLabel}
+      authorProfileHref={authorProfileHref}
+      canReport={canReport}
       showEditorialInfo={currentRole === 'SUPER_ADMIN' || currentRole === 'MODERATOR'}
     />
   );
