@@ -82,6 +82,9 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
     queryKey: ['admin-user-detail', id, accessToken],
     queryFn: () => getAdminUserDetail(accessToken, id),
     enabled: Boolean(accessToken && id),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const notify = (message: string, type: 'success' | 'error' = 'success') => {
@@ -95,6 +98,9 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setSuspendModalOpen(false);
       setSuspendReason('');
       notify(`User account successfully ${vars.isActive ? 'restored to active' : 'suspended'}.`);
@@ -110,6 +116,9 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setVerifyModal({ open: false, status: 'APPROVED' });
       setVerifyReason('');
       const statusLabel =

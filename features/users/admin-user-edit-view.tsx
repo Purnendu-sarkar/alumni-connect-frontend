@@ -73,6 +73,10 @@ function AdminUserEditForm({ user, basePath, accessToken }: AdminUserEditFormPro
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-user-detail', user.id] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       setFeedback({
         type: 'success',
         message: 'Institutional member record saved successfully.',

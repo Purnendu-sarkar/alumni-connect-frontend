@@ -38,6 +38,10 @@ export function AdminRolesView({ basePath = '/admin' }: AdminRolesViewProps) {
     queryKey: ['admin-roles-overview', accessToken],
     queryFn: () => getAdminRolesOverview(accessToken),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const data = rolesQuery.data?.data;
@@ -60,14 +64,20 @@ export function AdminRolesView({ basePath = '/admin' }: AdminRolesViewProps) {
           </Badge>
         }
         actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => rolesQuery.refetch()}
-            disabled={rolesQuery.isFetching}
-          >
-            <RefreshCw size={13} className={rolesQuery.isFetching ? 'animate-spin' : ''} /> Refresh
-          </Button>
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Sync Active
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => rolesQuery.refetch()}
+              disabled={rolesQuery.isFetching}
+            >
+              <RefreshCw size={13} className={rolesQuery.isFetching ? 'animate-spin' : ''} /> Refresh
+            </Button>
+          </div>
         }
       />
 

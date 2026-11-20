@@ -64,7 +64,8 @@ export function RegisterForm() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: 'STUDENT',
-      universitySlug: process.env.NEXT_PUBLIC_UNIVERSITY_SLUG || undefined,
+      universitySlug:
+        process.env.NEXT_PUBLIC_UNIVERSITY_SLUG || 'north-western-university',
       employmentStatus: 'Employed',
     },
   });
@@ -109,6 +110,10 @@ export function RegisterForm() {
         ...(Object.fromEntries(
           Object.entries(rest).filter(([, val]) => val !== '' && val !== undefined),
         ) as unknown as Omit<RegisterInput, 'skills' | 'interests'>),
+        universitySlug:
+          rest.universitySlug ||
+          process.env.NEXT_PUBLIC_UNIVERSITY_SLUG ||
+          'north-western-university',
         skills: skills ? skills.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
         interests: interests ? interests.split(',').map((i) => i.trim()).filter(Boolean) : undefined,
       };

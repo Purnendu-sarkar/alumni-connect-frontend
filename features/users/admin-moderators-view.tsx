@@ -92,6 +92,10 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
     queryKey: ['admin-moderators-overview', accessToken],
     queryFn: () => getAdminModerators(accessToken),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const inviteMutation = useMutation({
@@ -158,6 +162,8 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-moderators-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       setSuspendTarget(null);
       setSuspendReason('');
       showFeedback(
@@ -238,7 +244,11 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
           </Badge>
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Sync Active
+            </span>
             <Button
               variant="secondary"
               size="sm"
@@ -352,8 +362,14 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
             ) : (
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs divide-y divide-slate-100">
                 {moderators.map((mod) => {
+                  const stats = mod.stats ?? mod.activityStats ?? {
+                    jobsReviewed30d: 0,
+                    storiesReviewed30d: 0,
+                    activeClaimedJobs: 0,
+                    activeClaimedStories: 0,
+                  };
                   const totalClaimed =
-                    mod.stats.activeClaimedJobs + mod.stats.activeClaimedStories;
+                    stats.activeClaimedJobs + stats.activeClaimedStories;
 
                   return (
                     <div
@@ -391,11 +407,11 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
                           <div className="flex flex-wrap items-center gap-2 text-[11px]">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold">
                               <BriefcaseBusiness size={11} className="text-blue-600" />{' '}
-                              {mod.stats.jobsReviewed30d} jobs reviewed (30d)
+                              {stats.jobsReviewed30d} jobs reviewed (30d)
                             </span>
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-semibold">
                               <Sparkles size={11} className="text-purple-600" />{' '}
-                              {mod.stats.storiesReviewed30d} stories reviewed (30d)
+                              {stats.storiesReviewed30d} stories reviewed (30d)
                             </span>
                             <span
                               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-semibold ${
@@ -404,8 +420,8 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
                                   : 'bg-slate-100 text-slate-600'
                               }`}
                             >
-                              {mod.stats.activeClaimedJobs} claimed jobs ·{' '}
-                              {mod.stats.activeClaimedStories} claimed stories
+                              {stats.activeClaimedJobs} claimed jobs ·{' '}
+                              {stats.activeClaimedStories} claimed stories
                             </span>
                           </div>
                         </div>
@@ -708,7 +724,7 @@ export function AdminModeratorsView({ basePath }: AdminModeratorsViewProps) {
             });
           }}
           title={`Remove Moderator: ${removeTarget.name}`}
-          description={`Removing ${removeTarget.email} will deactivate their moderator account, terminate all active sessions, and automatically release ${removeTarget.stats.activeClaimedJobs} claimed job(s) and ${removeTarget.stats.activeClaimedStories} claimed story/stories back to the SUBMITTED moderation queue.`}
+          description={`Removing ${removeTarget.email} will deactivate their moderator account, terminate all active sessions, and automatically release ${removeTarget.stats?.activeClaimedJobs ?? removeTarget.activityStats?.activeClaimedJobs ?? 0} claimed job(s) and ${removeTarget.stats?.activeClaimedStories ?? removeTarget.activityStats?.activeClaimedStories ?? 0} claimed story/stories back to the SUBMITTED moderation queue.`}
           confirmLabel="Remove Moderator & Release Claims"
           variant="destructive"
           isLoading={removeMutation.isPending}

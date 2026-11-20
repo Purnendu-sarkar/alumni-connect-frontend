@@ -116,6 +116,10 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
         limit: 25,
       }),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const suspendMutation = useMutation({
@@ -130,6 +134,9 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
     }) => toggleUserSuspension(accessToken, userId, isActive, reason),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setTargetUser(null);
       setSuspendReason('');
@@ -160,6 +167,9 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setGraduateTarget(null);
       setGraduateReason('');
@@ -186,6 +196,8 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
       queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       setRevokeTarget(null);
       setRevokeReason('');
@@ -243,7 +255,11 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
           </Badge>
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Sync Active
+            </span>
             <Button
               variant="secondary"
               size="sm"
@@ -251,7 +267,7 @@ export function AdminUsersView({ basePath, roleFilterPreset }: AdminUsersViewPro
               disabled={usersQuery.isFetching}
             >
               <RefreshCw size={13} className={usersQuery.isFetching ? 'animate-spin' : ''} /> Refresh
-              Roster
+              Now
             </Button>
             <Button asChild size="sm">
               <Link href={`${basePath}/verification/pending`}>

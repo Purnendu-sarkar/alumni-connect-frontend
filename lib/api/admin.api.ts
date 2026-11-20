@@ -310,6 +310,13 @@ export interface ModeratorInvitation {
   } | null;
 }
 
+export interface ModeratorStaffStats {
+  jobsReviewed30d: number;
+  storiesReviewed30d: number;
+  activeClaimedJobs: number;
+  activeClaimedStories: number;
+}
+
 export interface ModeratorStaffItem {
   id: string;
   name: string;
@@ -320,12 +327,8 @@ export interface ModeratorStaffItem {
   verified: boolean;
   createdAt: string;
   updatedAt: string;
-  stats: {
-    jobsReviewed30d: number;
-    storiesReviewed30d: number;
-    activeClaimedJobs: number;
-    activeClaimedStories: number;
-  };
+  stats?: ModeratorStaffStats;
+  activityStats?: ModeratorStaffStats;
 }
 
 export interface ModeratorOverviewPayload {

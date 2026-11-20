@@ -96,6 +96,10 @@ export function AdminVerificationView({
         limit: 25,
       }),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const reviewMutation = useMutation({
@@ -112,6 +116,8 @@ export function AdminVerificationView({
       queryClient.invalidateQueries({ queryKey: ['admin-verifications'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-moderators'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-roles-overview'] });
       setRejectingUser(null);
       setRejectionReason('');
       showFeedback(
@@ -150,15 +156,21 @@ export function AdminVerificationView({
           </Badge>
         }
         actions={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => verificationsQuery.refetch()}
-            disabled={verificationsQuery.isFetching}
-          >
-            <RefreshCw size={13} className={verificationsQuery.isFetching ? 'animate-spin' : ''} />{' '}
-            Refresh Queue
-          </Button>
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live Sync Active
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => verificationsQuery.refetch()}
+              disabled={verificationsQuery.isFetching}
+            >
+              <RefreshCw size={13} className={verificationsQuery.isFetching ? 'animate-spin' : ''} />{' '}
+              Refresh Now
+            </Button>
+          </div>
         }
       />
 

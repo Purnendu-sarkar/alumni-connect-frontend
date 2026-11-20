@@ -45,12 +45,20 @@ export default function SuperAdminDashboardPage() {
     queryKey: ['admin-stats', accessToken],
     queryFn: () => getAdminStats(accessToken),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const auditLogsQuery = useQuery({
     queryKey: ['admin-audit-logs-summary', accessToken],
     queryFn: () => getAuditLogs(accessToken, { page: 1, limit: 5 }),
     enabled: Boolean(accessToken),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 15_000,
   });
 
   const stats = statsQuery.data?.data;
@@ -80,6 +88,21 @@ export default function SuperAdminDashboardPage() {
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                statsQuery.refetch();
+                auditLogsQuery.refetch();
+              }}
+              disabled={statsQuery.isFetching}
+            >
+              <RefreshCw
+                size={13}
+                className={statsQuery.isFetching ? 'animate-spin' : ''}
+              />{' '}
+              Refresh
+            </Button>
             <Button size="sm" variant="secondary" asChild>
               <Link href="/admin/users/moderators">
                 <UserPlus size={14} /> Invite Moderator
