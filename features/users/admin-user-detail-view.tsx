@@ -5,23 +5,22 @@ import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
+  ArrowRightLeft,
   Ban,
+  BriefcaseBusiness,
   Building2,
   Calendar,
   CheckCircle2,
   Clock,
-  ExternalLink,
-  GraduationCap,
+  Compass,
+  FileCheck2,
+  Handshake,
   KeyRound,
   LogOut,
-  Mail,
-  MapPin,
-  Phone,
+  Pencil,
   RefreshCw,
-  Shield,
   ShieldAlert,
-  ShieldCheck,
-  User,
+  Sparkles,
   UserCheck,
   XCircle,
 } from 'lucide-react';
@@ -29,20 +28,23 @@ import {
 import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/components/dashboard/confirm-dialog';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  changeAdminUserRole,
   getAdminUserDetail,
   reviewVerification,
+  sendAdminPasswordReset,
   terminateUserSessions,
   toggleUserSuspension,
   type AdminUserDetail,
 } from '@/lib/api/admin.api';
 import { useAuthStore } from '@/store/auth-store';
-import type { UserRole, VerificationStatus } from '@/types/domain';
+import type { UserRole } from '@/types/domain';
 
 interface AdminUserDetailViewProps {
   id: string;
@@ -53,6 +55,7 @@ interface AdminUserDetailViewProps {
 export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDetailViewProps) {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const currentUser = useAuthStore((state) => state.user);
 
   const [actionNotice, setActionNotice] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -67,6 +70,13 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
   const [verifyReason, setVerifyReason] = useState('');
 
   const [terminateSessionsModalOpen, setTerminateSessionsModalOpen] = useState(false);
+  const [sendResetModalOpen, setSendResetModalOpen] = useState(false);
+
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [nextRole, setNextRole] = useState<'STUDENT' | 'ALUMNI'>('ALUMNI');
+  const [roleGradYear, setRoleGradYear] = useState('');
+  const [roleBatch, setRoleBatch] = useState('');
+  const [roleReason, setRoleReason] = useState('');
 
   const userQuery = useQuery({
     queryKey: ['admin-user-detail', id, accessToken],
@@ -123,6 +133,38 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
     },
   });
 
+  const sendResetMutation = useMutation({
+    mutationFn: () => sendAdminPasswordReset(accessToken, id),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-detail', id] });
+      setSendResetModalOpen(false);
+      notify(res.data?.message || 'Password reset link dispatched to user email.');
+    },
+    onError: (err: unknown) => {
+      notify(err instanceof Error ? err.message : 'Failed to send password reset link.', 'error');
+    },
+  });
+
+  const changeRoleMutation = useMutation({
+    mutationFn: (input: {
+      role: 'STUDENT' | 'ALUMNI';
+      graduationYear?: string | null;
+      batch?: string | null;
+      reason: string;
+    }) => changeAdminUserRole(accessToken, id, input),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-detail', id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-users-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      setRoleModalOpen(false);
+      setRoleReason('');
+      notify(`User role transitioned to ${vars.role}. Active sessions were revoked.`);
+    },
+    onError: (err: unknown) => {
+      notify(err instanceof Error ? err.message : 'Failed to change user role.', 'error');
+    },
+  });
+
   if (userQuery.isLoading) {
     return (
       <div className="space-y-6 max-w-5xl py-6 animate-pulse">
@@ -161,6 +203,13 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
 
   const user: AdminUserDetail = userQuery.data.data;
   const isSuperAdminViewer = currentRole === 'SUPER_ADMIN';
+  const isSelf = currentUser?.id === user.id;
+  const canChangeRole =
+    isSuperAdminViewer && !isSelf && (user.role.name === 'STUDENT' || user.role.name === 'ALUMNI');
+  const isSuspendReasonValid = !user.isActive || suspendReason.trim().length >= 10;
+  const isVerifyReasonValid =
+    verifyModal.status === 'APPROVED' || verifyReason.trim().length >= 10;
+  const isRoleReasonValid = roleReason.trim().length >= 10;
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -203,24 +252,60 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
 
               {isSuperAdminViewer && (
                 <>
+                  <Button size="sm" variant="secondary" asChild>
+                    <Link href={`${basePath}/users/${user.id}/edit`}>
+                      <Pencil size={13} /> Edit Profile Record
+                    </Link>
+                  </Button>
+
                   <Button
                     size="sm"
-                    variant={user.isActive ? 'destructive' : 'primary'}
-                    onClick={() => {
-                      setSuspendReason('');
-                      setSuspendModalOpen(true);
-                    }}
+                    variant="secondary"
+                    onClick={() => setSendResetModalOpen(true)}
                   >
-                    {user.isActive ? (
-                      <>
-                        <Ban size={14} /> Suspend User
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck size={14} /> Reactivate User
-                      </>
-                    )}
+                    <KeyRound size={13} /> Send Reset Link
                   </Button>
+
+                  {canChangeRole && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setNextRole(user.role.name === 'STUDENT' ? 'ALUMNI' : 'STUDENT');
+                        setRoleGradYear(
+                          user.graduationYear ||
+                            user.expectedGraduationYear ||
+                            String(new Date().getFullYear()),
+                        );
+                        setRoleBatch(user.batch || '');
+                        setRoleReason('');
+                        setRoleModalOpen(true);
+                      }}
+                    >
+                      <ArrowRightLeft size={13} /> Change Role
+                    </Button>
+                  )}
+
+                  {!isSelf && (
+                    <Button
+                      size="sm"
+                      variant={user.isActive ? 'destructive' : 'primary'}
+                      onClick={() => {
+                        setSuspendReason('');
+                        setSuspendModalOpen(true);
+                      }}
+                    >
+                      {user.isActive ? (
+                        <>
+                          <Ban size={14} /> Suspend User
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck size={14} /> Reactivate User
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -348,6 +433,71 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
                   </div>
                 )}
               </div>
+
+              {/* Platform Activity Metrics */}
+              {user._count ? (
+                <div className="p-6 bg-white rounded-xl border border-slate-200 shadow-xs space-y-4">
+                  <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider m-0">
+                    Platform Engagement & Activity Summary
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <Handshake size={16} className="text-blue-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Connections</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.sentConnections + user._count.receivedConnections}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <Compass size={16} className="text-indigo-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Mentorships</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.mentoringRequests + user._count.menteeRequests}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <BriefcaseBusiness size={16} className="text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Jobs Posted</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.jobsPosted}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <FileCheck2 size={16} className="text-sky-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Job Applications</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.jobApplications}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <Calendar size={16} className="text-amber-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Event RSVPs</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.eventRsvps}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg flex items-center gap-2.5">
+                      <Sparkles size={16} className="text-purple-600 shrink-0" />
+                      <div>
+                        <span className="text-[11px] text-slate-400 block">Stories Authored</span>
+                        <strong className="text-sm text-slate-900">
+                          {user._count.authoredStories}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </TabsContent>
 
             {/* TAB 2: VERIFICATION & ACCREDITATION CONTROLS */}
@@ -633,25 +783,38 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
         confirmLabel={user.isActive ? 'Suspend Account' : 'Reactivate Account'}
         variant={user.isActive ? 'destructive' : 'primary'}
         isLoading={suspendMutation.isPending}
-        onConfirm={() =>
+        confirmDisabled={!isSuspendReasonValid}
+        onConfirm={() => {
+          if (!isSuspendReasonValid) return;
           suspendMutation.mutate({
             isActive: !user.isActive,
-            reason: suspendReason.trim() || undefined,
-          })
-        }
+            reason: user.isActive ? suspendReason.trim() : undefined,
+          });
+        }}
       >
         {user.isActive ? (
-          <div className="mt-3 text-left">
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Reason for Suspension (Optional):
+          <div className="mt-3 text-left space-y-1.5">
+            <label
+              htmlFor="detail-suspend-reason"
+              className="block text-xs font-bold text-slate-700"
+            >
+              Mandatory Reason for Suspension (minimum 10 characters) *
             </label>
             <textarea
+              id="detail-suspend-reason"
               value={suspendReason}
               onChange={(e) => setSuspendReason(e.target.value)}
-              placeholder="e.g. Inappropriate community conduct, identity mismatch..."
+              placeholder="e.g. Inappropriate community conduct or verified identity mismatch."
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:bg-white"
               rows={3}
             />
+            <p
+              className={`text-[11px] m-0 ${
+                isSuspendReasonValid ? 'text-emerald-600' : 'text-slate-500'
+              }`}
+            >
+              {suspendReason.trim().length}/10 minimum characters
+            </p>
           </div>
         ) : null}
       </ConfirmDialog>
@@ -683,28 +846,159 @@ export function AdminUserDetailView({ id, currentRole, basePath }: AdminUserDeta
         }
         variant={verifyModal.status === 'APPROVED' ? 'primary' : 'destructive'}
         isLoading={verifyMutation.isPending}
-        onConfirm={() =>
+        confirmDisabled={!isVerifyReasonValid}
+        onConfirm={() => {
+          if (!isVerifyReasonValid) return;
           verifyMutation.mutate({
             status: verifyModal.status,
-            reason: verifyReason.trim() || undefined,
-          })
-        }
+            reason: verifyModal.status === 'APPROVED' ? undefined : verifyReason.trim(),
+          });
+        }}
       >
         {verifyModal.status !== 'APPROVED' ? (
-          <div className="mt-3 text-left">
-            <label className="block text-xs font-bold text-slate-700 mb-1">
-              Reason for {verifyModal.status === 'REVOKED' ? 'Revocation' : 'Rejection'} (Required, min 3 chars):
+          <div className="mt-3 text-left space-y-1.5">
+            <label
+              htmlFor="detail-verify-reason"
+              className="block text-xs font-bold text-slate-700"
+            >
+              Mandatory Reason for {verifyModal.status === 'REVOKED' ? 'Revocation' : 'Rejection'}{' '}
+              (minimum 10 characters) *
             </label>
             <textarea
+              id="detail-verify-reason"
               value={verifyReason}
               onChange={(e) => setVerifyReason(e.target.value)}
-              placeholder="Explain the academic mismatch or accreditation reason..."
+              placeholder="Explain the academic mismatch or accreditation reason…"
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-rose-500 focus:bg-white"
               rows={3}
               required
             />
+            <p
+              className={`text-[11px] m-0 ${
+                isVerifyReasonValid ? 'text-emerald-600' : 'text-slate-500'
+              }`}
+            >
+              {verifyReason.trim().length}/10 minimum characters
+            </p>
           </div>
         ) : null}
+      </ConfirmDialog>
+
+      {/* Send Password Reset Dialog */}
+      <ConfirmDialog
+        isOpen={sendResetModalOpen}
+        onClose={() => setSendResetModalOpen(false)}
+        title={`Dispatch Password Reset: ${user.name}`}
+        description={`A secure single-use password reset link will be sent to ${user.email}. This action is recorded in the institutional audit log.`}
+        confirmLabel="Send Reset Link"
+        variant="primary"
+        isLoading={sendResetMutation.isPending}
+        onConfirm={() => sendResetMutation.mutate()}
+      />
+
+      {/* Change Role Dialog (STUDENT <-> ALUMNI) */}
+      <ConfirmDialog
+        isOpen={roleModalOpen}
+        onClose={() => {
+          setRoleModalOpen(false);
+          setRoleReason('');
+        }}
+        title={`Change Role: ${user.name}`}
+        description={
+          nextRole === 'ALUMNI'
+            ? `Transition ${user.name} from STUDENT to ALUMNI. Their accreditation will be marked APPROVED and active sessions will be revoked.`
+            : `Transition ${user.name} from ALUMNI to STUDENT. Open published jobs posted by this user will be closed and active sessions will be revoked.`
+        }
+        confirmLabel={`Transition to ${nextRole}`}
+        variant="primary"
+        isLoading={changeRoleMutation.isPending}
+        confirmDisabled={!isRoleReasonValid || nextRole === user.role.name}
+        onConfirm={() => {
+          if (!isRoleReasonValid || nextRole === user.role.name) return;
+          changeRoleMutation.mutate({
+            role: nextRole,
+            graduationYear: nextRole === 'ALUMNI' ? roleGradYear.trim() || null : undefined,
+            batch: roleBatch.trim() || null,
+            reason: roleReason.trim(),
+          });
+        }}
+      >
+        <div className="mt-3 space-y-3 text-left">
+          <div>
+            <label
+              htmlFor="detail-target-role"
+              className="block text-xs font-bold text-slate-700 mb-1"
+            >
+              Target Role
+            </label>
+            <select
+              id="detail-target-role"
+              value={nextRole}
+              onChange={(e) => setNextRole(e.target.value as 'STUDENT' | 'ALUMNI')}
+              className="w-full text-xs rounded-lg border border-slate-200 px-3 py-2 bg-white text-slate-800 focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+            >
+              <option value="ALUMNI">ALUMNI</option>
+              <option value="STUDENT">STUDENT</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            {nextRole === 'ALUMNI' ? (
+              <div>
+                <label
+                  htmlFor="detail-role-grad-year"
+                  className="block text-xs font-bold text-slate-700 mb-1"
+                >
+                  Graduation Year
+                </label>
+                <Input
+                  id="detail-role-grad-year"
+                  value={roleGradYear}
+                  onChange={(e) => setRoleGradYear(e.target.value)}
+                  placeholder="e.g. 2026"
+                />
+              </div>
+            ) : null}
+            <div>
+              <label
+                htmlFor="detail-role-batch"
+                className="block text-xs font-bold text-slate-700 mb-1"
+              >
+                Batch / Cohort
+              </label>
+              <Input
+                id="detail-role-batch"
+                value={roleBatch}
+                onChange={(e) => setRoleBatch(e.target.value)}
+                placeholder="e.g. 2022"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              htmlFor="detail-role-reason"
+              className="block text-xs font-bold text-slate-700 mb-1"
+            >
+              Mandatory Audit Reason (minimum 10 characters) *
+            </label>
+            <textarea
+              id="detail-role-reason"
+              rows={3}
+              value={roleReason}
+              onChange={(e) => setRoleReason(e.target.value)}
+              placeholder="e.g. Verified graduation status against registrar degree conferral list."
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            />
+            <p
+              className={`text-[11px] m-0 mt-1 ${
+                isRoleReasonValid ? 'text-emerald-600' : 'text-slate-500'
+              }`}
+            >
+              {roleReason.trim().length}/10 minimum characters
+            </p>
+          </div>
+        </div>
       </ConfirmDialog>
 
       {/* Terminate Sessions Dialog */}

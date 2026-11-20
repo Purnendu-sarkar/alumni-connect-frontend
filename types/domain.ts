@@ -115,6 +115,11 @@ export interface VerificationItem {
   verifiedAt: string | null;
   createdAt: string;
   role: { id: string; name: UserRole };
+  departmentRef?: { id: string; name: string; code: string } | null;
+  signals?: {
+    emailDomainValid: boolean;
+    duplicateIdCount: number;
+  };
 }
 
 export type JobStatus =

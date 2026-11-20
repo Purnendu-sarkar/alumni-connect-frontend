@@ -58,6 +58,7 @@ export default function SuperAdminDashboardPage() {
 
   const totalUsers = stats?.totalUsers ?? 0;
   const pendingVerifications = stats?.pendingVerifications ?? 0;
+  const pendingEmailVerifications = stats?.pendingEmailVerifications ?? 0;
   const approvedUsers = stats?.approvedUsers ?? 0;
   const totalJobs = stats?.totalJobs ?? 0;
   const pendingJobs = stats?.pendingJobs ?? 0;
@@ -127,7 +128,11 @@ export default function SuperAdminDashboardPage() {
           <StatCard
             label="Pending Verifications"
             value={pendingVerifications}
-            subtext="Awaiting credential check"
+            subtext={
+              pendingEmailVerifications > 0
+                ? `Ready for check · ${pendingEmailVerifications} awaiting email`
+                : 'Ready for accreditation check'
+            }
             icon={ShieldAlert}
             iconColor={pendingVerifications > 0 ? '#D97706' : '#16A34A'}
             href="/admin/verification/pending"

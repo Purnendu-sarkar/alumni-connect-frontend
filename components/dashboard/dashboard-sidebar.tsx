@@ -200,6 +200,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
             { href: '/admin/users/students', label: 'Student Roster', icon: GraduationCap },
             { href: '/admin/users/alumni', label: 'Alumni Roster', icon: UserCheck },
             { href: '/admin/users/moderators', label: 'Moderator Staff', icon: Shield },
+            { href: '/admin/roles', label: 'Roles & Permissions', icon: Key },
           ],
         },
         {

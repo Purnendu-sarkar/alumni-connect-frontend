@@ -15,6 +15,7 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   variant?: 'destructive' | 'primary';
   isLoading?: boolean;
+  confirmDisabled?: boolean;
   children?: ReactNode;
 }
 
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   variant = 'destructive',
   isLoading = false,
+  confirmDisabled = false,
   children,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,7 @@ export function ConfirmDialog({
                 variant={variant === 'destructive' ? 'destructive' : 'primary'}
                 size="sm"
                 onClick={onConfirm}
-                disabled={isLoading}
+                disabled={isLoading || confirmDisabled}
               >
                 {isLoading ? 'Processing…' : confirmLabel}
               </Button>

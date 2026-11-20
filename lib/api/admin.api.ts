@@ -6,6 +6,7 @@ export interface VerificationQueryParams {
   limit?: number;
   role?: UserRole;
   status?: VerificationStatus;
+  emailVerified?: 'ALL' | 'VERIFIED' | 'UNVERIFIED';
   search?: string;
 }
 
@@ -18,6 +19,7 @@ export function getVerifications(
   if (filters.limit) params.set('limit', String(filters.limit));
   if (filters.role) params.set('role', filters.role);
   if (filters.status) params.set('status', filters.status);
+  if (filters.emailVerified) params.set('emailVerified', filters.emailVerified);
   if (filters.search) params.set('search', filters.search);
 
   const queryStr = params.toString() ? `?${params.toString()}` : '';
@@ -32,9 +34,11 @@ export interface AdminUserItem {
   email: string;
   batch: string | null;
   department: string | null;
+  departmentId?: string | null;
   studentId: string | null;
   academicId: string | null;
   currentSemester: string | null;
+  expectedGraduationYear?: string | null;
   graduationYear: string | null;
   employmentStatus: string | null;
   currentCompany: string | null;
@@ -84,6 +88,8 @@ export interface AdminUserDetail {
   name: string;
   email: string;
   department: string | null;
+  departmentId?: string | null;
+  departmentRef?: { id: string; name: string; code: string } | null;
   batch: string | null;
   studentId: string | null;
   currentSemester: string | null;
@@ -116,6 +122,16 @@ export interface AdminUserDetail {
   updatedAt: string;
   role: { id: string; name: UserRole; description?: string };
   university: { id: string; name: string; slug: string; domain: string };
+  _count?: {
+    sentConnections: number;
+    receivedConnections: number;
+    mentoringRequests: number;
+    menteeRequests: number;
+    jobsPosted: number;
+    jobApplications: number;
+    eventRsvps: number;
+    authoredStories: number;
+  };
   refreshTokens: Array<{
     id: string;
     createdAt: string;
@@ -137,6 +153,60 @@ export function getAdminUserDetail(accessToken: string | null, userId: string) {
   return apiClient<AdminUserDetail>(`/admin/users/${userId}`, {
     accessToken,
   });
+}
+
+export interface UpdateAdminUserPayload {
+  name?: string;
+  departmentId?: string | null;
+  department?: string | null;
+  batch?: string | null;
+  graduationYear?: string | null;
+  studentId?: string | null;
+  academicId?: string | null;
+  currentSemester?: string | null;
+  expectedGraduationYear?: string | null;
+  position?: string | null;
+  currentCompany?: string | null;
+  employmentStatus?: string | null;
+}
+
+export function updateAdminUser(
+  accessToken: string | null,
+  userId: string,
+  data: UpdateAdminUserPayload,
+) {
+  return apiClient<AdminUserItem>(`/admin/users/${userId}`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify(data),
+  });
+}
+
+export function changeAdminUserRole(
+  accessToken: string | null,
+  userId: string,
+  data: {
+    role: 'STUDENT' | 'ALUMNI';
+    graduationYear?: string | null;
+    batch?: string | null;
+    reason: string;
+  },
+) {
+  return apiClient<AdminUserItem>(`/admin/users/${userId}/role`, {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify(data),
+  });
+}
+
+export function sendAdminPasswordReset(accessToken: string | null, userId: string) {
+  return apiClient<{ success: boolean; message: string; deliveredViaSmtp: boolean }>(
+    `/admin/users/${userId}/send-reset`,
+    {
+      method: 'POST',
+      accessToken,
+    },
+  );
 }
 
 export function terminateUserSessions(accessToken: string | null, userId: string) {
@@ -173,12 +243,19 @@ export interface UniversityRecord {
 }
 
 export interface AdminStats {
+  scope?: 'SINGLE_UNIVERSITY';
   totalUsers: number;
-  pendingVerifications: number;
+  totalStudents: number;
+  totalAlumni: number;
+  totalModerators: number;
+  totalAdmins: number;
   approvedUsers: number;
+  pendingVerifications: number;
+  pendingEmailVerifications: number;
   totalJobs: number;
   pendingJobs: number;
-  totalUniversities: number;
+  auditLogsCount: number;
+  totalUniversities?: number;
 }
 
 export function getAdminStats(accessToken: string | null) {
@@ -233,12 +310,59 @@ export interface ModeratorInvitation {
   } | null;
 }
 
+export interface ModeratorStaffItem {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  department: string | null;
+  isActive: boolean;
+  verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  stats: {
+    jobsReviewed30d: number;
+    storiesReviewed30d: number;
+    activeClaimedJobs: number;
+    activeClaimedStories: number;
+  };
+}
+
+export interface ModeratorOverviewPayload {
+  moderators: ModeratorStaffItem[];
+  invitations: ModeratorInvitation[];
+}
+
+export function getAdminModerators(accessToken: string | null) {
+  return apiClient<ModeratorOverviewPayload>('/admin/moderators', {
+    method: 'GET',
+    accessToken,
+  });
+}
+
+export function removeAdminModerator(
+  accessToken: string | null,
+  userId: string,
+  reason: string,
+) {
+  return apiClient<{
+    user: { id: string; name: string; email: string; isActive: boolean };
+    releasedJobsCount: number;
+    releasedStoriesCount: number;
+  }>(`/admin/moderators/${userId}/remove`, {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export function inviteModerator(accessToken: string | null, email: string) {
   return apiClient<{
     id: string;
     email: string;
     expiresAt: string;
     deliveredViaSmtp: boolean;
+    setupUrl?: string;
     invitationUrl?: string;
   }>('/admin/moderators/invite', {
     method: 'POST',
@@ -260,6 +384,7 @@ export function resendModeratorInvitation(accessToken: string | null, id: string
     email: string;
     expiresAt: string;
     deliveredViaSmtp: boolean;
+    setupUrl?: string;
     invitationUrl?: string;
   }>(`/admin/moderators/invitations/${id}/resend`, {
     method: 'POST',
@@ -270,6 +395,60 @@ export function resendModeratorInvitation(accessToken: string | null, id: string
 export function revokeModeratorInvitation(accessToken: string | null, id: string) {
   return apiClient<{ success: boolean; message: string }>(`/admin/moderators/invitations/${id}`, {
     method: 'DELETE',
+    accessToken,
+  });
+}
+
+export interface RoleSummaryItem {
+  name: UserRole;
+  description: string;
+  userCount: number;
+  permissionCount: number;
+}
+
+export interface PermissionMatrixRow {
+  key: string;
+  resource: string;
+  action: string;
+  description: string;
+  roles: {
+    STUDENT: boolean;
+    ALUMNI: boolean;
+    MODERATOR: boolean;
+    SUPER_ADMIN: boolean;
+  };
+}
+
+export interface SuperAdminRosterItem {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  isActive: boolean;
+  verified: boolean;
+  createdAt: string;
+}
+
+export interface RoleAuditLogEntry {
+  id: string;
+  action: string;
+  targetType: string | null;
+  targetId: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  actor?: { id: string; name: string; email: string } | null;
+}
+
+export interface AdminRolesOverview {
+  roles: RoleSummaryItem[];
+  permissionMatrix: PermissionMatrixRow[];
+  superAdmins: SuperAdminRosterItem[];
+  recentRoleAuditLogs: RoleAuditLogEntry[];
+}
+
+export function getAdminRolesOverview(accessToken: string | null) {
+  return apiClient<AdminRolesOverview>('/admin/roles', {
+    method: 'GET',
     accessToken,
   });
 }
