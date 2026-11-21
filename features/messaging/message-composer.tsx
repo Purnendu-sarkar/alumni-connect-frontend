@@ -2,20 +2,25 @@
 
 import { useState, useRef, useEffect } from 'react';
 import {
+  Check,
   FileText,
   Loader2,
   Paperclip,
   Send,
+  ShieldAlert,
   Smile,
+  UserPlus,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth-store';
 import { messagesApi } from '@/lib/api/messages.api';
+import { sendConnectionRequest } from '@/lib/api/connection.api';
 import type { MessageAttachment, MessageDto, MessagingEligibility } from '@/types/domain';
 
 interface MessageComposerProps {
   conversationId: string;
+  targetUserId?: string;
   eligibility?: MessagingEligibility | null;
   replyingTo?: MessageDto | null;
   editingMessage?: MessageDto | null;
@@ -36,6 +41,7 @@ const EMOJI_PALETTE = ['😀', '😂', '😍', '👍', '🎉', '🔥', '🙏', '
 
 export function MessageComposer({
   conversationId,
+  targetUserId,
   eligibility,
   replyingTo,
   editingMessage,
@@ -55,6 +61,8 @@ export function MessageComposer({
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isSendingConnection, setIsSendingConnection] = useState(false);
+  const [connectionSent, setConnectionSent] = useState(false);
 
   // Sync text if editing
   useEffect(() => {
@@ -169,9 +177,59 @@ export function MessageComposer({
 
   // If user is restricted from messaging
   if (eligibility && !eligibility.eligible) {
+    const isConnectionsOnly = eligibility.reason === 'CONNECTIONS_ONLY';
+
+    const handleSendConnection = async () => {
+      if (!targetUserId || isSendingConnection || connectionSent) return;
+      try {
+        setIsSendingConnection(true);
+        await sendConnectionRequest(accessToken, { recipientId: targetUserId });
+        setConnectionSent(true);
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to send connection request';
+        alert(errorMsg);
+      } finally {
+        setIsSendingConnection(false);
+      }
+    };
+
     return (
-      <div className="p-3 bg-amber-50 border-t border-amber-200 text-amber-800 text-xs flex items-center justify-center text-center">
-        <span>{eligibility.message || 'Direct messaging is currently restricted.'}</span>
+      <div className="p-3.5 bg-amber-50 border-t border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+          <span>
+            {connectionSent
+              ? 'Connection request sent — messaging unlocks once accepted.'
+              : eligibility.message || 'Direct messaging is currently restricted.'}
+          </span>
+        </div>
+        {isConnectionsOnly && targetUserId && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={isSendingConnection || connectionSent}
+            onClick={() => void handleSendConnection()}
+            className="shrink-0 text-xs font-semibold bg-white border-amber-300 text-amber-900 hover:bg-amber-100/80 shadow-2xs"
+          >
+            {isSendingConnection ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                <span>Sending...</span>
+              </>
+            ) : connectionSent ? (
+              <>
+                <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                <span>Request Sent</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
+                <span>Send Connection Request</span>
+              </>
+            )}
+          </Button>
+        )}
       </div>
     );
   }

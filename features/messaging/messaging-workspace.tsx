@@ -9,7 +9,7 @@ import { useMessagingSocket } from './use-messaging-socket';
 import { ConversationSidebar } from './conversation-sidebar';
 import { ActiveChatThread } from './active-chat-thread';
 import { NewChatModal } from './new-chat-modal';
-import type { ConversationDto, MessageDto, UserRole } from '@/types/domain';
+import type { ConversationDto, MessageAttachment, MessageDto, UserRole } from '@/types/domain';
 
 interface MessagingWorkspaceProps {
   currentRole: UserRole;
@@ -82,6 +82,13 @@ export function MessagingWorkspace({
         if (isMounted && res.data?.id) {
           setActiveConvId(res.data.id);
           void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+
+          // Clear ?user query parameter from URL so page refresh won't snap back to initial user
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('user');
+            window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+          }
         }
       } catch (err) {
         console.error('Failed to initialize conversation with deep-linked user:', err);
@@ -147,7 +154,7 @@ export function MessagingWorkspace({
   const handleSendMessage = async (payload: {
     content: string;
     type?: 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO';
-    attachments?: any[];
+    attachments?: MessageAttachment[];
     replyToId?: string;
   }) => {
     if (!activeConvId) return;

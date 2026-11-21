@@ -26,6 +26,7 @@ import { MessageBubble } from './message-bubble';
 import { MessageComposer } from './message-composer';
 import type {
   ConversationDto,
+  MessageAttachment,
   MessageDto,
   MessagingEligibility,
 } from '@/types/domain';
@@ -46,7 +47,7 @@ interface ActiveChatThreadProps {
   onSendMessage: (payload: {
     content: string;
     type?: 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO';
-    attachments?: any[];
+    attachments?: MessageAttachment[];
     replyToId?: string;
   }) => Promise<void>;
   onEditMessage: (messageId: string, newContent: string) => Promise<void>;
@@ -336,6 +337,7 @@ export function ActiveChatThread({
       {/* Composer */}
       <MessageComposer
         conversationId={conversation.id}
+        targetUserId={other.id}
         eligibility={eligibility}
         replyingTo={replyingTo}
         editingMessage={editingMessage}

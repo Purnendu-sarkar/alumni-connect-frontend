@@ -68,8 +68,9 @@ export function NewChatModal({
         onConversationCreated(res.data.id);
         onClose();
       }
-    } catch (err: any) {
-      alert(err.message || 'Cannot start conversation with this member.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Cannot start conversation with this member.';
+      alert(message);
     } finally {
       setIsStarting(null);
     }
