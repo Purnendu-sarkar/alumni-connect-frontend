@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { RsvpControlPanel } from '@/components/events/rsvp-control-panel';
+import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import { getEventById } from '@/lib/api/events.api';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
@@ -174,9 +175,7 @@ export function EventDetailView({ id, currentRole, basePath }: EventDetailViewPr
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 m-0">
               About This Gathering
             </h3>
-            <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-              {eventData.description}
-            </div>
+            <SanitizedRichText content={eventData.description} className="text-sm text-slate-700 leading-relaxed" />
           </div>
 
           {/* Organizer Information */}

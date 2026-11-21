@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Info, LogIn, Mail } from 'lucide-react';
+import { CheckCircle2, LogIn, Mail, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -12,17 +12,27 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
-import { demoLogin, getDemoCapabilities, login, type DemoCapabilities } from '@/lib/api/auth.api';
+import {
+  getQuickAccessProfiles,
+  login,
+  quickAccessLogin,
+  type QuickAccessCapabilities,
+} from '@/lib/api/auth.api';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
 import { getAuthErrorMessage } from './auth-error';
 import { loginSchema, type LoginValues } from './auth.schemas';
 
-const DEFAULT_DEMO_ROLES: Array<{ role: UserRole; label: string; email: string }> = [
-  { role: 'STUDENT', label: 'Student', email: 'demo.student@demo.edu' },
-  { role: 'ALUMNI', label: 'Alumni', email: 'demo.alumni@demo.edu' },
-  { role: 'MODERATOR', label: 'Moderator', email: 'demo.moderator@demo.edu' },
-  { role: 'SUPER_ADMIN', label: 'Super Admin', email: 'demo.superadmin@demo.edu' },
+const DEFAULT_SHOWCASE_ROLES: Array<{
+  role: UserRole;
+  label: string;
+  name: string;
+  subtitle: string;
+}> = [
+  { role: 'SUPER_ADMIN', label: 'Super Admin', name: 'Platform Super Admin', subtitle: 'Platform Governance' },
+  { role: 'MODERATOR', label: 'Moderator', name: 'Kazi Moinul Islam', subtitle: 'CSE Faculty & Moderator' },
+  { role: 'ALUMNI', label: 'Alumni', name: 'Arif Gazi', subtitle: "BBA '16 · HRBP" },
+  { role: 'STUDENT', label: 'Student', name: 'Soumya Miah', subtitle: "CSE '22 · 8th Sem" },
 ];
 
 function getRoleHome(role?: UserRole): string {
@@ -62,14 +72,15 @@ export function LoginForm() {
     }
   }, []);
 
-  // Demo capability state
-  const [demoCapabilities, setDemoCapabilities] = useState<DemoCapabilities | null>({
+  // Quick-access showcase capability state
+  const [showcaseCapabilities, setShowcaseCapabilities] = useState<QuickAccessCapabilities | null>({
     enabled: true,
     environment: 'development',
-    roles: DEFAULT_DEMO_ROLES,
+    profiles: [],
+    roles: DEFAULT_SHOWCASE_ROLES.map((r) => ({ role: r.role, label: r.label, email: '' })),
   });
   const [loggingInRole, setLoggingInRole] = useState<UserRole | null>(null);
-  const [demoError, setDemoError] = useState<string | null>(null);
+  const [quickAccessError, setQuickAccessError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -79,14 +90,14 @@ export function LoginForm() {
 
   useEffect(() => {
     let isMounted = true;
-    getDemoCapabilities()
+    getQuickAccessProfiles()
       .then((res) => {
         if (isMounted && res.data?.enabled) {
-          setDemoCapabilities(res.data);
+          setShowcaseCapabilities(res.data);
         }
       })
       .catch(() => {
-        // Retain default development demo buttons if backend isn't responding
+        // Retain default development showcase buttons if backend is unreachable
       });
     return () => {
       isMounted = false;
@@ -112,17 +123,17 @@ export function LoginForm() {
     }
   };
 
-  const handleDemoLogin = async (role: UserRole) => {
-    setDemoError(null);
+  const handleQuickAccessLogin = async (role: UserRole) => {
+    setQuickAccessError(null);
     setLoggingInRole(role);
     try {
       queryClient.clear();
-      const response = await demoLogin(role);
-      if (!response.data) throw new Error('Demo session could not be created.');
+      const response = await quickAccessLogin(role);
+      if (!response.data) throw new Error('Showcase session could not be created.');
       setSession(response.data);
       router.replace(getRoleHome(role));
     } catch (error) {
-      setDemoError(getAuthErrorMessage(error));
+      setQuickAccessError(getAuthErrorMessage(error));
     } finally {
       setLoggingInRole(null);
     }
@@ -209,62 +220,93 @@ export function LoginForm() {
         </p>
       </div>
 
-      {/* Development Demo Access matching Screenshot 3 */}
-      {demoCapabilities?.enabled && demoCapabilities.roles?.length ? (
-        <div className="rounded-2xl bg-blue-50/70 border border-blue-100/90 p-4 space-y-2.5">
-          <div className="flex items-start gap-2">
-            <div className="p-1 rounded-md bg-blue-600/10 text-blue-600 shrink-0 mt-0.5">
-              <Info size={14} />
+      {/* Quick Role Access Gateway */}
+      {showcaseCapabilities?.enabled ? (
+        <div className="rounded-2xl bg-slate-50/90 border border-slate-200/90 p-4 space-y-3">
+          <div className="flex items-start gap-2.5">
+            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-600 shrink-0 mt-0.5">
+              <Sparkles size={15} />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900 m-0">Development Demo Access</p>
-              <p className="text-[11px] text-slate-500 m-0">Quick login for testing purposes:</p>
+              <p className="text-xs font-bold text-slate-900 m-0">Quick Role Access</p>
+              <p className="text-[11px] text-slate-500 m-0">One-click role login for live platform overview:</p>
             </div>
           </div>
 
-          {demoError ? (
+          {quickAccessError ? (
             <Alert variant="destructive">
-              <AlertDescription>{demoError}</AlertDescription>
+              <AlertDescription>{quickAccessError}</AlertDescription>
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            {demoCapabilities.roles.map((item) => {
-              const isCurrent = loggingInRole === item.role;
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            {DEFAULT_SHOWCASE_ROLES.map((defaultItem) => {
+              const liveProfile = showcaseCapabilities.profiles?.find((p) => p.role === defaultItem.role);
+              const displayName = liveProfile?.name || defaultItem.name;
+              const displaySubtitle = liveProfile?.designation || defaultItem.subtitle;
+              const isCurrent = loggingInRole === defaultItem.role;
+
               return (
                 <button
-                  key={item.role}
-                  id={`demo-login-${item.role.toLowerCase().replace('_', '-')}`}
+                  key={defaultItem.role}
+                  id={`quick-login-${defaultItem.role.toLowerCase().replace('_', '-')}`}
                   type="button"
-                  onClick={() => handleDemoLogin(item.role)}
+                  onClick={() => void handleQuickAccessLogin(defaultItem.role)}
                   disabled={Boolean(loggingInRole) || isSubmitting}
-                  className={`px-3 py-2 rounded-xl border text-left transition-all duration-150 flex items-center justify-between gap-2 cursor-pointer shadow-2xs ${
+                  className={`px-3 py-2.5 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between gap-1.5 cursor-pointer shadow-2xs ${
                     isCurrent
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white hover:bg-blue-50/80 hover:border-blue-200 border-slate-200 text-slate-800'
                   }`}
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{
+                          backgroundColor:
+                            defaultItem.role === 'SUPER_ADMIN'
+                              ? '#7c3aed'
+                              : defaultItem.role === 'MODERATOR'
+                              ? '#d97706'
+                              : defaultItem.role === 'ALUMNI'
+                              ? '#16a34a'
+                              : '#2563eb',
+                        }}
+                      />
+                      <span className={`text-[11px] font-bold uppercase tracking-wider truncate ${isCurrent ? 'text-white' : 'text-slate-700'}`}>
+                        {defaultItem.label}
+                      </span>
+                    </div>
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{
-                        backgroundColor:
-                          item.role === 'SUPER_ADMIN'
-                            ? '#7c3aed'
-                            : item.role === 'MODERATOR'
-                            ? '#d97706'
-                            : item.role === 'ALUMNI'
-                            ? '#16a34a'
-                            : '#2563eb',
-                      }}
-                    />
-                    <span className="text-xs font-semibold truncate">
-                      {isCurrent ? 'Logging in…' : item.label}
+                      className={`text-[9px] font-mono px-1.5 py-0.5 rounded-md shrink-0 ${
+                        isCurrent
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {defaultItem.role === 'SUPER_ADMIN'
+                        ? 'admin'
+                        : defaultItem.role === 'MODERATOR'
+                        ? 'mod'
+                        : defaultItem.role === 'ALUMNI'
+                        ? 'alumni'
+                        : 'student'}
                     </span>
                   </div>
-                  <span className={`text-[10px] font-mono shrink-0 ${isCurrent ? 'text-white/80' : 'text-slate-400'}`}>
-                    {item.role === 'SUPER_ADMIN' ? 'admin' : item.role === 'MODERATOR' ? 'mod' : item.role === 'ALUMNI' ? 'alumni' : 'student'}
-                  </span>
+
+                  <div className="min-w-0">
+                    <p className={`text-xs font-semibold truncate m-0 ${isCurrent ? 'text-white' : 'text-slate-900'}`}>
+                      {isCurrent ? 'Authenticating…' : displayName}
+                    </p>
+                    <p
+                      className={`text-[10px] truncate m-0 ${
+                        isCurrent ? 'text-white/80' : 'text-slate-500'
+                      }`}
+                    >
+                      {displaySubtitle}
+                    </p>
+                  </div>
                 </button>
               );
             })}

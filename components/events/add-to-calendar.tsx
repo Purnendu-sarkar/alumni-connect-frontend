@@ -2,6 +2,7 @@
 
 import { Calendar, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import type { EventDetail, EventCard } from '@/types/domain';
 
 interface AddToCalendarProps {
@@ -22,7 +23,8 @@ function generateICSContent(event: EventDetail | EventCard): string {
   const now = formatDateToICS(new Date().toISOString());
 
   const location = event.venue || event.onlineUrl || 'University Campus';
-  const cleanDescription = (event.description || '').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,');
+  const plainDesc = stripHtmlToPlainText(event.description || '');
+  const cleanDescription = plainDesc.replace(/\r?\n/g, '\\n').replace(/,/g, '\\,');
   const cleanTitle = (event.title || '').replace(/,/g, '\\,');
 
   return [

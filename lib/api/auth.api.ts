@@ -92,22 +92,38 @@ export function logout() {
   return apiClient<void>('/auth/logout', { method: 'POST' });
 }
 
-export interface DemoCapabilities {
+export interface ShowcaseProfile {
+  role: UserRole;
+  label: string;
+  name: string;
+  email: string;
+  department: string | null;
+  designation: string | null;
+  avatarUrl: string | null;
+}
+
+export interface QuickAccessCapabilities {
   enabled: boolean;
   environment: string;
-  roles: Array<{ role: UserRole; label: string; email: string }>;
+  profiles: ShowcaseProfile[];
+  roles: Array<{ role: UserRole; label: string; email: string; name?: string }>;
 }
 
-export function getDemoCapabilities() {
-  return apiClient<DemoCapabilities>('/auth/demo-capabilities', { method: 'GET' });
+export function getQuickAccessProfiles() {
+  return apiClient<QuickAccessCapabilities>('/auth/quick-access/profiles', { method: 'GET' });
 }
 
-export function demoLogin(role: UserRole) {
-  return apiClient<AuthSession>('/auth/demo-login', {
+export function quickAccessLogin(role: UserRole) {
+  return apiClient<AuthSession>('/auth/quick-access', {
     method: 'POST',
     body: JSON.stringify({ role }),
   });
 }
+
+// Aliases for backwards-compatibility
+export type DemoCapabilities = QuickAccessCapabilities;
+export const getDemoCapabilities = getQuickAccessProfiles;
+export const demoLogin = quickAccessLogin;
 
 export function forgotPassword(email: string) {
   return apiClient<{ message: string; debugToken?: string; resetUrl?: string }>(

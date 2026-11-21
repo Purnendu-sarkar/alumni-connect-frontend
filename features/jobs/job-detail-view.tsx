@@ -25,6 +25,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { JobApplyModal } from '@/components/jobs/job-apply-modal';
@@ -155,18 +156,14 @@ export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps)
           {/* Description */}
           <Card className="p-6 space-y-4">
             <h2 className="text-base font-bold text-slate-900 m-0">About the Role</h2>
-            <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {job.description}
-            </div>
+            <SanitizedRichText content={job.description} className="text-xs sm:text-sm text-slate-700 leading-relaxed" />
           </Card>
 
           {/* Requirements */}
           {job.requirements && (
             <Card className="p-6 space-y-4">
               <h2 className="text-base font-bold text-slate-900 m-0">Key Qualifications & Skills</h2>
-              <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {job.requirements}
-              </div>
+              <SanitizedRichText content={job.requirements} className="text-xs sm:text-sm text-slate-700 leading-relaxed" />
             </Card>
           )}
 

@@ -8,9 +8,9 @@ import { Calendar, Save, Send, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { MediaUploader } from '@/components/media/media-uploader';
+import { RichTextEditor } from '@/components/shared/rich-text-editor';
 import {
   createEvent,
   updateEvent,
@@ -313,14 +313,13 @@ export function EventCreateForm({ currentRole, basePath, editId }: EventCreateFo
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Event Description & Schedule *
             </label>
-            <Textarea
-              rows={6}
-              placeholder="Detailed description, keynote agenda, prerequisites, and registration instructions…"
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
+              placeholder="Detailed description, keynote agenda, prerequisites, and registration instructions…"
+              minHeight="180px"
               required
-              minLength={20}
-              className="text-xs"
+              helperText="Rich formatting supported. Switch between Write and Preview tabs to review."
             />
           </div>
 

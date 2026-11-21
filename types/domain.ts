@@ -159,6 +159,7 @@ export interface Job {
   id: string;
   title: string;
   description: string;
+  descriptionSnippet?: string;
   requirements?: string | null;
   company: string;
   category?: string | null;
@@ -224,6 +225,7 @@ export interface EventCard {
   title: string;
   slug?: string;
   description: string;
+  descriptionSnippet?: string;
   category: string;
   organizer?: string | null;
   mode: EventMode;

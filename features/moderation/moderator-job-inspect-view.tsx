@@ -30,6 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { StatusBadge } from '@/components/dashboard/status-badge';
@@ -305,16 +306,16 @@ export function ModeratorJobInspectView({ id, currentRole, basePath }: Moderator
 
             <div>
               <span className="text-[11px] font-bold text-slate-400 block mb-1">Description</span>
-              <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-line p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                {job.description}
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                <SanitizedRichText content={job.description} className="text-xs text-slate-700 leading-relaxed" />
               </div>
             </div>
 
             {job.requirements && (
               <div>
                 <span className="text-[11px] font-bold text-slate-400 block mb-1">Requirements</span>
-                <div className="text-xs text-slate-700 leading-relaxed whitespace-pre-line p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                  {job.requirements}
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                  <SanitizedRichText content={job.requirements} className="text-xs text-slate-700 leading-relaxed" />
                 </div>
               </div>
             )}

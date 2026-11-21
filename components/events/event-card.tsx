@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils/format';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import type { EventCard as EventCardType } from '@/types/domain';
 
 interface EventCardProps {
@@ -115,7 +116,7 @@ export function EventCard({ event, basePath = '' }: EventCardProps) {
 
         <CardContent className="px-4 py-2 space-y-2.5">
           <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-            {event.description}
+            {event.descriptionSnippet || stripHtmlToPlainText(event.description)}
           </p>
 
           <div className="pt-1 flex flex-col gap-1 text-xs text-slate-600">

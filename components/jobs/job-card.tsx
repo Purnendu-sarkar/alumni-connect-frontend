@@ -4,6 +4,7 @@ import { ArrowUpRight, BriefcaseBusiness, Building2, MapPin } from 'lucide-react
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { formatDate } from '@/lib/utils/format';
 import type { Job } from '@/types/domain';
 
@@ -44,7 +45,7 @@ export function JobCard({ job }: { job: Job }) {
 
           {job.description && (
             <p className="text-xs text-slate-600 mt-2.5 line-clamp-2 leading-relaxed m-0">
-              {job.description}
+              {job.descriptionSnippet || stripHtmlToPlainText(job.description)}
             </p>
           )}
         </CardContent>

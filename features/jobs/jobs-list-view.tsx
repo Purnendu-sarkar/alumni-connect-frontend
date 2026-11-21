@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { PageHeader } from '@/components/dashboard/page-header';
@@ -352,7 +353,7 @@ export function JobsListView({ currentRole, basePath }: JobsListViewProps) {
 
                   {job.description && (
                     <p className="text-xs text-slate-600 mt-3 line-clamp-2 leading-relaxed m-0">
-                      {job.description}
+                      {job.descriptionSnippet || stripHtmlToPlainText(job.description)}
                     </p>
                   )}
 

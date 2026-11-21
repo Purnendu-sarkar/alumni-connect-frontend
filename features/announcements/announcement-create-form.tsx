@@ -8,8 +8,8 @@ import { Megaphone, Save, Pin, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { PageHeader } from '@/components/dashboard/page-header';
+import { RichTextEditor } from '@/components/shared/rich-text-editor';
 import {
   createAnnouncement,
   updateAnnouncement,
@@ -199,14 +199,13 @@ export function AnnouncementCreateForm({
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Notice Content & Detailed Instructions (HTML allowed) *
             </label>
-            <Textarea
-              rows={8}
-              placeholder="Draft your announcement notice, directives, and relevant contact details here…"
+            <RichTextEditor
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={setBody}
+              placeholder="Draft your announcement notice, directives, and relevant contact details here…"
+              minHeight="200px"
               required
-              minLength={20}
-              className="text-xs"
+              helperText="Rich formatting supported. Switch between Write and Preview tabs to review."
             />
           </div>
 

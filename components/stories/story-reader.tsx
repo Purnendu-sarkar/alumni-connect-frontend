@@ -20,6 +20,7 @@ import type { StoryDetail, StoryAuthor } from '@/types/domain';
 import { useAuthStore } from '@/store/auth-store';
 import { reportStory } from '@/lib/api/stories.api';
 import { cn } from '@/lib/utils/cn';
+import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import {
   STORY_CATEGORY_COLORS,
   STORY_CATEGORY_LABELS,
@@ -290,25 +291,24 @@ export function StoryReader({
       )}
 
       {/* Story Narrative Content */}
-      <div
+      <SanitizedRichText
+        content={story.body}
         className={cn(
-          'story-content prose prose-slate max-w-none font-serif text-slate-800 leading-relaxed sm:text-lg',
-          'prose-headings:font-sans prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900',
-          'prose-h2:text-2xl sm:prose-h2:text-3xl prose-h2:mt-10 prose-h2:mb-4',
-          'prose-h3:text-xl sm:prose-h3:text-2xl prose-h3:mt-8 prose-h3:mb-3',
-          'prose-p:my-5 prose-p:leading-[1.8]',
-          'prose-blockquote:border-l-4 prose-blockquote:border-blue-600 prose-blockquote:pl-5 prose-blockquote:italic prose-blockquote:text-slate-700 prose-blockquote:my-6',
-          'prose-ul:list-disc prose-ul:my-5 prose-ul:pl-6',
-          'prose-ol:list-decimal prose-ol:my-5 prose-ol:pl-6',
-          'prose-li:my-2',
-          'prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-800',
-          'prose-hr:my-8 prose-hr:border-slate-200',
+          'story-content font-serif text-slate-800 leading-relaxed sm:text-lg',
+          '[&_h2]:font-sans [&_h2]:text-2xl sm:[&_h2]:text-3xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-slate-900 [&_h2]:mt-10 [&_h2]:mb-4',
+          '[&_h3]:font-sans [&_h3]:text-xl sm:[&_h3]:text-2xl [&_h3]:font-bold [&_h3]:tracking-tight [&_h3]:text-slate-900 [&_h3]:mt-8 [&_h3]:mb-3',
+          '[&_p]:my-5 [&_p]:leading-[1.8]',
+          '[&_blockquote]:border-l-4 [&_blockquote]:border-blue-600 [&_blockquote]:pl-5 [&_blockquote]:italic [&_blockquote]:text-slate-700 [&_blockquote]:my-6',
+          '[&_ul]:list-disc [&_ul]:my-5 [&_ul]:pl-6',
+          '[&_ol]:list-decimal [&_ol]:my-5 [&_ol]:pl-6',
+          '[&_li]:my-2',
+          '[&_a]:text-blue-600 [&_a]:underline hover:[&_a]:text-blue-800',
+          '[&_hr]:my-8 [&_hr]:border-slate-200',
           '[&_figure]:my-8 [&_figure]:overflow-hidden [&_figure]:rounded-xl [&_figure]:border [&_figure]:border-slate-200',
           '[&_figure_img]:w-full [&_figure_img]:h-auto [&_figure_img]:object-cover',
           '[&_figure_video]:w-full [&_figure_video]:rounded-xl',
           '[&_figcaption]:bg-slate-50 [&_figcaption]:py-2 [&_figcaption]:px-4 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:italic [&_figcaption]:text-slate-500'
         )}
-        dangerouslySetInnerHTML={{ __html: story.body }}
       />
 
       {/* Story Tags */}

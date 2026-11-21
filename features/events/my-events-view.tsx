@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { AddToCalendar } from '@/components/events/add-to-calendar';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { getMyEventRsvps } from '@/lib/api/events.api';
 import { useAuthStore } from '@/store/auth-store';
 import type { UserRole } from '@/types/domain';
@@ -159,7 +160,7 @@ export function MyEventsView({ currentRole, basePath }: MyEventsViewProps) {
                     </h3>
 
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed m-0">
-                      {ev.description}
+                      {ev.descriptionSnippet || stripHtmlToPlainText(ev.description)}
                     </p>
                   </div>
                 </div>

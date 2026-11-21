@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/card';
 import { FormAlert } from '@/components/ui/form-alert';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/dashboard/page-header';
+import { RichTextEditor } from '@/components/shared/rich-text-editor';
 import {
   createJob,
   getOwnerJobDetail,
@@ -384,13 +385,13 @@ export function JobCreateForm({ currentRole, basePath, editJobId }: JobCreateFor
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Job Description & Responsibilities *
             </label>
-            <textarea
-              rows={6}
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={setDescription}
               placeholder="Outline what the candidate will be doing day-to-day, team dynamics, projects, and learning opportunities…"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-800"
+              minHeight="180px"
               required
+              helperText="Rich formatting supported. Switch between Write and Preview tabs to review."
             />
           </div>
 
@@ -398,12 +399,12 @@ export function JobCreateForm({ currentRole, basePath, editJobId }: JobCreateFor
             <label className="block text-xs font-bold text-slate-700 mb-1.5">
               Requirements, Coursework & Skills
             </label>
-            <textarea
-              rows={5}
+            <RichTextEditor
               value={requirements}
-              onChange={(e) => setRequirements(e.target.value)}
+              onChange={setRequirements}
               placeholder="Specific programming languages, framework competencies, CGPA recommendations, thesis topics, or communication skills…"
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500 text-slate-800"
+              minHeight="160px"
+              helperText="Use bullet lists or bold tags to cleanly structure qualifications."
             />
           </div>
         </div>
