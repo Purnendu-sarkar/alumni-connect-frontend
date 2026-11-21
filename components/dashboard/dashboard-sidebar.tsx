@@ -38,6 +38,8 @@ import { Brand } from '@/components/layout/brand';
 import { SignOutButton } from '@/features/auth/sign-out-button';
 import { cn } from '@/lib/utils/cn';
 import { useAuthStore } from '@/store/auth-store';
+import { useQuery } from '@tanstack/react-query';
+import { messagesApi } from '@/lib/api/messages.api';
 import type { UserRole } from '@/types/domain';
 
 export interface NavItem {
@@ -175,6 +177,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
         {
           title: 'System & Account',
           items: [
+            { href: '/moderator/messages', label: 'Messages', icon: MessageSquare },
             { href: '/moderator/notifications', label: 'Notifications', icon: Inbox },
             { href: '/moderator/settings', label: 'Settings', icon: Settings },
             { href: '/moderator/settings/security', label: 'Security & Password', icon: Key },
@@ -218,6 +221,7 @@ export function getRoleNavGroups(role?: UserRole): NavGroup[] {
         {
           title: 'Platform System',
           items: [
+            { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
             { href: '/admin/departments', label: 'Academic Departments', icon: Building2 },
             { href: '/admin/settings', label: 'System Settings', icon: Settings },
             { href: '/admin/settings/security', label: 'Security & Password', icon: Key },
@@ -240,6 +244,21 @@ export function DashboardSidebar({ role, onNavigate, className }: DashboardSideb
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const groups = getRoleNavGroups(role || user?.role);
+
+  const { data: unreadData } = useQuery({
+    queryKey: ['unread-messages-count'],
+    queryFn: async () => {
+      try {
+        const res = await messagesApi.getUnreadCount();
+        return res.data?.unreadCount || 0;
+      } catch {
+        return 0;
+      }
+    },
+    enabled: !!user,
+    refetchInterval: 20000,
+  });
+  const unreadMessagesCount = unreadData || 0;
 
   const roleAccentColor =
     user?.role === 'SUPER_ADMIN'
@@ -350,11 +369,18 @@ export function DashboardSidebar({ role, onNavigate, className }: DashboardSideb
                     <span className="truncate">{item.label}</span>
                   </span>
 
-                  {item.badge ? (
-                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-                      {item.badge}
-                    </span>
-                  ) : null}
+                  {(() => {
+                    const displayBadge =
+                      item.label === 'Messages' && unreadMessagesCount > 0
+                        ? unreadMessagesCount
+                        : item.badge;
+                    if (!displayBadge) return null;
+                    return (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                        {displayBadge}
+                      </span>
+                    );
+                  })()}
                 </Link>
               );
             })}

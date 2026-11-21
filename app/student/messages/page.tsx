@@ -1,5 +1,10 @@
 import { MessagingView } from '@/features/messaging/messaging-view';
 
-export default function StudentMessagesPage() {
-  return <MessagingView currentRole="STUDENT" basePath="/student" />;
+interface StudentMessagesPageProps {
+  searchParams: Promise<{ user?: string }>;
+}
+
+export default async function StudentMessagesPage({ searchParams }: StudentMessagesPageProps) {
+  const params = await searchParams;
+  return <MessagingView currentRole="STUDENT" basePath="/student" initialUserId={params.user} />;
 }

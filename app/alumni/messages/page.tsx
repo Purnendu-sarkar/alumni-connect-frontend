@@ -1,5 +1,10 @@
 import { MessagingView } from '@/features/messaging/messaging-view';
 
-export default function AlumniMessagesPage() {
-  return <MessagingView currentRole="ALUMNI" basePath="/alumni" />;
+interface AlumniMessagesPageProps {
+  searchParams: Promise<{ user?: string }>;
+}
+
+export default async function AlumniMessagesPage({ searchParams }: AlumniMessagesPageProps) {
+  const params = await searchParams;
+  return <MessagingView currentRole="ALUMNI" basePath="/alumni" initialUserId={params.user} />;
 }

@@ -443,3 +443,79 @@ export interface AdminStoryDetail extends StoryDetail {
   }>;
 }
 
+// ======================== MESSAGING DOMAIN TYPES ========================
+
+export type MessageDeliveryStatus = 'SENT' | 'DELIVERED' | 'READ';
+export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'AUDIO' | 'SYSTEM';
+
+export interface MessageAttachment {
+  url: string;
+  secureUrl: string;
+  publicId: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+}
+
+export interface MessageDto {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl: string | null;
+  senderRole: string;
+  isOwn: boolean;
+  type: MessageType;
+  content: string;
+  attachments: MessageAttachment[];
+  deliveryStatus: MessageDeliveryStatus;
+  replyTo: {
+    id: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+  } | null;
+  reactions: Record<string, string[]>;
+  isEdited: boolean;
+  editedAt: string | null;
+  isDeletedForAll: boolean;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationParticipantDto {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  role: string;
+  department: string | null;
+  position: string | null;
+  currentCompany: string | null;
+}
+
+export interface ConversationDto {
+  id: string;
+  contextType: string;
+  contextId: string | null;
+  lastMessageSnippet: string | null;
+  lastMessageAt: string | null;
+  otherParticipant: ConversationParticipantDto;
+  preferences: {
+    isArchived: boolean;
+    isMuted: boolean;
+    isPinned: boolean;
+    unreadCount: number;
+    lastReadAt: string | null;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessagingEligibility {
+  eligible: boolean;
+  reason?: 'SELF' | 'BLOCKED' | 'CONNECTIONS_ONLY' | 'DISALLOWED' | 'USER_NOT_FOUND' | 'INACTIVE' | null;
+  message?: string | null;
+}
+
+

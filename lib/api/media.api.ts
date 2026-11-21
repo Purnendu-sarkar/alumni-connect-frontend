@@ -5,7 +5,8 @@ export type UploadPurpose =
   | 'RESUME'
   | 'STORY_MEDIA'
   | 'EVENT_BANNER'
-  | 'ANNOUNCEMENT_ATTACHMENT';
+  | 'ANNOUNCEMENT_ATTACHMENT'
+  | 'MESSAGE_ATTACHMENT';
 
 export interface UploadedFileResponse {
   id: string;
