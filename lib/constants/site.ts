@@ -8,7 +8,6 @@ export const siteConfig = {
     { href: '/events', label: 'Events' },
     { href: '/stories', label: 'Stories' },
     { href: '/announcements', label: 'Notices' },
-    { href: '/giving', label: 'Giving' },
     { href: '/mentorship', label: 'Mentorship' },
   ],
 } as const;

@@ -39,7 +39,6 @@ export function Footer() {
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Impact & Records</h4>
             <ul className="space-y-2 text-xs">
               <li><Link href="/stories" className="hover:text-white transition-colors">Alumni Success Stories</Link></li>
-              <li><Link href="/giving" className="hover:text-white transition-colors">Endowment & Giving</Link></li>
               <li><Link href="/announcements" className="hover:text-white transition-colors">Official Circulars</Link></li>
             </ul>
           </div>

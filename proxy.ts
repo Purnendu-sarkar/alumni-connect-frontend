@@ -44,6 +44,11 @@ function getRoleDetailPath(
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Incomplete feature route guard: /giving is under development, redirect to home
+  if (pathname === '/giving' || pathname.startsWith('/giving/')) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   const roleCookie = request.cookies.get('ac_role')?.value;
   const authCookie = request.cookies.get('ac_auth')?.value;
   const refreshCookie = request.cookies.get('refreshToken')?.value;
@@ -151,6 +156,8 @@ export const config = {
     '/events/:path+',
     '/announcements/:path+',
     '/stories/:path+',
+    '/giving',
+    '/giving/:path*',
     '/login',
     '/register',
     '/forgot-password',
