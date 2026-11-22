@@ -1,177 +1,87 @@
 import Link from 'next/link';
-import {
-  ArrowUpRight,
-  CalendarDays,
-  CheckCircle2,
-  GraduationCap,
-  HeartHandshake,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 
-import { AlumniCard } from '@/components/alumni/alumni-card';
 import { JobCard } from '@/components/jobs/job-card';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { LandingAuthCtas } from '@/components/public/landing-auth-ctas';
-import { demoAlumni } from '@/features/shared/demo-data';
+import { HeroSplitSection } from '@/components/public/hero-split-section';
+import { TelemetryStrip } from '@/components/public/telemetry-strip';
+import { DepartmentGrid } from '@/components/public/department-grid';
+import { EcosystemRolesSection } from '@/components/public/ecosystem-roles-section';
+import { FeaturedStoriesSection } from '@/components/public/featured-stories-section';
+import { CampusEventsDualFeed } from '@/components/public/campus-events-dual-feed';
+import { getPublicOverview } from '@/lib/api/public.api';
 import { getJobs } from '@/lib/api/jobs.api';
-import { formatCompactNumber } from '@/lib/utils/format';
-
-const proofPoints = [
-  {
-    number: '01',
-    title: 'Verified Institutional Community',
-    description: 'Every profile is authenticated against university graduation and enrollment records. Zero spam or commercial headhunters.',
-    icon: ShieldCheck,
-  },
-  {
-    number: '02',
-    title: 'Direct 1-on-1 Mentorship',
-    description: 'Book thirty-minute career advisory sessions with alumni who have walked your specific department and career roadmap.',
-    icon: HeartHandshake,
-  },
-  {
-    number: '03',
-    title: 'Alumni-Shared Career Openings',
-    description: 'Access curated internships, graduate programs, and software roles shared directly by alumni working inside hiring teams.',
-    icon: TrendingUp,
-  },
-];
+import type { Job } from '@/types/domain';
 
 export default async function HomePage() {
-  const jobsRes = await getJobs({ limit: 3 }).catch(() => ({ data: [] }));
-  const featuredJobs = jobsRes.data ?? [];
+  const [overview, jobsRes] = await Promise.all([
+    getPublicOverview(),
+    getJobs({ limit: 3 }).catch(() => ({ data: [] })),
+  ]);
+
+  const rawJobs = (jobsRes.data && jobsRes.data.length > 0) ? jobsRes.data : overview.featuredJobs;
+
+  const displayJobs: Job[] = rawJobs.slice(0, 3).map((item) => {
+    const isDomainJob = 'employmentType' in item && typeof item.employmentType === 'string';
+    if (isDomainJob) {
+      return item as Job;
+    }
+    const publicJob = item as typeof overview.featuredJobs[number];
+    return {
+      id: publicJob.id,
+      title: publicJob.title,
+      company: publicJob.company,
+      location: publicJob.location,
+      employmentType: publicJob.jobType ?? 'Full-time',
+      workMode: publicJob.workMode ?? 'ON_SITE',
+      description: publicJob.descriptionSnippet,
+      descriptionSnippet: publicJob.descriptionSnippet,
+      salary: publicJob.salaryRange,
+      deadline: publicJob.deadline,
+      createdAt: publicJob.postedAt,
+    };
+  });
 
   return (
-    <div className="space-y-16 lg:space-y-24 py-8 md:py-12">
-      {/* Hero Section using shadcn Card */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="relative overflow-hidden rounded-3xl bg-linear-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-8 sm:p-12 lg:p-16 shadow-xl border-slate-800">
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
-          <div className="relative z-10 max-w-3xl space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold">
-              <Sparkles size={14} className="text-blue-400" />
-              OFFICIAL ALUMNI & STUDENT ENGAGEMENT PLATFORM
-            </div>
+    <div className="space-y-16 lg:space-y-24 py-8 md:py-12 animate-fade-in">
+      {/* 1. Executive Split-Screen Hero */}
+      <HeroSplitSection
+        metrics={overview.metrics}
+        featuredAlumni={overview.featuredAlumni}
+        heroBannerUrl={overview.featuredEvents[0]?.bannerUrl}
+      />
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.1] m-0">
-              Your next big career move has a familiar face.
-            </h1>
+      {/* 2. Real-Time Institutional Telemetry Strip */}
+      <TelemetryStrip metrics={overview.metrics} />
 
-            <p className="text-base sm:text-xl text-slate-300 max-w-2xl leading-relaxed m-0">
-              Connect with the graduates who took the road before you. Seek authentic career guidance, discover curated campus opportunities, and strengthen your lifelong university network.
-            </p>
+      {/* 3. Academic Departments & Alumni Footprint */}
+      <DepartmentGrid departments={overview.departments} />
 
-            <LandingAuthCtas variant="hero" />
+      {/* 4. Verified Institutional Ecosystem ("How It Works") */}
+      <EcosystemRolesSection />
 
-            <div className="pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-emerald-400" />
-                <span>Verified Members</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-blue-400" />
-                <span>1-on-1 Mentorship</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 size={16} className="text-cyan-400" />
-                <span>Zero Commercial Ads</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <GraduationCap size={16} className="text-indigo-400" />
-                <span>Institutional Trust</span>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </section>
-
-      {/* Proof Points Strip using shadcn Card */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {proofPoints.map((point) => {
-            const Icon = point.icon;
-            return (
-              <Card
-                key={point.number}
-                className="hover:border-blue-300 hover:shadow-md transition-all duration-200"
-              >
-                <div className="flex items-center justify-between gap-4 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                    <Icon size={20} />
-                  </div>
-                  <span className="font-mono text-xs font-extrabold text-slate-400">
-                    STEP {point.number}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-slate-900 m-0">
-                  {point.title}
-                </h3>
-                <p className="text-xs text-slate-600 mt-2 leading-relaxed m-0">
-                  {point.description}
-                </p>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Directory Preview Section using shadcn AlumniCard */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          eyebrow="CAMPUS DIRECTORY"
-          title="Graduates Worth Knowing"
-          description="Search and connect across departments, graduation years, and leading industry employers."
-          action={<LandingAuthCtas variant="directory-action" />}
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {demoAlumni.slice(0, 3).map((alumnus) => (
-            <AlumniCard key={alumnus.id} alumnus={alumnus} />
-          ))}
-        </div>
-      </section>
-
-      {/* Mentorship Callout Banner using shadcn Card */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="bg-blue-600 text-white rounded-3xl p-8 sm:p-12 shadow-lg border-blue-600 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-3 max-w-xl">
-            <span className="text-xs font-bold uppercase tracking-widest text-blue-200 font-mono">
-              THE MENTORSHIP DESK
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight m-0">
-              One honest conversation can redefine your career direction.
-            </h2>
-            <p className="text-sm text-blue-100 leading-relaxed m-0">
-              Request a focused thirty-minute session with an alumnus who has successfully navigated the path you are considering. Review your portfolio, prepare for technical interviews, and receive candid industry perspective.
-            </p>
-          </div>
-          <LandingAuthCtas variant="mentorship" />
-        </Card>
-      </section>
-
-      {/* Job Opportunities Section using shadcn JobCard */}
+      {/* 5. Live Career Opportunities Board */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="ON THE BOARD"
           title="Work Worth Showing Up For"
-          description="Curated campus and graduate opportunities submitted by alumni in good standing."
+          description="Curated campus and engineering opportunities submitted by alumni in good standing."
           action={
             <Button asChild variant="outline" size="sm">
               <Link href="/jobs" className="inline-flex items-center gap-1.5 font-bold">
-                See All Opportunities <ArrowUpRight size={14} />
+                <span>Explore All {overview.metrics.publishedJobsCount.toLocaleString()}+ Opportunities</span>
+                <ArrowUpRight size={14} />
               </Link>
             </Button>
           }
         />
 
-        {featuredJobs.length > 0 ? (
+        {displayJobs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredJobs.slice(0, 3).map((job) => (
+            {displayJobs.map((job) => (
               <JobCard key={job.id} job={job} />
             ))}
           </div>
@@ -184,62 +94,33 @@ export default async function HomePage() {
         )}
       </section>
 
-      {/* Network Metrics Stats using shadcn Card */}
+      {/* 6. Inspiring Alumni Success Stories */}
+      <FeaturedStoriesSection stories={overview.featuredStories} />
+
+      {/* 7. Upcoming Campus Events & Official Notices Dual Feed */}
+      <CampusEventsDualFeed
+        events={overview.featuredEvents}
+        announcements={overview.latestAnnouncements}
+      />
+
+      {/* 8. Executive Call-to-Action Banner */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-8 text-center divide-y md:divide-y-0 md:divide-x divide-slate-800">
-          <div className="space-y-1">
-            <span className="text-3xl sm:text-4xl font-extrabold text-blue-400 font-mono">
-              {formatCompactNumber(2400)}+
+        <Card className="relative overflow-hidden rounded-3xl bg-linear-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-8 sm:p-12 lg:p-14 border-slate-800 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+          <div className="space-y-3 max-w-xl relative z-10">
+            <span className="text-xs font-bold uppercase tracking-widest text-blue-300 font-mono">
+              INSTITUTIONAL MEMBERSHIP · NORTH WESTERN UNIVERSITY
             </span>
-            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
-              Verified Members
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight m-0">
+              Be part of North Western University&apos;s growing alumni network.
+            </h2>
+            <p className="text-sm text-slate-300 leading-relaxed m-0">
+              Whether you are graduating this term or established in your career, your perspective is vital to our academic community. Connect, mentor, and discover alumni-shared opportunities.
             </p>
-            <p className="text-[11px] text-slate-500 m-0">Graduates & Students across 12 faculties</p>
           </div>
-
-          <div className="space-y-1 pt-6 md:pt-0">
-            <span className="text-3xl sm:text-4xl font-extrabold text-emerald-400 font-mono">
-              180+
-            </span>
-            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
-              Active Mentors
-            </p>
-            <p className="text-[11px] text-slate-500 m-0">Offering mock interviews & code reviews</p>
+          <div className="relative z-10 shrink-0">
+            <LandingAuthCtas variant="bottom-banner" />
           </div>
-
-          <div className="space-y-1 pt-6 md:pt-0">
-            <span className="text-3xl sm:text-4xl font-extrabold text-amber-400 font-mono">
-              40+
-            </span>
-            <p className="text-xs uppercase tracking-wider font-bold text-slate-400 m-0">
-              Curated Opportunities
-            </p>
-            <p className="text-[11px] text-slate-500 m-0">Direct referrals with hiring alumni</p>
-          </div>
-        </Card>
-      </section>
-
-      {/* Upcoming Event & Join Banner using shadcn Card */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <Card className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl border border-blue-100 shrink-0">
-              <CalendarDays size={28} />
-            </div>
-            <div>
-              <span className="text-xs font-bold tracking-widest uppercase text-blue-600 font-mono">
-                CAMPUS GATHERING
-              </span>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1 m-0">
-                Annual Alumni Homecoming & Symposium
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1.5 max-w-lg leading-relaxed m-0">
-                Return to campus for keynotes, workshops, and roundtables with fellow graduates who are pioneering modern engineering and leadership.
-              </p>
-            </div>
-          </div>
-
-          <LandingAuthCtas variant="bottom-banner" />
         </Card>
       </section>
     </div>
