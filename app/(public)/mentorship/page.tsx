@@ -38,6 +38,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { searchDirectory, type DirectoryMemberCard } from '@/lib/api/directory.api';
 import { sendMentorshipRequest } from '@/lib/api/mentorship.api';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
 
@@ -256,7 +257,7 @@ export default function MentorshipHubPage() {
 
                     {mentor.bio ? (
                       <p className="text-xs text-slate-600 line-clamp-2 m-0 italic">
-                        &quot;{mentor.bio}&quot;
+                        &quot;{stripHtmlToPlainText(mentor.bio)}&quot;
                       </p>
                     ) : null}
                   </div>

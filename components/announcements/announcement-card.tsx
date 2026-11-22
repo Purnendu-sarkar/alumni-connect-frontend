@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Pin,
@@ -14,6 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils/format';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
+import { useAuthStore } from '@/store/auth-store';
 import type { AnnouncementCard as AnnouncementCardType } from '@/types/domain';
 
 interface AnnouncementCardProps {
@@ -25,7 +30,31 @@ export function AnnouncementCard({
   announcement,
   basePath = '',
 }: AnnouncementCardProps) {
-  const detailUrl = `${basePath}/announcements/${announcement.id}`;
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
+  const isPublicView = !basePath || basePath === '';
+  const detailUrl = isPublicView
+    ? isAuthenticated
+      ? `${rolePrefix}/announcements/${announcement.id}`
+      : `/login?returnTo=${encodeURIComponent(`/announcements/${announcement.id}`)}`
+    : `${basePath}/announcements/${announcement.id}`;
+
+  const buttonLabel = isPublicView && !isAuthenticated ? 'Sign in to Read Notice' : 'Read Full Notice';
 
   const categoryBadgeColors = {
     GENERAL: 'bg-slate-100 text-slate-800 border-slate-200',
@@ -91,7 +120,7 @@ export function AnnouncementCard({
 
         <CardContent className="px-5 py-0 space-y-3">
           <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed m-0">
-            {announcement.summary}
+            {stripHtmlToPlainText(announcement.summary)}
           </p>
 
           <div className="flex items-center gap-3 text-xs text-slate-500 pt-1">
@@ -125,7 +154,7 @@ export function AnnouncementCard({
           className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-0 h-auto"
         >
           <Link href={detailUrl} className="inline-flex items-center gap-1">
-            Read Full Notice <ArrowUpRight className="w-3.5 h-3.5" />
+            {buttonLabel} <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </Button>
       </CardFooter>

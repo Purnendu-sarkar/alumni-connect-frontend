@@ -13,6 +13,7 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import { getEvents } from '@/lib/api/events.api';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { useAuthStore } from '@/store/auth-store';
 
 function EventCtaAction() {
@@ -55,6 +56,23 @@ function EventCtaAction() {
 }
 
 export default function EventsPage() {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
   const { data: responseData, isLoading, isError, refetch } = useQuery({
     queryKey: ['public-events'],
     queryFn: () => getEvents({ tab: 'upcoming', limit: 20 }),
@@ -127,7 +145,7 @@ export default function EventsPage() {
                   </h2>
 
                   <p className="text-sm sm:text-base text-slate-300 leading-relaxed m-0 line-clamp-3">
-                    {featured.description}
+                    {featured.descriptionSnippet || stripHtmlToPlainText(featured.description)}
                   </p>
 
                   <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-2">
@@ -160,8 +178,14 @@ export default function EventsPage() {
                   </div>
 
                   <Button asChild size="default" className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold">
-                    <Link href={`/events/${featured.id}`}>
-                      RSVP & Passes <ArrowUpRight size={14} />
+                    <Link
+                      href={
+                        isAuthenticated
+                          ? `${rolePrefix}/events/${featured.id}`
+                          : `/login?returnTo=${encodeURIComponent(`/events/${featured.id}`)}`
+                      }
+                    >
+                      {isAuthenticated ? 'RSVP & Passes' : 'Sign in to RSVP'} <ArrowUpRight size={14} />
                     </Link>
                   </Button>
                 </div>
@@ -211,7 +235,7 @@ export default function EventsPage() {
                           </h3>
 
                           <p className="text-xs text-slate-600 leading-relaxed m-0 line-clamp-2">
-                            {event.description}
+                            {event.descriptionSnippet || stripHtmlToPlainText(event.description)}
                           </p>
 
                           <div className="flex items-center gap-3 text-xs text-slate-500 pt-2">
@@ -226,8 +250,15 @@ export default function EventsPage() {
 
                       <CardFooter className="p-0 pt-4 mt-6 border-t border-slate-100 flex items-center justify-end">
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/events/${event.id}`} className="inline-flex items-center gap-1 font-semibold">
-                            Event Details <ArrowUpRight size={13} />
+                          <Link
+                            href={
+                              isAuthenticated
+                                ? `${rolePrefix}/events/${event.id}`
+                                : `/login?returnTo=${encodeURIComponent(`/events/${event.id}`)}`
+                            }
+                            className="inline-flex items-center gap-1 font-semibold"
+                          >
+                            {isAuthenticated ? 'Event Details' : 'Sign in to View Details'} <ArrowUpRight size={13} />
                           </Link>
                         </Button>
                       </CardFooter>

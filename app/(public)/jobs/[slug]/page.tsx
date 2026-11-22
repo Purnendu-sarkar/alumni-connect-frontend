@@ -24,6 +24,7 @@ import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { JobApplyModal } from '@/components/jobs/job-apply-modal';
 import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
+import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import { getJobById } from '@/lib/api/jobs.api';
 import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
@@ -35,14 +36,15 @@ export default function JobDetailPage() {
   const jobId = (params?.slug as string) || '';
 
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applySuccess, setApplySuccess] = useState<string | null>(null);
 
   // Fetch real job data
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['job', jobId],
-    queryFn: () => getJobById(jobId),
+    queryKey: ['job', jobId, accessToken],
+    queryFn: () => getJobById(jobId, accessToken),
     enabled: Boolean(jobId),
   });
 
@@ -134,9 +136,10 @@ export default function JobDetailPage() {
             <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-slate-400 m-0">
               THE ROLE
             </h2>
-            <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-              {job.description}
-            </div>
+            <SanitizedRichText
+              content={job.description}
+              className="text-xs sm:text-sm text-slate-700 leading-relaxed"
+            />
           </Card>
 
           {job.requirements && (
@@ -144,9 +147,10 @@ export default function JobDetailPage() {
               <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-slate-400 m-0">
                 QUALIFICATIONS & SKILLS
               </h2>
-              <div className="text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                {job.requirements}
-              </div>
+              <SanitizedRichText
+                content={job.requirements}
+                className="text-xs sm:text-sm text-slate-700 leading-relaxed"
+              />
             </Card>
           )}
 

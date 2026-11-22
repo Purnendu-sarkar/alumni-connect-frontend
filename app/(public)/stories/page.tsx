@@ -25,6 +25,8 @@ import { getStories } from '@/lib/api/stories.api';
 import type { StoryCard as StoryCardType, StoryCategory } from '@/types/domain';
 import { StoryCard, STORY_CATEGORY_LABELS } from '@/components/stories/story-card';
 import { cn } from '@/lib/utils/cn';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
+import { useAuthStore } from '@/store/auth-store';
 
 const CATEGORY_TABS: Array<{ value: StoryCategory | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'All Spotlights' },
@@ -38,6 +40,23 @@ const CATEGORY_TABS: Array<{ value: StoryCategory | 'ALL'; label: string }> = [
 ];
 
 export default function StoriesPage() {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
   const [category, setCategory] = useState<StoryCategory | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -212,14 +231,20 @@ export default function StoriesPage() {
                     </span>
                   </div>
 
-                  <Link href={`/stories/${featured.slug || featured.id}`}>
+                  <Link
+                    href={
+                      isAuthenticated
+                        ? `${rolePrefix === '/moderator' ? '/moderator/content' : `${rolePrefix}/stories`}/${featured.slug || featured.id}`
+                        : `/login?returnTo=${encodeURIComponent(`/stories/${featured.slug || featured.id}`)}`
+                    }
+                  >
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug hover:text-blue-600 transition-colors">
                       {featured.title}
                     </h2>
                   </Link>
 
                   <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
-                    {featured.summary}
+                    {stripHtmlToPlainText(featured.summary)}
                   </p>
                 </div>
 

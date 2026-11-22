@@ -148,8 +148,8 @@ export function getJobs(filters: JobFilterParams = {}) {
   return apiClient<Job[]>(`/jobs${queryString ? `?${queryString}` : ''}`, { tenant: true });
 }
 
-export function getJobById(jobId: string) {
-  return apiClient<Job>(`/jobs/${jobId}`, { tenant: true });
+export function getJobById(jobId: string, accessToken?: string | null) {
+  return apiClient<Job>(`/jobs/${jobId}`, { accessToken, tenant: true });
 }
 
 export function getOwnerJobDetail(jobId: string, accessToken?: string | null) {

@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, BriefcaseBusiness, Building2, MapPin } from 'lucide-react';
 
@@ -6,9 +9,31 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { stripHtmlToPlainText } from '@/lib/utils/text';
 import { formatDate } from '@/lib/utils/format';
+import { useAuthStore } from '@/store/auth-store';
 import type { Job } from '@/types/domain';
 
 export function JobCard({ job }: { job: Job }) {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
+  const detailHref = isAuthenticated
+    ? `${rolePrefix}/jobs/${job.id}`
+    : `/login?returnTo=${encodeURIComponent(`/jobs/${job.id}`)}`;
+  const ctaText = isAuthenticated ? 'View Position' : 'Sign in to View Position';
   return (
     <Card className="flex flex-col justify-between group hover:shadow-md hover:border-blue-300 transition-all duration-200">
       <div>
@@ -56,8 +81,8 @@ export function JobCard({ job }: { job: Job }) {
           Active Listing
         </span>
         <Button variant="ghost" size="sm" asChild className="p-0 h-auto font-bold text-blue-600 hover:text-blue-800 hover:bg-transparent">
-          <Link href={`/jobs/${job.id}`} className="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-            View Position <ArrowUpRight size={14} />
+          <Link href={detailHref} className="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+            {ctaText} <ArrowUpRight size={14} />
           </Link>
         </Button>
       </CardFooter>

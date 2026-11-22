@@ -16,6 +16,31 @@ function getRoleHome(role: string): string {
   }
 }
 
+function getRoleDetailPath(
+  role: string,
+  resource: 'jobs' | 'events' | 'announcements' | 'stories',
+  idOrSlug: string,
+): string {
+  const normalizedRole = role.toUpperCase();
+  const prefix =
+    normalizedRole === 'SUPER_ADMIN'
+      ? '/admin'
+      : normalizedRole === 'MODERATOR'
+        ? '/moderator'
+        : normalizedRole === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
+  if (resource === 'stories') {
+    if (normalizedRole === 'MODERATOR') {
+      return `/moderator/content/${idOrSlug}`;
+    }
+    return `${prefix}/stories/${idOrSlug}`;
+  }
+
+  return `${prefix}/${resource}/${idOrSlug}`;
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -91,6 +116,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(getRoleHome(userRole), request.url));
   }
 
+  // 5. Public detail routes auth-gate & role-aware workspace redirect:
+  // /jobs/:slug, /events/:id, /announcements/:id, /stories/:id
+  const detailMatch = pathname.match(/^\/(jobs|events|announcements|stories)\/(.+)$/);
+  if (detailMatch) {
+    const resource = detailMatch[1] as 'jobs' | 'events' | 'announcements' | 'stories';
+    const idOrSlug = detailMatch[2];
+
+    if (!isAuthenticated) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('returnTo', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const targetDetailPath = getRoleDetailPath(userRole || 'STUDENT', resource, idOrSlug);
+    return NextResponse.redirect(new URL(targetDetailPath, request.url));
+  }
+
   return NextResponse.next();
 }
 
@@ -105,6 +147,10 @@ export const config = {
     '/admin/:path*',
     '/dashboard',
     '/dashboard/:path*',
+    '/jobs/:path+',
+    '/events/:path+',
+    '/announcements/:path+',
+    '/stories/:path+',
     '/login',
     '/register',
     '/forgot-password',

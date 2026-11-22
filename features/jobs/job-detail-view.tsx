@@ -44,15 +44,16 @@ interface JobDetailViewProps {
 
 export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps) {
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
 
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const jobQuery = useQuery({
-    queryKey: ['job', id],
+    queryKey: ['job', id, accessToken],
     queryFn: async () => {
-      const res = await getJobById(id);
+      const res = await getJobById(id, accessToken);
       return res.data;
     },
   });

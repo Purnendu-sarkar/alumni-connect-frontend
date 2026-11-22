@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Clock, BookOpen, User as UserIcon } from 'lucide-react';
 import type { StoryCard as StoryCardType, StoryCategory } from '@/types/domain';
 import { cn } from '@/lib/utils/cn';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
+import { useAuthStore } from '@/store/auth-store';
 
 export const STORY_CATEGORY_LABELS: Record<StoryCategory, string> = {
   CAREER_MILESTONE: 'Career Milestone',
@@ -55,7 +57,30 @@ interface StoryCardProps {
 }
 
 export function StoryCard({ story, href, className }: StoryCardProps) {
-  const targetHref = href || `/stories/${story.slug || story.id}`;
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
+  const isPublicLink = !href || href.startsWith('/stories');
+  const targetHref = isPublicLink
+    ? isAuthenticated
+      ? `${rolePrefix === '/moderator' ? '/moderator/content' : `${rolePrefix}/stories`}/${story.slug || story.id}`
+      : `/login?returnTo=${encodeURIComponent(`/stories/${story.slug || story.id}`)}`
+    : href;
+
   const categoryConfig = STORY_CATEGORY_COLORS[story.category] || STORY_CATEGORY_COLORS.GENERAL_INSIGHT;
   const categoryLabel = STORY_CATEGORY_LABELS[story.category] || story.category;
 
@@ -119,7 +144,7 @@ export function StoryCard({ story, href, className }: StoryCardProps) {
         </Link>
 
         <p className="mt-2 line-clamp-2 text-sm text-slate-600 leading-relaxed">
-          {story.summary}
+          {stripHtmlToPlainText(story.summary)}
         </p>
 
         {story.tags && story.tags.length > 0 && (

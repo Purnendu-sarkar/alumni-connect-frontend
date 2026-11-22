@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight, Building2 } from 'lucide-react';
 
@@ -5,9 +8,34 @@ import { Avatar } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { stripHtmlToPlainText } from '@/lib/utils/text';
+import { useAuthStore } from '@/store/auth-store';
 import type { Alumni } from '@/types/domain';
 
 export function AlumniCard({ alumnus }: { alumnus: Alumni }) {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isAuthenticated = mounted && Boolean(user);
+  const rolePrefix =
+    user?.role === 'SUPER_ADMIN'
+      ? '/admin'
+      : user?.role === 'MODERATOR'
+        ? '/moderator'
+        : user?.role === 'ALUMNI'
+          ? '/alumni'
+          : '/student';
+
+  const profileHref = isAuthenticated
+    ? user?.role === 'SUPER_ADMIN'
+      ? `/admin/users/${alumnus.id}`
+      : `${rolePrefix}/directory/${alumnus.id}`
+    : `/login?returnTo=${encodeURIComponent(`/alumni/${alumnus.id}`)}`;
+  const ctaText = isAuthenticated ? 'View Profile' : 'Sign in to View Profile';
   return (
     <Card className="flex flex-col justify-between group hover:shadow-md hover:border-blue-300 transition-all duration-200">
       <div>
@@ -34,7 +62,7 @@ export function AlumniCard({ alumnus }: { alumnus: Alumni }) {
 
           {alumnus.bio && (
             <p className="text-xs text-slate-600 mt-2 line-clamp-2 leading-relaxed m-0">
-              {alumnus.bio}
+              {stripHtmlToPlainText(alumnus.bio)}
             </p>
           )}
 
@@ -55,8 +83,8 @@ export function AlumniCard({ alumnus }: { alumnus: Alumni }) {
 
       <CardFooter className="p-0 pt-4 mt-4 flex items-center justify-between border-t border-slate-100">
         <Button variant="ghost" size="sm" asChild className="p-0 h-auto font-bold text-blue-600 hover:text-blue-800 hover:bg-transparent">
-          <Link href={`/alumni/${alumnus.id}`} className="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-            View Profile <ArrowUpRight size={14} />
+          <Link href={profileHref} className="inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+            {ctaText} <ArrowUpRight size={14} />
           </Link>
         </Button>
       </CardFooter>
