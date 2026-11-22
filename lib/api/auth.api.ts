@@ -187,3 +187,20 @@ export function changePassword(
     body: JSON.stringify(input),
   });
 }
+
+export interface LoginHistoryItem {
+  id: string;
+  action: string;
+  result: 'SUCCESS' | 'FAILURE';
+  maskedIp: string;
+  deviceName: string;
+  userAgent: string | null;
+  createdAt: string;
+}
+
+export function getLoginHistory(accessToken: string | null, limit = 15) {
+  return apiClient<LoginHistoryItem[]>(`/auth/login-history?limit=${limit}`, {
+    method: 'GET',
+    accessToken,
+  });
+}

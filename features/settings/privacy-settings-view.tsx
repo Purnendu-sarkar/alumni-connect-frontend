@@ -12,6 +12,7 @@ import {
   Mail,
   MessageSquare,
   Phone,
+  RotateCcw,
   Save,
   Search,
   Shield,
@@ -23,8 +24,17 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   getMyPrivacy,
   updateMyPrivacy,
+  resetPrivacyDefaults,
   type PrivacyScope,
   type PrivacySettingPayload,
 } from '@/lib/api/privacy.api';
@@ -79,6 +89,7 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
   });
 
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   const { data: privacyData, isLoading, isError, error } = useQuery({
     queryKey: ['privacy', 'me'],
@@ -125,6 +136,39 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
     },
     onError: (err: unknown) => {
       setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to save privacy preferences.') });
+      setTimeout(() => setNotice(null), 5000);
+    },
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const res = await resetPrivacyDefaults(accessToken);
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'Failed to reset privacy defaults');
+      }
+      return res.data;
+    },
+    onSuccess: (defaults) => {
+      queryClient.setQueryData(['privacy', 'me'], defaults);
+      setFormState({
+        profileVisibility: defaults.profileVisibility || 'ALL_MEMBERS',
+        emailVisibility: defaults.emailVisibility || 'CONNECTIONS_ONLY',
+        phoneVisibility: defaults.phoneVisibility || 'CONNECTIONS_ONLY',
+        locationVisibility: defaults.locationVisibility || 'ALL_MEMBERS',
+        careerVisibility: defaults.careerVisibility || 'ALL_MEMBERS',
+        educationVisibility: defaults.educationVisibility || 'ALL_MEMBERS',
+        skillsVisibility: defaults.skillsVisibility || 'ALL_MEMBERS',
+        connectionsVisibility: defaults.connectionsVisibility || 'CONNECTIONS_ONLY',
+        mentorshipVisibility: defaults.mentorshipVisibility || 'ALL_MEMBERS',
+        searchVisibility: defaults.searchVisibility || 'ALL_MEMBERS',
+        messagingPermission: defaults.messagingPermission || 'CONNECTIONS_ONLY',
+      });
+      setConfirmResetOpen(false);
+      setNotice({ type: 'success', message: 'Privacy preferences reset to institutional defaults.' });
+      setTimeout(() => setNotice(null), 4000);
+    },
+    onError: (err: unknown) => {
+      setNotice({ type: 'error', message: getApiErrorMessage(err, 'Failed to reset privacy preferences.') });
       setTimeout(() => setNotice(null), 5000);
     },
   });
@@ -432,11 +476,23 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmResetOpen(true)}
+              disabled={resetMutation.isPending || updateMutation.isPending}
+              className="text-xs text-slate-600 hover:text-slate-900 border-slate-300"
+            >
+              <RotateCcw size={14} className={resetMutation.isPending ? 'animate-spin' : ''} />
+              Reset to Institutional Defaults
+            </Button>
+
             <Button
               type="submit"
               size="sm"
-              disabled={updateMutation.isPending}
+              disabled={updateMutation.isPending || resetMutation.isPending}
               className="px-6"
             >
               <Save size={14} className={updateMutation.isPending ? 'animate-spin' : ''} />
@@ -445,6 +501,41 @@ export function PrivacySettingsView({ currentRole, basePath }: PrivacySettingsVi
           </div>
         </form>
       )}
+
+      {/* CONFIRM RESET MODAL */}
+      <Dialog open={confirmResetOpen} onOpenChange={setConfirmResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <RotateCcw size={18} className="text-blue-600" />
+              Reset Privacy Preferences to Defaults
+            </DialogTitle>
+            <DialogDescription className="text-slate-600 text-xs leading-relaxed">
+              This will restore all your privacy and visibility scopes to the institutional baseline: Campus Community for profile discovery and academic records, and Connections Only for personal contact details and direct messaging.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmResetOpen(false)}
+              disabled={resetMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => resetMutation.mutate()}
+              disabled={resetMutation.isPending}
+            >
+              {resetMutation.isPending ? 'Resetting…' : 'Confirm Reset'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

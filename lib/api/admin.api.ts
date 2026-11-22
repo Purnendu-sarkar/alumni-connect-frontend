@@ -539,3 +539,34 @@ export function getAuditLogs(
     accessToken,
   });
 }
+
+export interface AdminSystemSettings {
+  universityName: string;
+  domain: string;
+  allowedEmailDomains: string[];
+  requireEmailVerification: boolean;
+  requireAlumniVerification: boolean;
+  moderatorAutoApproval: boolean;
+  sessionTimeoutMin: number;
+  maxActiveMentees: number;
+  allowStudentJobApply: boolean;
+  allowAlumniMentorship: boolean;
+}
+
+export function getAdminSettings(accessToken: string | null) {
+  return apiClient<AdminSystemSettings>('/admin/settings', {
+    method: 'GET',
+    accessToken,
+  });
+}
+
+export function updateAdminSettings(
+  accessToken: string | null,
+  payload: Partial<AdminSystemSettings>,
+) {
+  return apiClient<AdminSystemSettings>('/admin/settings', {
+    method: 'PATCH',
+    accessToken,
+    body: JSON.stringify(payload),
+  });
+}

@@ -34,3 +34,10 @@ export function updateMyPrivacy(accessToken: string | null, data: PrivacySetting
     body: JSON.stringify(data),
   });
 }
+
+export function resetPrivacyDefaults(accessToken: string | null) {
+  return apiClient<PrivacySettingRecord>('/privacy/reset-defaults', {
+    method: 'POST',
+    accessToken,
+  });
+}

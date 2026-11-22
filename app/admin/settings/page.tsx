@@ -28,6 +28,12 @@ export default function AdminSettingsPage() {
       href: '/admin/settings/notifications',
       icon: Bell,
     },
+    {
+      title: 'My Administrator Account',
+      description: 'Manage institutional profile name, export audit archive, and account lifecycle.',
+      href: '/admin/settings/account',
+      icon: User,
+    },
   ];
 
   return (
