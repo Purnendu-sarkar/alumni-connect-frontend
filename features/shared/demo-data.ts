@@ -238,61 +238,7 @@ export interface AnnouncementRecord {
 
 export const demoAnnouncements: AnnouncementRecord[] = [];
 
-export interface ReportItem {
-  id: string;
-  type: 'USER' | 'JOB' | 'STORY' | 'MESSAGE';
-  targetId: string;
-  targetTitle: string;
-  reportedBy: string;
-  reportedByRole: UserRole;
-  reason: string;
-  details: string;
-  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'DISMISSED';
-  createdAt: string;
-  resolvedAt?: string;
-  resolutionNote?: string;
-}
-
-export const demoReports: ReportItem[] = [
-  {
-    id: 'rep-1',
-    type: 'JOB',
-    targetId: 'job-99',
-    targetTitle: 'Remote Data Entry Clerk - Instant Payout',
-    reportedBy: 'Tahsin Kabir',
-    reportedByRole: 'STUDENT',
-    reason: 'Suspicious Job / Possible Advance Fee Scam',
-    details: 'The employer asks applicants to pay a registration fee for software licenses before scheduling an interview.',
-    status: 'OPEN',
-    createdAt: '2026-11-09T08:30:00.000Z',
-  },
-  {
-    id: 'rep-2',
-    type: 'USER',
-    targetId: 'usr-12',
-    targetTitle: 'Impersonation Account (Dr. M. Rahman)',
-    reportedBy: 'Kazi Farhan',
-    reportedByRole: 'ALUMNI',
-    reason: 'Impersonating Faculty Member',
-    details: 'This profile claims to be an active faculty member but does not have verified institutional domain email.',
-    status: 'IN_REVIEW',
-    createdAt: '2026-11-08T16:45:00.000Z',
-  },
-  {
-    id: 'rep-3',
-    type: 'STORY',
-    targetId: 'story-8',
-    targetTitle: 'Crypto Arbitrage Secrets for University Students',
-    reportedBy: 'Sadia Rahman',
-    reportedByRole: 'ALUMNI',
-    reason: 'Spam / Commercial Promotion',
-    details: 'Article is an unmoderated promotional affiliate link for high-risk financial instruments.',
-    status: 'RESOLVED',
-    createdAt: '2026-11-04T11:00:00.000Z',
-    resolvedAt: '2026-11-04T14:30:00.000Z',
-    resolutionNote: 'Content unpublished and author warned for promotional spam violation.',
-  },
-];
+export type { ReportItem } from '@/lib/api/reports.api';
 
 export interface NotificationItem {
   id: string;

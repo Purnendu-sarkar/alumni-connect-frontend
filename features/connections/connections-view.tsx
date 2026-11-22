@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
@@ -57,7 +58,21 @@ export function ConnectionsView({
   const accessToken = useAuthStore((state) => state.accessToken);
   const currentUser = useAuthStore((state) => state.user);
 
-  const [activeTab, setActiveTab] = useState<'connected' | 'received' | 'sent' | 'blocked'>(initialTab);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const validTabs = ['connected', 'received', 'sent', 'blocked'] as const;
+  const initialResolvedTab =
+    tabParam && validTabs.includes(tabParam as (typeof validTabs)[number])
+      ? (tabParam as (typeof validTabs)[number])
+      : initialTab;
+
+  const [activeTab, setActiveTab] = useState<'connected' | 'received' | 'sent' | 'blocked'>(initialResolvedTab);
+
+  useEffect(() => {
+    if (tabParam && validTabs.includes(tabParam as (typeof validTabs)[number])) {
+      setActiveTab(tabParam as (typeof validTabs)[number]);
+    }
+  }, [tabParam]);
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [page, setPage] = useState(1);

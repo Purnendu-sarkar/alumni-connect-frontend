@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -40,6 +41,7 @@ interface NotificationsViewProps {
 }
 
 export function NotificationsView({ currentRole, basePath }: NotificationsViewProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
@@ -388,13 +390,23 @@ export function NotificationsView({ currentRole, basePath }: NotificationsViewPr
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
               <div>
                 {selectedItem.link ? (
-                  <Link
-                    href={getSafeRoleNotificationLink(selectedItem.link, currentRole)}
-                    onClick={() => setSelectedItem(null)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedItem.link || selectedItem.link === '#' || selectedItem.link === '/404') {
+                        setNotice('This item is no longer available');
+                        setTimeout(() => setNotice(null), 3000);
+                        setSelectedItem(null);
+                        return;
+                      }
+                      const safeTarget = getSafeRoleNotificationLink(selectedItem.link, currentRole);
+                      setSelectedItem(null);
+                      router.push(safeTarget);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
                   >
                     Go to Related Page <ExternalLink size={12} />
-                  </Link>
+                  </button>
                 ) : null}
               </div>
               <Button size="sm" variant="secondary" onClick={() => setSelectedItem(null)}>

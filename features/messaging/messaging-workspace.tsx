@@ -9,6 +9,7 @@ import { useMessagingSocket } from './use-messaging-socket';
 import { ConversationSidebar } from './conversation-sidebar';
 import { ActiveChatThread } from './active-chat-thread';
 import { NewChatModal } from './new-chat-modal';
+import { ReportContentModal } from '@/components/shared/report-content-modal';
 import type { ConversationDto, MessageAttachment, MessageDto, UserRole } from '@/types/domain';
 
 interface MessagingWorkspaceProps {
@@ -30,6 +31,7 @@ export function MessagingWorkspace({
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
+  const [reportingUser, setReportingUser] = useState<{ id: string; name: string } | null>(null);
 
   // Debounce search query 300ms
   useEffect(() => {
@@ -278,6 +280,10 @@ export function MessagingWorkspace({
             onToggleReaction={handleToggleReaction}
             onStartTyping={startTyping}
             onStopTyping={stopTyping}
+            onReportUser={(userId) => {
+              const other = activeConversation?.otherParticipant;
+              setReportingUser({ id: userId, name: other?.name || 'Member' });
+            }}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
@@ -311,6 +317,17 @@ export function MessagingWorkspace({
           void queryClient.invalidateQueries({ queryKey: ['conversations'] });
         }}
       />
+
+      {/* Report Member Modal */}
+      {reportingUser && (
+        <ReportContentModal
+          isOpen={Boolean(reportingUser)}
+          onClose={() => setReportingUser(null)}
+          targetType="USER"
+          targetId={reportingUser.id}
+          targetName={reportingUser.name}
+        />
+      )}
     </div>
   );
 }

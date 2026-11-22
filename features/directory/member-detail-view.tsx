@@ -14,6 +14,7 @@ import {
   Clock,
   Compass,
   ExternalLink,
+  Flag,
   Globe,
   GraduationCap,
   Handshake,
@@ -38,6 +39,7 @@ import { blockUser, sendConnectionRequest } from '@/lib/api/connection.api';
 import { sendMentorshipRequest } from '@/lib/api/mentorship.api';
 import { getApiErrorMessage } from '@/lib/api/error-utils';
 import { useAuthStore } from '@/store/auth-store';
+import { ReportContentModal } from '@/components/shared/report-content-modal';
 import type { UserRole } from '@/types/domain';
 
 interface MemberDetailViewProps {
@@ -67,6 +69,7 @@ export function MemberDetailView({ id, currentRole, basePath }: MemberDetailView
 
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [blockReason, setBlockReason] = useState('');
+  const [showReportModal, setShowReportModal] = useState(false);
 
   // Real backend query for community member details
   const detailQuery = useQuery({
@@ -256,6 +259,16 @@ export function MemberDetailView({ id, currentRole, basePath }: MemberDetailView
                   title="Block User"
                 >
                   <Ban size={14} />
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                  onClick={() => setShowReportModal(true)}
+                  title="Report Member"
+                >
+                  <Flag size={14} />
                 </Button>
               </>
             )}
@@ -689,6 +702,17 @@ export function MemberDetailView({ id, currentRole, basePath }: MemberDetailView
             </div>
           </div>
         </div>
+      )}
+
+      {/* Report Member Modal */}
+      {showReportModal && member && (
+        <ReportContentModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          targetType="USER"
+          targetId={member.id}
+          targetName={member.name}
+        />
       )}
     </div>
   );

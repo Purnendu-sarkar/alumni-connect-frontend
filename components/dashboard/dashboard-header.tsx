@@ -7,6 +7,7 @@ import {
   Bell,
   Check,
   ChevronDown,
+  Info,
   LogOut,
   Menu,
   Search,
@@ -55,6 +56,7 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -104,6 +106,11 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
       markSingleReadMutation.mutate(notif.id);
     }
     setShowNotifications(false);
+    if (!notif.link || notif.link === '#' || notif.link === '/404') {
+      setToastMessage('This item is no longer available');
+      setTimeout(() => setToastMessage(null), 4000);
+      return;
+    }
     const safeTarget = getSafeRoleNotificationLink(notif.link, user?.role);
     router.push(safeTarget);
   };
@@ -344,6 +351,13 @@ export function DashboardHeader({ onToggleMobileMenu, role, className }: Dashboa
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2.5 text-xs font-semibold shadow-xl border border-slate-700 animate-in fade-in slide-in-from-bottom-2">
+          <Info size={14} className="text-amber-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </header>
   );
 }

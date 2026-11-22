@@ -13,6 +13,7 @@ import {
   DollarSign,
   ExternalLink,
   FileCheck,
+  Flag,
   Mail,
   MapPin,
   Send,
@@ -29,6 +30,7 @@ import { SanitizedRichText } from '@/components/shared/sanitized-rich-text';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { PageHeader } from '@/components/dashboard/page-header';
 import { JobApplyModal } from '@/components/jobs/job-apply-modal';
+import { ReportContentModal } from '@/components/shared/report-content-modal';
 import { getJobById } from '@/lib/api/jobs.api';
 import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
@@ -44,6 +46,7 @@ export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps)
   const user = useAuthStore((state) => state.user);
 
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const jobQuery = useQuery({
@@ -136,6 +139,18 @@ export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps)
                 <a href={job.applicationUrl} target="_blank" rel="noreferrer">
                   External Portal <ExternalLink size={13} />
                 </a>
+              </Button>
+            )}
+
+            {!isAuthor && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                onClick={() => setIsReportModalOpen(true)}
+                title="Report Job Listing"
+              >
+                <Flag size={14} />
               </Button>
             )}
           </div>
@@ -293,6 +308,17 @@ export function JobDetailView({ id, currentRole, basePath }: JobDetailViewProps)
           setTimeout(() => setSuccessToast(null), 6000);
         }}
       />
+
+      {/* Report Job Modal */}
+      {isReportModalOpen && (
+        <ReportContentModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          targetType="JOB"
+          targetId={job.id}
+          targetName={job.title}
+        />
+      )}
     </div>
   );
 }
