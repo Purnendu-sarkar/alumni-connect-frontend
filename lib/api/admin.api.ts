@@ -242,20 +242,66 @@ export interface UniversityRecord {
   };
 }
 
+export interface DepartmentMetric {
+  department: string;
+  code?: string;
+  students: number;
+  alumni: number;
+  total: number;
+}
+
 export interface AdminStats {
-  scope?: 'SINGLE_UNIVERSITY';
+  scope?: string;
   totalUsers: number;
   totalStudents: number;
   totalAlumni: number;
   totalModerators: number;
   totalAdmins: number;
+  totalSuperAdmins?: number;
   approvedUsers: number;
   pendingVerifications: number;
   pendingEmailVerifications: number;
+  suspendedUsers?: number;
   totalJobs: number;
   pendingJobs: number;
   auditLogsCount: number;
   totalUniversities?: number;
+
+  // Verification Funnel
+  registeredCount?: number;
+  emailVerifiedCount?: number;
+  adminVerifiedCount?: number;
+  rejectedVerificationCount?: number;
+
+  // Network & Mentorship Velocity
+  totalConnections?: number;
+  acceptedConnections?: number;
+  pendingConnections?: number;
+  totalMentorships?: number;
+  activeMentorships?: number;
+  completedMentorships?: number;
+  pendingMentorships?: number;
+
+  // Jobs & Applications Pipeline
+  publishedJobs?: number;
+  pendingReviewJobs?: number;
+  closedJobs?: number;
+  totalApplications?: number;
+  shortlistedApplications?: number;
+  acceptedApplications?: number;
+
+  // Events, Content & Moderation
+  totalEvents?: number;
+  upcomingEvents?: number;
+  totalEventRsvps?: number;
+  totalAnnouncements?: number;
+  publishedStories?: number;
+  openReports?: number;
+  resolvedReports?: number;
+  totalAuditLogs?: number;
+
+  // Department Breakdown
+  departmentBreakdown?: DepartmentMetric[];
 }
 
 export function getAdminStats(accessToken: string | null) {
@@ -568,5 +614,47 @@ export function updateAdminSettings(
     method: 'PATCH',
     accessToken,
     body: JSON.stringify(payload),
+  });
+}
+
+export interface BroadcastPayload {
+  audience: 'ALL' | 'STUDENTS' | 'ALUMNI' | 'MODERATORS';
+  category?: 'GENERAL' | 'ACADEMIC' | 'CAREER' | 'EVENT' | 'SECURITY_SYSTEM';
+  title: string;
+  message: string;
+  link?: string;
+}
+
+export interface BroadcastResult {
+  recipientCount: number;
+  audience: string;
+  title: string;
+  sentAt: string;
+}
+
+export interface BroadcastHistoryItem {
+  id: string;
+  sentAt: string;
+  senderName: string;
+  senderEmail: string | null;
+  audience: 'ALL' | 'STUDENTS' | 'ALUMNI' | 'MODERATORS';
+  category: string;
+  title: string;
+  recipientCount: number;
+  link: string | null;
+}
+
+export function sendAdminBroadcast(accessToken: string | null, payload: BroadcastPayload) {
+  return apiClient<BroadcastResult>('/admin/notifications/broadcast', {
+    method: 'POST',
+    accessToken,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAdminBroadcasts(accessToken: string | null) {
+  return apiClient<BroadcastHistoryItem[]>('/admin/notifications/broadcasts', {
+    method: 'GET',
+    accessToken,
   });
 }
