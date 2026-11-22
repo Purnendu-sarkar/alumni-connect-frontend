@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { AnnouncementCard } from '@/components/announcements/announcement-card';
+import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import { getAnnouncements } from '@/lib/api/announcements.api';
 import type { AnnouncementCategory } from '@/types/domain';
 
@@ -62,6 +63,8 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-10">
+      <PublicWorkspaceBanner resource="announcements" />
+
       {/* Page Header */}
       <div className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">

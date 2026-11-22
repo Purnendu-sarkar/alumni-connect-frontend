@@ -37,6 +37,7 @@ import {
   getMyPostedJobs,
   submitJob,
   withdrawJob,
+  type MyJobsResponse,
 } from '@/lib/api/jobs.api';
 import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
@@ -60,12 +61,24 @@ export function MyJobsView({ currentRole, basePath }: MyJobsViewProps) {
     queryKey: ['my-posted-jobs', accessToken],
     queryFn: async () => {
       const res = await getMyPostedJobs(accessToken);
-      return res.data ?? [];
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'postedJobs' in data && Array.isArray((data as MyJobsResponse).postedJobs)) {
+        return (data as MyJobsResponse).postedJobs;
+      }
+      return [];
     },
     enabled: Boolean(accessToken),
   });
 
-  const jobs: Job[] = jobsQuery.data ?? [];
+  const rawJobs = jobsQuery.data;
+  const jobs: Job[] = Array.isArray(rawJobs)
+    ? rawJobs
+    : rawJobs && typeof rawJobs === 'object' && 'postedJobs' in rawJobs && Array.isArray((rawJobs as MyJobsResponse).postedJobs)
+    ? (rawJobs as MyJobsResponse).postedJobs
+    : [];
+
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
 
   // Submit Draft Mutation
   const submitMutation = useMutation({
@@ -123,7 +136,7 @@ export function MyJobsView({ currentRole, basePath }: MyJobsViewProps) {
     },
   });
 
-  const filteredJobs = jobs.filter((j) => {
+  const filteredJobs = safeJobs.filter((j) => {
     if (activeTab === 'PUBLISHED') return j.status === 'PUBLISHED';
     if (activeTab === 'UNDER_REVIEW') return j.status === 'UNDER_REVIEW' || j.status === 'SUBMITTED';
     if (activeTab === 'CHANGES_REQUESTED') return j.status === 'CHANGES_REQUESTED';
@@ -176,26 +189,26 @@ export function MyJobsView({ currentRole, basePath }: MyJobsViewProps) {
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3 overflow-x-auto">
         {[
-          { key: 'ALL', label: `All (${jobs.length})` },
+          { key: 'ALL', label: `All (${safeJobs.length})` },
           {
             key: 'PUBLISHED',
-            label: `Live (${jobs.filter((j) => j.status === 'PUBLISHED').length})`,
+            label: `Live (${safeJobs.filter((j) => j.status === 'PUBLISHED').length})`,
           },
           {
             key: 'UNDER_REVIEW',
-            label: `In Review (${jobs.filter((j) => j.status === 'SUBMITTED' || j.status === 'UNDER_REVIEW').length})`,
+            label: `In Review (${safeJobs.filter((j) => j.status === 'SUBMITTED' || j.status === 'UNDER_REVIEW').length})`,
           },
           {
             key: 'CHANGES_REQUESTED',
-            label: `Changes Requested (${jobs.filter((j) => j.status === 'CHANGES_REQUESTED').length})`,
+            label: `Changes Requested (${safeJobs.filter((j) => j.status === 'CHANGES_REQUESTED').length})`,
           },
           {
             key: 'DRAFT',
-            label: `Drafts (${jobs.filter((j) => j.status === 'DRAFT').length})`,
+            label: `Drafts (${safeJobs.filter((j) => j.status === 'DRAFT').length})`,
           },
           {
             key: 'CLOSED',
-            label: `Closed (${jobs.filter((j) => j.status === 'CLOSED').length})`,
+            label: `Closed (${safeJobs.filter((j) => j.status === 'CLOSED').length})`,
           },
         ].map((tab) => (
           <button

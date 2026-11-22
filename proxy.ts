@@ -80,8 +80,13 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // 4. Guest-only routes: /login, /register
-  const isAuthRoute = pathname === '/login' || pathname === '/register';
+  // 4. Guest-only routes: /login, /register, /forgot-password, /reset-password, /verify-email
+  const isAuthRoute =
+    pathname === '/login' ||
+    pathname === '/register' ||
+    pathname === '/forgot-password' ||
+    pathname === '/reset-password' ||
+    pathname === '/verify-email';
   if (isAuthRoute && isAuthenticated && userRole) {
     return NextResponse.redirect(new URL(getRoleHome(userRole), request.url));
   }
@@ -102,5 +107,8 @@ export const config = {
     '/dashboard/:path*',
     '/login',
     '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
   ],
 };

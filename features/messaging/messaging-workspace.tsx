@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, MessagesSquare, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/auth-store';
@@ -71,9 +71,27 @@ export function MessagingWorkspace({
     }
   }, [conversations, checkUsersPresence]);
 
+  const initializingUserIdRef = useRef<string | null>(null);
+
   // Deep-linking: if initialUserId is present, find or create conversation
   useEffect(() => {
     if (!initialUserId || initialUserId === currentUserId) return;
+
+    // Fast-path: Check if conversation already exists in current loaded list
+    const existing = conversations.find((c) => c.otherParticipant.id === initialUserId);
+    if (existing) {
+      setActiveConvId(existing.id);
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('user');
+        window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
+      }
+      return;
+    }
+
+    // Deduplication guard for React 19 StrictMode / concurrent renders
+    if (initializingUserIdRef.current === initialUserId) return;
+    initializingUserIdRef.current = initialUserId;
 
     let isMounted = true;
     void (async () => {
@@ -90,15 +108,17 @@ export function MessagingWorkspace({
             window.history.replaceState(null, '', url.pathname + (url.search ? url.search : ''));
           }
         }
-      } catch (err) {
-        console.error('Failed to initialize conversation with deep-linked user:', err);
+      } catch (err: unknown) {
+        // Fallback: Invalidate conversations to sync client state
+        void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        console.warn('Notice when initializing conversation with deep-linked user:', err);
       }
     })();
 
     return () => {
       isMounted = false;
     };
-  }, [initialUserId, currentUserId, queryClient]);
+  }, [initialUserId, currentUserId, queryClient, conversations]);
 
   // Auto-select first conversation on desktop if none selected and not deep-linked
   useEffect(() => {

@@ -27,7 +27,7 @@ export function Footer() {
           <div className="space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Network & Careers</h4>
             <ul className="space-y-2 text-xs">
-              <li><Link href="/alumni" className="hover:text-white transition-colors">Alumni Directory</Link></li>
+              <li><Link href="/stories" className="hover:text-white transition-colors">Alumni Stories</Link></li>
               <li><Link href="/jobs" className="hover:text-white transition-colors">Campus Job Board</Link></li>
               <li><Link href="/mentorship" className="hover:text-white transition-colors">Mentorship Program</Link></li>
               <li><Link href="/events" className="hover:text-white transition-colors">Campus Events</Link></li>

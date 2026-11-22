@@ -40,6 +40,7 @@ import {
   getReceivedApplications,
   updateApplicationStatus,
   type ApplicationCandidateRecord,
+  type MyJobsResponse,
 } from '@/lib/api/jobs.api';
 import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
@@ -79,12 +80,22 @@ export function ApplicantReviewView({ currentRole, basePath }: ApplicantReviewVi
     queryKey: ['my-posted-jobs', accessToken],
     queryFn: async () => {
       const res = await getMyPostedJobs(accessToken);
-      return res.data ?? [];
+      const data = res.data;
+      if (Array.isArray(data)) return data;
+      if (data && typeof data === 'object' && 'postedJobs' in data && Array.isArray((data as MyJobsResponse).postedJobs)) {
+        return (data as MyJobsResponse).postedJobs;
+      }
+      return [];
     },
     enabled: Boolean(accessToken),
   });
 
-  const postedJobs: Job[] = postedJobsQuery.data ?? [];
+  const rawPosted = postedJobsQuery.data;
+  const postedJobs: Job[] = Array.isArray(rawPosted)
+    ? rawPosted
+    : rawPosted && typeof rawPosted === 'object' && 'postedJobs' in rawPosted && Array.isArray((rawPosted as MyJobsResponse).postedJobs)
+    ? (rawPosted as MyJobsResponse).postedJobs
+    : [];
 
   // Fetch received applications
   const applicationsQuery = useQuery({

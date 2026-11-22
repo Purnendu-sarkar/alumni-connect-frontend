@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { CardGridSkeleton } from '@/components/dashboard/loading-skeleton';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { getJobs } from '@/lib/api/jobs.api';
+import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import type { Job } from '@/types/domain';
 
 export function JobsBoard() {
@@ -40,6 +41,8 @@ export function JobsBoard() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-8">
+      <PublicWorkspaceBanner resource="jobs" />
+
       {/* Header */}
       <div className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">

@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/dashboard/empty-state';
 import { JobApplyModal } from '@/components/jobs/job-apply-modal';
+import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import { getJobById } from '@/lib/api/jobs.api';
 import { formatDate } from '@/lib/utils/format';
 import { useAuthStore } from '@/store/auth-store';
@@ -81,6 +82,8 @@ export default function JobDetailPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-8">
+      <PublicWorkspaceBanner resource="jobs" />
+
       <Link
         href="/jobs"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"

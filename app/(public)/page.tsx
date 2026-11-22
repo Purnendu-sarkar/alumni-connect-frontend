@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import {
-  ArrowRight,
   ArrowUpRight,
   CalendarDays,
   CheckCircle2,
   GraduationCap,
   HeartHandshake,
-  Search,
   ShieldCheck,
   Sparkles,
   TrendingUp,
@@ -15,10 +13,10 @@ import {
 
 import { AlumniCard } from '@/components/alumni/alumni-card';
 import { JobCard } from '@/components/jobs/job-card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { SectionHeading } from '@/components/ui/section-heading';
+import { LandingAuthCtas } from '@/components/public/landing-auth-ctas';
 import { demoAlumni } from '@/features/shared/demo-data';
 import { getJobs } from '@/lib/api/jobs.api';
 import { formatCompactNumber } from '@/lib/utils/format';
@@ -47,6 +45,7 @@ const proofPoints = [
 export default async function HomePage() {
   const jobsRes = await getJobs({ limit: 3 }).catch(() => ({ data: [] }));
   const featuredJobs = jobsRes.data ?? [];
+
   return (
     <div className="space-y-16 lg:space-y-24 py-8 md:py-12">
       {/* Hero Section using shadcn Card */}
@@ -67,16 +66,7 @@ export default async function HomePage() {
               Connect with the graduates who took the road before you. Seek authentic career guidance, discover curated campus opportunities, and strengthen your lifelong university network.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-              <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-md">
-                <Link href="/alumni">
-                  Find Your Alumni <ArrowRight size={16} />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-white font-semibold">
-                <Link href="/register">Join the Network</Link>
-              </Button>
-            </div>
+            <LandingAuthCtas variant="hero" />
 
             <div className="pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-400">
               <div className="flex items-center gap-2">
@@ -136,13 +126,7 @@ export default async function HomePage() {
           eyebrow="CAMPUS DIRECTORY"
           title="Graduates Worth Knowing"
           description="Search and connect across departments, graduation years, and leading industry employers."
-          action={
-            <Button asChild variant="outline" size="sm">
-              <Link href="/alumni" className="inline-flex items-center gap-1.5 font-bold">
-                Explore Full Directory <ArrowUpRight size={14} />
-              </Link>
-            </Button>
-          }
+          action={<LandingAuthCtas variant="directory-action" />}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -166,14 +150,7 @@ export default async function HomePage() {
               Request a focused thirty-minute session with an alumnus who has successfully navigated the path you are considering. Review your portfolio, prepare for technical interviews, and receive candid industry perspective.
             </p>
           </div>
-          <div className="shrink-0 flex flex-col sm:flex-row gap-3">
-            <Button asChild size="lg" className="bg-white hover:bg-slate-100 text-blue-900 font-bold shadow-xs border-white">
-              <Link href="/mentorship">Explore Mentors</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="border-blue-400 text-white hover:bg-blue-700 font-semibold">
-              <Link href="/register">Become a Mentor</Link>
-            </Button>
-          </div>
+          <LandingAuthCtas variant="mentorship" />
         </Card>
       </section>
 
@@ -262,14 +239,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-3">
-            <Button asChild size="default">
-              <Link href="/events">Browse Events</Link>
-            </Button>
-            <Button asChild variant="outline" size="default">
-              <Link href="/register">Create Profile</Link>
-            </Button>
-          </div>
+          <LandingAuthCtas variant="bottom-banner" />
         </Card>
       </section>
     </div>

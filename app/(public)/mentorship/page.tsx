@@ -274,7 +274,17 @@ export default function MentorshipHubPage() {
                     </Button>
                   ) : (
                     <Button asChild size="sm" variant="outline" className="w-full">
-                      <Link href={user ? `/alumni/directory/${mentor.id}` : '/login'}>
+                      <Link
+                        href={
+                          !user
+                            ? '/login'
+                            : user.role === 'ALUMNI'
+                            ? `/alumni/directory/${mentor.id}`
+                            : user.role === 'SUPER_ADMIN'
+                            ? `/admin/users/${mentor.id}`
+                            : `/student/directory/${mentor.id}`
+                        }
+                      >
                         {user ? 'View Profile' : 'Sign in to Connect'}
                       </Link>
                     </Button>

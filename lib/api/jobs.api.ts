@@ -216,7 +216,7 @@ export function deleteJob(accessToken: string | null, jobId: string) {
 }
 
 export function getMyPostedJobs(accessToken?: string | null) {
-  return apiClient<Job[]>('/jobs/mine', {
+  return apiClient<MyJobsResponse | Job[]>('/jobs/mine', {
     accessToken,
     tenant: true,
   });

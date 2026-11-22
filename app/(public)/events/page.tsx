@@ -1,18 +1,58 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, CalendarDays, Clock, MapPin, Sparkles, Users, Calendar } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import { getEvents } from '@/lib/api/events.api';
-import type { EventCard as EventCardType } from '@/types/domain';
+import { useAuthStore } from '@/store/auth-store';
+
+function EventCtaAction() {
+  const [mounted, setMounted] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const isInitialized = useAuthStore((state) => state.isInitialized);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !isInitialized || !user) {
+    return (
+      <Button asChild size="sm" className="shrink-0 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+        <Link href="/register">Join to Participate</Link>
+      </Button>
+    );
+  }
+
+  if (user.role === 'SUPER_ADMIN') {
+    return (
+      <Button asChild size="sm" className="shrink-0 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+        <Link href="/admin/events/create">Create an Event</Link>
+      </Button>
+    );
+  }
+
+  const rolePrefix =
+    user.role === 'ALUMNI'
+      ? '/alumni'
+      : user.role === 'MODERATOR'
+      ? '/moderator'
+      : '/student';
+
+  return (
+    <Button asChild size="sm" className="shrink-0 font-bold bg-blue-600 hover:bg-blue-700 text-white">
+      <Link href={`${rolePrefix}/events`}>Open Campus Events</Link>
+    </Button>
+  );
+}
 
 export default function EventsPage() {
   const { data: responseData, isLoading, isError, refetch } = useQuery({
@@ -26,6 +66,8 @@ export default function EventsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
+      <PublicWorkspaceBanner resource="events" />
+
       {/* Header */}
       <div className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">
@@ -217,9 +259,7 @@ export default function EventsPage() {
           </div>
         </div>
 
-        <Button asChild size="sm" className="shrink-0 font-bold bg-blue-600 hover:bg-blue-700 text-white">
-          <Link href="/register">Propose an Event</Link>
-        </Button>
+        <EventCtaAction />
       </Card>
     </div>
   );

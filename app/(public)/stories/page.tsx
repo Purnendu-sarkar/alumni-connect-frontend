@@ -20,6 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { EmptyState } from '@/components/dashboard/empty-state';
+import { PublicWorkspaceBanner } from '@/components/public/public-workspace-banner';
 import { getStories } from '@/lib/api/stories.api';
 import type { StoryCard as StoryCardType, StoryCategory } from '@/types/domain';
 import { StoryCard, STORY_CATEGORY_LABELS } from '@/components/stories/story-card';
@@ -78,6 +79,8 @@ export default function StoriesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
+      <PublicWorkspaceBanner resource="stories" />
+
       {/* Header */}
       <div className="space-y-4 max-w-3xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold font-mono uppercase tracking-wider">
