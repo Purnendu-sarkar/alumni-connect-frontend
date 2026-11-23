@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="alumni-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0B1F3A" />
+    </linearGradient>
+    <linearGradient id="inner-border" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.08" />
+    </linearGradient>
+  </defs>
+
+  <!-- Squircle Base with Royal Blue to Navy Trust Gradient -->
+  <rect width="64" height="64" rx="16" fill="url(#alumni-grad)" />
+
+  <!-- Subtle Inner Border Highlight -->
+  <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="15.25" fill="none" stroke="url(#inner-border)" stroke-width="1.5" />
+
+  <!-- Academic Graduation Cap - Mortarboard Diamond -->
+  <path
+    d="M 32 14 L 53 23.5 L 32 33 L 11 23.5 Z"
+    fill="#FFFFFF"
+  />
+
+  <!-- Academic Graduation Cap - Under-Cap Headband -->
+  <path
+    d="M 19 28.5 V 37 C 19 44, 45 44, 45 37 V 28.5"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="3.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Academic Graduation Cap - Tassel -->
+  <path
+    d="M 52.5 24.5 V 40"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="2.5"
+    stroke-linecap="round"
+  />
+  <circle cx="52.5" cy="41.5" r="2" fill="#FFFFFF" />
+</svg>

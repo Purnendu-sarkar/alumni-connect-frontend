@@ -7,17 +7,26 @@ import '@/styles/globals.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://alumniconnect.example'),
   title: {
-    default: 'AlumniConnect — Academic Networking Platform',
-    template: '%s | AlumniConnect',
+    default: 'Alumni Connect — North Western University',
+    template: '%s | Alumni Connect',
   },
-  description: 'The verified professional networking platform for your university community.',
-  applicationName: 'AlumniConnect',
-  keywords: ['alumni', 'mentorship', 'jobs', 'university network', 'higher education'],
+  description: 'The official verified alumni networking, mentorship, and career portal for North Western University.',
+  applicationName: 'Alumni Connect',
+  keywords: ['alumni', 'mentorship', 'jobs', 'university network', 'North Western University', 'NWU'],
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: 'any' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   openGraph: {
     type: 'website',
-    siteName: 'AlumniConnect',
-    title: 'AlumniConnect',
-    description: 'Find mentors, career opportunities, and your university network.',
+    siteName: 'Alumni Connect — North Western University',
+    title: 'Alumni Connect — North Western University',
+    description: 'Find mentors, career opportunities, and your university network at North Western University.',
   },
 };
 
